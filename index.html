@@ -255,6 +255,85 @@ tr.total td:first-child{color:var(--indigo)}
   .stkrow{grid-template-columns:1fr;gap:5px}
   .pmet .mv{font-size:26px}
 }
+/* ---- Sortable / filterable tables, export controls ---- */
+.tbar{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:6px 0 11px}
+.filt{padding:7px 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);
+  color:var(--ink);font:inherit;font-size:13px;min-width:210px;flex:1;max-width:340px}
+.xbtn{padding:7px 13px;border:1px solid var(--indigo);border-radius:8px;background:var(--surface);
+  color:var(--indigo);font-weight:600;font-size:12.5px;cursor:pointer;white-space:nowrap}
+.xbtn:hover{background:var(--indigo);color:#fff}
+.xbtn[disabled]{opacity:.45;cursor:default;border-color:var(--line);color:var(--muted);
+  background:var(--surface)}
+.cnt{font-size:12px;color:var(--muted);font-family:"IBM Plex Mono",ui-monospace,monospace}
+th[data-sort]{cursor:pointer;user-select:none;white-space:nowrap}
+th[data-sort]:hover{color:var(--indigo)}
+th[data-sort] .ar{opacity:.32;margin-left:3px;font-size:9px}
+th[data-sort].on{color:var(--indigo)}
+th[data-sort].on .ar{opacity:1}
+.matrix td.p{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;
+  text-align:right;white-space:nowrap}
+.pos{display:inline-block;min-width:30px;padding:1px 7px;border-radius:5px;font-weight:600;
+  font-size:12px}
+.pos.t3{background:rgba(26,138,90,.14);color:#1a8a5a}
+.pos.p1{background:rgba(53,37,151,.11);color:var(--indigo)}
+.pos.p2{background:rgba(231,115,13,.14);color:#b45c09}
+.pos.nr{color:var(--muted)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]) .pos.t3{color:#4cc48a}
+  :root:not([data-theme=light]) .pos.p1{color:#a79cf2}
+  :root:not([data-theme=light]) .pos.p2{color:#f0a95e}}
+
+/* ---- Link value flags ---- */
+.vflag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:600;
+  white-space:nowrap}
+.vflag.hi{background:rgba(26,138,90,.14);color:#1a8a5a}
+.vflag.lo{background:var(--soft);color:var(--muted)}
+.vflag.tox{background:rgba(192,57,43,.13);color:#c0392b}
+
+/* ---- Bot vs human estimate ---- */
+.botbar{display:flex;height:26px;border-radius:7px;overflow:hidden;background:var(--soft);
+  margin:4px 0 10px}
+.botbar span{display:block;height:100%;overflow:hidden}
+.botbar em{font-style:normal;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10.5px;
+  color:#fff;line-height:26px;padding:0 8px;white-space:nowrap}
+.risk{display:inline-block;min-width:26px;text-align:right;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:600}
+
+/* ---- Readiness trend ---- */
+.trend{display:flex;align-items:flex-end;gap:7px;height:74px;padding-top:4px;
+  border-bottom:1px solid var(--line);margin-bottom:5px}
+.trend .tb{flex:1;min-width:16px;max-width:52px;display:flex;flex-direction:column;
+  justify-content:flex-end;align-items:center;gap:3px;height:100%}
+.trend .tv{font-size:10px;font-weight:600;font-family:"IBM Plex Mono",ui-monospace,monospace}
+.trend .tf{width:100%;border-radius:3px 3px 0 0}
+.trendx{display:flex;gap:7px}
+.trendx span{flex:1;min-width:16px;max-width:52px;text-align:center;font-size:9.5px;
+  color:var(--muted);font-family:"IBM Plex Mono",ui-monospace,monospace}
+
+/* ---- Print: the Overview becomes the AIM PDF deliverable ---- */
+@media print{
+  /* Restate the light palette: a viewer in dark mode must still print a light
+     document, and the browser will not flip these back on its own. */
+  :root{--cream:#fff;--surface:#fff;--ink:#241d3d;--secondary:#4d4763;--muted:#6b647f;
+    --line:#ddd6e6;--soft:#f4f0f8;--indigo:#352597;--magenta:#c0228a;--orange:#e7730d;
+    --good:#2e8b57;--c1:#352597;--c2:#c0228a;--c3:#e7730d;--c4:#5343c9;--c5:#d9569f;
+    --c6:#f0924a;--c7:#1a8a5a;--c8:#8e8aa8;--bandbg:#352597;--shadow:none}
+  @page{margin:12mm 11mm}
+  *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
+  html,body{background:#fff !important}
+  .nav,.mast,.ranges,.tabs,.genbtn,.xbtn,.tbar,#out,.pdfbar{display:none !important}
+  .wrap{max-width:none;padding:0}
+  section{border:1px solid var(--line);box-shadow:none;break-inside:avoid;
+    page-break-inside:avoid;margin-bottom:11px;padding:15px 17px}
+  .ovhead{break-inside:avoid;page-break-inside:avoid}
+  .rband{break-after:avoid;page-break-after:avoid;break-inside:avoid}
+  .dcard,.pcol,.stat,.tile,.sub{break-inside:avoid;page-break-inside:avoid}
+  .dnuts{grid-template-columns:1fr 1fr}
+  .foot{break-inside:avoid;page-break-inside:avoid}
+  a[href]:after{content:""}
+  .prfoot{display:block !important}
+}
+.prfoot{display:none}
+.pdfbar{display:flex;justify-content:flex-end;margin-bottom:12px}
 </style></head><body>
 
 <div id="login" class="hide">
@@ -297,7 +376,8 @@ const ASK=API.replace(/\/dashboard$/,'/ask');
 const STORE='aim_session';
 const S={toxic:[],aiFull:null,audits:[],auditCats:{},clients:[],client:null,tab:'overview',
   range:'30d',from:null,to:null,data:null,forms:null,busy:false,
-  trafficTotals:null,summary:null,summaryState:'idle',summaryErr:null,summaryCache:{}};
+  trafficTotals:null,summary:null,summaryState:'idle',summaryErr:null,summaryCache:{},
+  trafficDaily:null,tech:null,kw:null,kwSort:{col:'best',dir:1},kwFilter:'',auditHist:{}};
 
 const TABS=[['overview','Overview'],['search','Search'],['rankings','Rankings'],['movement','Movement'],
             ['traffic','Traffic'],['ai','AI Visibility'],['readiness','AI Readiness'],
@@ -391,6 +471,28 @@ async function load(){
     // null means the endpoint did not answer, which is not the same as no visits.
     try{ S.trafficTotals=await api(`/api/traffic_totals?client=${S.client}&from=${S.from}&to=${S.to}`)||[]; }
     catch(_e){ S.trafficTotals=null; }
+    // Per-day traffic carries new_users, and the tech read carries the country /
+    // duration signals the automation estimate is built from. Both are optional:
+    // null means the endpoint did not answer, which is not the same as zero.
+    try{ S.trafficDaily=await api(`/api/traffic?client=${S.client}&from=${S.from}&to=${S.to}`)||[]; }
+    catch(_e){ S.trafficDaily=null; }
+    try{ S.tech=await api(`/api/traffic_tech?client=${S.client}&from=${S.from}&to=${S.to}`)||[]; }
+    catch(_e){ S.tech=null; }
+    // The rank matrix is one read per engine; a single engine failing must not
+    // blank the whole table, so each falls back to an empty list.
+    try{
+      const sets=await Promise.all(ENG_ORDER.map(e=>
+        api(`/api/keywords?client=${S.client}&engine=${e}&from=${S.from}&to=${S.to}`)
+          .then(r=>r||[]).catch(()=>[])));
+      S.kw=sets.some(s=>s.length)?mergeKeywords(ENG_ORDER,sets):[];
+    }catch(_e){ S.kw=null; }
+    // Audit history drives the readiness trend; only fetched for types that exist.
+    S.auditHist={};
+    for(const a of (S.audits||[])){
+      try{ S.auditHist[a.audit_type]=await api(
+        `/api/audit_history?client=${S.client}&type=${encodeURIComponent(a.audit_type)}`)||[]; }
+      catch(_e){ S.auditHist[a.audit_type]=[]; }
+    }
     await loadSummary();
     S.data.aiFull=S.aiFull;
     $('genline').textContent=`Reporting ${S.from} to ${S.to} · generated ${iso(new Date())}`;
@@ -416,6 +518,113 @@ async function loadSummary(){
     }
   }catch(_e){ /* not deployed, or nothing cached: fall through to the button */ }
 }
+
+/* ---------- file exports ----------
+   A real .xlsx rather than CSV: message bodies carry commas, quotes and line
+   breaks, and Excel's CSV import mangles phone numbers and leading zeros. An
+   xlsx is a zip of XML parts; storing the entries uncompressed keeps this to a
+   CRC32 and two headers per file instead of a deflate implementation. */
+
+const CRC_T=(()=>{const t=new Uint32Array(256);
+  for(let i=0;i<256;i++){let c=i;for(let k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[i]=c>>>0}
+  return t})();
+function crc32(u8){let c=0xFFFFFFFF;
+  for(let i=0;i<u8.length;i++)c=CRC_T[(c^u8[i])&0xFF]^(c>>>8);
+  return (c^0xFFFFFFFF)>>>0}
+
+// XML 1.0 forbids most control characters outright, so they are dropped rather
+// than escaped — Excel refuses to open a file that contains them.
+const xesc=s=>String(s).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g,'')
+  .replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
+
+function colName(i){let s='',x=i+1;while(x>0){const m=(x-1)%26;s=String.fromCharCode(65+m)+s;
+  x=(x-m-1)/26}return s}
+
+function sheetXml(rows){
+  const body=rows.map((row,r)=>{
+    const cells=row.map((v,c)=>{
+      const ref=colName(c)+(r+1);
+      if(v==null||v==='')return `<c r="${ref}"/>`;
+      if(typeof v==='number'&&isFinite(v))return `<c r="${ref}"><v>${v}</v></c>`;
+      return `<c r="${ref}" t="inlineStr"><is><t xml:space="preserve">${xesc(v)}</t></is></c>`;
+    }).join('');
+    return `<row r="${r+1}">${cells}</row>`;
+  }).join('');
+  const cols=(rows[0]||[]).map((_,i)=>
+    `<col min="${i+1}" max="${i+1}" width="${i===0?46:17}" customWidth="1"/>`).join('');
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
+<cols>${cols}</cols><sheetData>${body}</sheetData></worksheet>`;
+}
+
+function zipBytes(files){
+  const enc=new TextEncoder();
+  const u16=v=>[v&255,(v>>8)&255];
+  const u32=v=>[v&255,(v>>8)&255,(v>>16)&255,(v>>>24)&255];
+  const parts=[],dir=[]; let off=0;
+  for(const f of files){
+    const name=enc.encode(f.name),data=f.data,crc=crc32(data),n=data.length;
+    const local=new Uint8Array([...u32(0x04034b50),...u16(20),...u16(0),...u16(0),
+      ...u16(0),...u16(0),...u32(crc),...u32(n),...u32(n),...u16(name.length),...u16(0)]);
+    parts.push(local,name,data);
+    dir.push(new Uint8Array([...u32(0x02014b50),...u16(20),...u16(20),...u16(0),...u16(0),
+      ...u16(0),...u16(0),...u32(crc),...u32(n),...u32(n),...u16(name.length),
+      ...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),name);
+    off+=local.length+name.length+n;
+  }
+  const dirSize=dir.reduce((a,p)=>a+p.length,0);
+  const end=new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),
+    ...u16(files.length),...u16(files.length),...u32(dirSize),...u32(off),...u16(0)]);
+  const all=[...parts,...dir,end];
+  const total=all.reduce((a,p)=>a+p.length,0);
+  const out=new Uint8Array(total); let at=0;
+  for(const p of all){out.set(p,at);at+=p.length}
+  return out;
+}
+
+function xlsx(rows,sheetName){
+  const enc=new TextEncoder(),E=s=>enc.encode(s);
+  const nm=xesc(String(sheetName||'Sheet1').replace(/[\\\/\?\*\[\]:]/g,' ').slice(0,31));
+  return zipBytes([
+    {name:'[Content_Types].xml',data:E(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+</Types>`)},
+    {name:'_rels/.rels',data:E(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`)},
+    {name:'xl/workbook.xml',data:E(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets><sheet name="${nm}" sheetId="1" r:id="rId1"/></sheets></workbook>`)},
+    {name:'xl/_rels/workbook.xml.rels',data:E(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+</Relationships>`)},
+    {name:'xl/worksheets/sheet1.xml',data:E(sheetXml(rows))},
+  ]);
+}
+
+function saveBlob(data,mime,filename){
+  const blob=new Blob([data],{type:mime});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click();
+  // Revoking immediately can cancel the download in some browsers.
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url)},2000);
+}
+const slug=s=>String(s||'client').toLowerCase().replace(/[^a-z0-9]+/g,'-')
+  .replace(/^-|-$/g,'').slice(0,40)||'client';
+function saveXlsx(rows,sheetName,filename){
+  saveBlob(xlsx(rows,sheetName),
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',filename);
+}
+function saveText(text,filename){saveBlob(text,'text/plain;charset=utf-8',filename);}
 
 /* ---------- renderers ---------- */
 function tile(lab,val,note){return `<div class="tile"><div class="t-lab">${lab}</div>
@@ -497,7 +706,7 @@ function donutMulti(rows,centre,caption){
       font-family="Fraunces,Georgia,serif" font-weight="700"
       font-size="${String(centre).length>5?18:23}" fill="var(--ink)">${esc(centre)}</text>
     <text x="65" y="83" text-anchor="middle" font-family="IBM Plex Mono,monospace"
-      font-size="9" fill="var(--muted)">${esc(caption)}</text>
+      font-size="${String(caption).length>13?7:9}" fill="var(--muted)">${esc(caption)}</text>
   </svg>`;
 }
 
@@ -618,7 +827,7 @@ function ovPlacement(d){
       ['Google','Google Local','Bing']);
 
   const byEng={}; rows.forEach(r=>{byEng[r.engine]=r});
-  const big=['google','google_local','bing'].map(k=>{
+  const big=ENG_ORDER.map(k=>{
     const r=byEng[k];
     if(!r)return `<div class="stat"><div class="v" style="color:var(--muted)">—</div>
       <div class="l">${esc(ENGN[k])}</div>
@@ -629,7 +838,9 @@ function ovPlacement(d){
     </div>`;
   }).join('');
 
-  const bars=rows.map(r=>{
+  const ordered=ENG_ORDER.map(k=>byEng[k]).filter(Boolean)
+    .concat(rows.filter(r=>ENG_ORDER.indexOf(r.engine)<0));
+  const bars=ordered.map(r=>{
     const tracked=Number(r.tracked)||0;
     if(!tracked)return '';
     const t3=Number(r.top3)||0,p4=Number(r.p4_10)||0,rest=Math.max(0,tracked-t3-p4);
@@ -813,11 +1024,97 @@ function ovGbp(d){
         'the profile is linked this section fills in on its own.',metrics);
 }
 
+/* ---- Overview: AI Tracking (are the engines citing us) ---- */
+function ovAiTracking(d){
+  const a=S.aiFull;
+  const eng=(d.ai||[]);
+  if((!a||!a.results)&&!eng.length)
+    return ncPanel('No AI tracker run inside this window.',
+      'AI visibility runs on a monthly cadence — widen the date range to include the most '+
+      'recent run, or the tracker has not been set up for this client yet.',
+      ['Citation rate','Mention rate','Share of voice']);
+
+  const r1=v=>(v==null||!isFinite(v))?'—':Number(v).toFixed(1).replace(/\.0$/,'')+'%';
+  const sp=a?intentSplit(a):{branded:null,discovery:null};
+  const dis=sp.discovery,br=sp.branded;
+
+  // The discovery rate leads because it is the one that reflects new business.
+  const tiles=`<div class="stats">
+    <div class="stat"><div class="v">${r1(dis?dis.citation_rate:null)}</div>
+      <div class="l">Citation rate — non-branded</div>
+      <div class="d">Answers to questions that never name the firm, where AI cited a
+        brand-owned page${dis?` · ${n(dis.answers)} answers`:''}</div></div>
+    <div class="stat"><div class="v">${r1(dis?dis.mention_rate:null)}</div>
+      <div class="l">Mention rate — non-branded</div>
+      <div class="d">Answers naming the firm at all when the question did not</div></div>
+    <div class="stat"><div class="v">${r1(dis?dis.sov:null)}</div>
+      <div class="l">Share of voice — non-branded</div>
+      <div class="d">Mentions of this firm against every tracked competitor</div></div>
+  </div>`;
+
+  const brRow=br?`<div class="callout">Asked about by name, AI cites this firm
+    <b>${r1(br.citation_rate)}</b> of the time across ${n(br.answers)} branded answers.
+    That number belongs in a different column from the one above: someone typing the firm's
+    name has already found them. The non-branded figures are the ones that reflect winning
+    someone new.</div>`:'';
+
+  const table=eng.length?`<div class="tw"><table><thead><tr><th>Engine</th>
+    <th class="n">Answers</th><th class="n">Mention</th><th class="n">Citation</th>
+    <th class="n">Competitor present</th></tr></thead><tbody>
+    ${eng.map(e=>`<tr><td><b>${esc({openai:'ChatGPT',gemini:'Google Gemini',
+        anthropic:'Claude',perplexity:'Perplexity'}[e.engine]||e.engine)}</b></td>
+      <td class="n num">${n(e.answers)}</td>
+      <td class="n num">${r1(e.mention_rate)}</td>
+      <td class="n num">${r1(e.citation_rate)}</td>
+      <td class="n num">${r1(e.competitor_presence)}</td></tr>`).join('')}
+    </tbody></table></div>`:'';
+
+  return tiles+brRow+table+`<p class="exp" style="margin-top:12px">Every tracked question is
+    sent to each AI engine and the answer is read for mentions of the firm and links to its
+    site.${a&&a.day?` Last run ${niceDate(a.day)}.`:''}</p>`;
+}
+
+/* ---- Overview: AI Visibility (is the site built to be found) ---- */
+function ovAiReadiness(d){
+  const auds=S.audits||[];
+  if(!auds.length)
+    return ncPanel('No AI readiness audit has been published for this client yet.',
+      'Scores appear here on their own the next time an AI Visibility Assessment or an '+
+      'Agentic Browsing Readiness audit is run — nothing needs uploading.',
+      ['Overall score','Grade','Change since last run']);
+
+  const TITLES={ai_visibility:'AI Visibility Assessment',
+    agentic_browsing:'Agentic Browsing Readiness',
+    entity_footprint:'AI Entity Footprint Review',seo_audit:'SEO Audit'};
+
+  return `<div class="stats">${auds.map(a=>{
+    const max=Number(a.max_score)||100;
+    const pctv=Number(a.overall_score)/max*100;
+    const prev=a.prev_score==null?null:Number(a.prev_score);
+    const delta=prev==null?null:Number(a.overall_score)-prev;
+    return `<div class="stat"><div class="v" style="color:${bandColor(pctv)}">${
+        Math.round(Number(a.overall_score))}<small>/${Math.round(max)}</small></div>
+      <div class="l">${esc(TITLES[a.audit_type]||a.audit_type)}</div>
+      <div class="d">${esc(a.grade||bandName(pctv))} · run ${niceDate(a.run_date)}<br>${
+        delta==null?'first run — nothing to compare against'
+        :delta>0?`▲ up ${Math.abs(delta).toFixed(1)} since ${esc(a.prev_date)}`
+        :delta<0?`▼ down ${Math.abs(delta).toFixed(1)} since ${esc(a.prev_date)}`
+        :`unchanged since ${esc(a.prev_date)}`}</div></div>`;
+  }).join('')}</div>
+  <p class="exp">These are point-in-time rubric scores for how well the site itself can be read,
+  understood and acted on by AI search engines. Full category detail is on the AI Readiness tab.</p>`;
+}
+
 function overview(d,f){
-  return ovHeader(d)
+  return `<div class="pdfbar"><button class="xbtn" data-act="pdf">Save as PDF</button></div>`
+    + ovHeader(d)
     + ovSummary()
     + band('Front Page Placement','Rankings')
     + `<section>${ovPlacement(d)}</section>`
+    + band('AI Tracking','Are the engines citing us')
+    + `<section>${ovAiTracking(d)}</section>`
+    + band('AI Visibility','Is the site built to be found')
+    + `<section>${ovAiReadiness(d)}</section>`
     + band('Search Traffic','Where visitors came from')
     + `<section>${ovTraffic(d)}</section>`
     + band('Website Performance','Engagement and bounce')
@@ -841,6 +1138,122 @@ function engineTable(d){
   </tbody></table></div>`;
 }
 
+/* ---------- keyword matrix ---------- */
+// Engine order is the one the report reads in, not alphabetical.
+const ENG_ORDER=['google','google_local','google_mobile','bing'];
+// dash_keywords answers for one engine at a time, so the matrix is four reads
+// joined on the phrase. 101 is the collector's "outside the top 100" sentinel.
+const NR=101;
+const posOf=r=>{const v=r.end_pos==null?r.best_pos:r.end_pos;
+  return (v==null||Number(v)>=NR)?null:Number(v)};
+
+function mergeKeywords(engines,sets){
+  const by=new Map();
+  engines.forEach((eng,i)=>{
+    for(const r of (sets[i]||[])){
+      const key=String(r.phrase||'').trim().toLowerCase();
+      if(!key)continue;
+      let row=by.get(key);
+      if(!row){row={phrase:r.phrase,url:null};by.set(key,row)}
+      row[eng]=posOf(r);
+      if(!row.url&&r.ranked_url)row.url=r.ranked_url;
+    }
+  });
+  const out=[...by.values()];
+  for(const r of out){
+    const vals=ENG_ORDER.map(e=>r[e]).filter(v=>v!=null);
+    r.best=vals.length?Math.min(...vals):null;
+    r.p1=ENG_ORDER.filter(e=>r[e]!=null&&r[e]<=10);
+  }
+  return out;
+}
+
+function posCell(v){
+  if(v==null)return '<span class="pos nr">—</span>';
+  const c=v<=3?'t3':v<=10?'p1':v<=20?'p2':'';
+  return `<span class="pos ${c}">${v}</span>`;
+}
+
+function sortKeywords(rows){
+  const {col,dir}=S.kwSort||{col:'best',dir:1};
+  const cp=[...rows];
+  cp.sort((a,b)=>{
+    if(col==='phrase')return dir*String(a.phrase).localeCompare(String(b.phrase));
+    const x=a[col],y=b[col];
+    // Terms that do not rank always sort last, whichever direction is chosen —
+    // otherwise "sort best first" fills the top with blanks.
+    if(x==null&&y==null)return String(a.phrase).localeCompare(String(b.phrase));
+    if(x==null)return 1;
+    if(y==null)return -1;
+    return dir*(x-y)||String(a.phrase).localeCompare(String(b.phrase));
+  });
+  return cp;
+}
+
+function kwHead(){
+  const s=S.kwSort||{col:'best',dir:1};
+  // Position headings carry the "n" class so the label sits over its numbers
+  // rather than at the far side of the column.
+  const th=(col,label,num)=>{
+    const on=s.col===col;
+    return `<th data-sort="${col}" class="${num?'n ':''}${on?'on':''}"
+      title="Sort by ${esc(label)}">${esc(label)}<span class="ar">${
+        on?(s.dir===1?'▲':'▼'):'▲'}</span></th>`;
+  };
+  return `<thead><tr>${th('phrase','Search phrase',false)}
+    ${th('google','Google',true)}${th('bing','Bing',true)}
+    ${th('google_mobile','Google Mobile',true)}${th('google_local','Google Local',true)}
+  </tr></thead>`;
+}
+
+function keywordMatrix(){
+  const all=S.kw;
+  if(all===null)return `<div class="pending"><b>Rank detail is unavailable.</b>
+    The per-keyword endpoint did not answer, so no positions are shown rather than a
+    placeholder.</div>`;
+  if(!all.length)return '<p class="exp">No tracked phrases in this period.</p>';
+
+  const q=String(S.kwFilter||'').trim().toLowerCase();
+  const rows=sortKeywords(q?all.filter(r=>String(r.phrase).toLowerCase().includes(q)):all);
+  const page1=all.filter(r=>r.best!=null&&r.best<=10);
+
+  return `<div class="tbar">
+      <input class="filt" id="kwq" type="search" placeholder="Filter phrases…"
+        value="${esc(S.kwFilter||'')}">
+      <span class="cnt">${n(rows.length)} of ${n(all.length)} phrases · ${
+        n(page1.length)} on page one</span>
+      <button class="xbtn" data-act="kw-xlsx"${page1.length?'':' disabled'}>
+        Export page-one phrases (.xlsx)</button>
+      <button class="xbtn" data-act="kw-all-xlsx">Export all (.xlsx)</button>
+    </div>
+    <div class="tw"><table class="matrix">${kwHead()}<tbody>
+    ${rows.map(r=>`<tr><td title="${esc(r.url||'')}">${esc(r.phrase)}</td>
+      ${ENG_ORDER.map(e=>`<td class="p">${posCell(r[e])}</td>`).join('')}
+    </tr>`).join('')}
+    </tbody></table></div>
+    <p class="exp" style="margin-top:11px">Position at the end of the reporting window.
+    <span class="pos t3">1–3</span> top three · <span class="pos p1">4–10</span> rest of page one
+    · <span class="pos p2">11–20</span> page two · — not in the top 100.
+    Click any column heading to sort; click again to reverse.</p>`;
+}
+
+function kwExportRows(onlyPage1){
+  const src=(S.kw||[]).filter(r=>onlyPage1?(r.best!=null&&r.best<=10):true);
+  const head=['Search phrase','Google','Bing','Google Mobile','Google Local',
+              'Best position','Engines on page one','Ranking URL'];
+  const body=sortKeywords(src).map(r=>[
+    r.phrase,
+    r.google==null?'Not in top 100':r.google,
+    r.bing==null?'Not in top 100':r.bing,
+    r.google_mobile==null?'Not in top 100':r.google_mobile,
+    r.google_local==null?'Not in top 100':r.google_local,
+    r.best==null?'':r.best,
+    r.p1.map(e=>ENGN[e]).join(', '),
+    r.url||'']);
+  return [head,...body];
+}
+
+/* ---------- Search tab ---------- */
 function search(d){
   const g=d.gsc||{};
   return `<section><p class="kick">Search Console</p><h2>Search performance</h2>
@@ -853,8 +1266,13 @@ function search(d){
   <div class="legend"><div class="lg"><span class="sw" style="background:var(--s1)"></span>Complete month</div>
     <div class="lg"><span class="sw" style="background:repeating-linear-gradient(135deg,var(--orange) 0 4px,transparent 4px 8px);border:1.5px solid var(--orange)"></span>Partial month — fewer days counted, not a decline</div></div>
   <h3>Top search terms</h3>${qTable(d.top_queries)}
-  <h3>Pages people land on</h3>${pTable(d.top_pages)}</section>`;
+  <h3>Pages people land on</h3>${pTable(d.top_pages)}</section>
+  <section><p class="kick">Rank Tracking</p><h2>Every phrase being targeted</h2>
+  <p class="exp">Each tracked phrase and where it sits on all four engines, from the rank
+  collector rather than Search Console.</p>
+  ${keywordMatrix()}</section>`;
 }
+
 function qTable(rows){
   if(!rows||!rows.length)return '<p class="exp">No query data in this period.</p>';
   return `<div class="tw"><table><thead><tr><th>Search term</th><th class="n">Clicks</th>
@@ -887,20 +1305,205 @@ function movement(d){
   </tbody></table></div></section>`;
 }
 
+/* ---------- Traffic tab ---------- */
+// dash_traffic is per day; the tab reports a period, so fold the days together.
+// Rates are session-weighted; counts are summed.
+function foldTraffic(daily){
+  const by=new Map();
+  for(const r of daily||[]){
+    const k=r.channel||'Unassigned';
+    let a=by.get(k);
+    if(!a){a={channel:k,sessions:0,users:0,new_users:0,_eng:0,_bnc:0,_d:0};by.set(k,a)}
+    const s=Number(r.sessions)||0;
+    a.sessions+=s; a.users+=Number(r.users)||0; a.new_users+=Number(r.new_users)||0;
+    if(r.engagement_rate!=null){a._eng+=Number(r.engagement_rate)*s}
+    if(r.bounce_rate!=null){a._bnc+=Number(r.bounce_rate)*s}
+    a._d+=s;
+  }
+  const out=[...by.values()];
+  for(const a of out){
+    a.engagement=a._d>0?a._eng/a._d*100:null;
+    a.bounce=a._d>0?a._bnc/a._d*100:null;
+  }
+  return out.sort((x,y)=>y.sessions-x.sessions);
+}
+
+// Risk bands come from the collector's own risk_score, which already weighs
+// country, session length, engagement and browser. Presented as an estimate,
+// because that is what it is — no analytics product can identify a bot for certain.
+function riskBand(v){
+  const r=Number(v)||0;
+  if(r>=50)return{k:'auto',label:'Almost certainly automated',col:'var(--c2)'};
+  if(r>=25)return{k:'susp',label:'Probably automated',col:'var(--c3)'};
+  return{k:'human',label:'Consistent with human visits',col:'var(--c7)'};
+}
+
+function botEstimate(){
+  const t=S.tech;
+  if(t===null)return `<div class="pending"><b>The automation estimate is unavailable.</b>
+    The technology endpoint did not answer, so no estimate is shown rather than a guess.</div>`;
+  if(!t||!t.length)return `<div class="pending"><b>Nothing to score yet.</b>
+    No country or device detail was returned for this period.</div>`;
+
+  const band={auto:0,susp:0,human:0};
+  let total=0;
+  for(const r of t){const s=Number(r.sessions)||0;band[riskBand(r.risk_score).k]+=s;total+=s}
+  if(!total)return '<p class="exp">No sessions to score in this period.</p>';
+  const w=v=>(100*v/total).toFixed(2)+'%';
+  const pc=v=>(100*v/total).toFixed(1)+'%';
+
+  const worst=[...t].sort((a,b)=>(Number(b.risk_score)||0)-(Number(a.risk_score)||0)
+    ||(Number(b.sessions)||0)-(Number(a.sessions)||0)).slice(0,12);
+
+  return `<div class="botbar" title="${n(band.auto)} almost certainly automated · ${
+      n(band.susp)} probably automated · ${n(band.human)} consistent with human">
+      <span style="width:${w(band.auto)};background:var(--c2)">${
+        band.auto/total>.1?`<em>${pc(band.auto)}</em>`:''}</span>
+      <span style="width:${w(band.susp)};background:var(--c3)">${
+        band.susp/total>.1?`<em>${pc(band.susp)}</em>`:''}</span>
+      <span style="width:${w(band.human)};background:var(--c7)">${
+        band.human/total>.1?`<em>${pc(band.human)}</em>`:''}</span>
+    </div>
+    <div class="legend" style="margin-top:0">
+      <div class="lg"><span class="sw" style="background:var(--c2)"></span>Almost certainly
+        automated — ${n(band.auto)} sessions (${pc(band.auto)})</div>
+      <div class="lg"><span class="sw" style="background:var(--c3)"></span>Probably automated —
+        ${n(band.susp)} (${pc(band.susp)})</div>
+      <div class="lg"><span class="sw" style="background:var(--c7)"></span>Consistent with human
+        visits — ${n(band.human)} (${pc(band.human)})</div>
+    </div>
+    <h3>Where the doubtful traffic comes from</h3>
+    <div class="tw"><table><thead><tr><th>Country</th><th>Device</th>
+      <th class="n">Sessions</th><th class="n">Avg time</th><th class="n">Engaged</th>
+      <th class="n">Risk</th><th>Why it was scored that way</th></tr></thead><tbody>
+    ${worst.map(r=>{const b=riskBand(r.risk_score);
+      return `<tr><td>${esc(r.country||'Unknown')}</td><td>${esc(r.device_category||'—')}</td>
+        <td class="n num">${n(r.sessions)}</td>
+        <td class="n num">${r.avg_secs==null?'—':Math.round(Number(r.avg_secs))+'s'}</td>
+        <td class="n num">${r.engaged_pct==null?'—':Number(r.engaged_pct).toFixed(0)+'%'}</td>
+        <td class="n"><span class="risk" style="color:${b.col}">${
+          r.risk_score==null?'—':r.risk_score}</span></td>
+        <td class="exp">${esc((r.signals||[]).join(' · '))||'—'}</td></tr>`}).join('')}
+    </tbody></table></div>
+    <p class="exp" style="margin-top:11px"><b>This is an estimate, not a measurement.</b>
+    Sessions are scored on the country they came from, how long they lasted, whether anything on
+    the page was engaged with, and the browser reported. A high score means the visit behaves
+    like automated traffic — it is not proof, and a real person on a slow connection can score
+    high. Treat it as a reason to look, not a number to report to a client as fact.</p>`;
+}
+
 function traffic(d){
-  const t=d.traffic||[];
-  const tot=t.reduce((a,c)=>({s:a.s+Number(c.sessions||0),u:a.u+Number(c.users||0),c:a.c+Number(c.conversions||0)}),{s:0,u:0,c:0});
+  const rows=S.trafficDaily?foldTraffic(S.trafficDaily):null;
+  const t=rows&&rows.length?rows:(d.traffic||[]);
+  const haveNew=!!(rows&&rows.some(r=>r.new_users>0));
+  const tot=t.reduce((a,c)=>({s:a.s+Number(c.sessions||0),u:a.u+Number(c.users||0),
+    nu:a.nu+Number(c.new_users||0),c:a.c+Number(c.conversions||0)}),{s:0,u:0,nu:0,c:0});
+
+  const table=t.length?`<div class="tw"><table><thead><tr><th>Channel</th>
+    <th class="n">Sessions</th><th class="n">Users</th>
+    ${haveNew?'<th class="n">First-time</th><th class="n">Returning</th>':''}
+    <th class="n">Engagement</th></tr></thead><tbody>
+    ${t.map(r=>{const u=Number(r.users)||0,nu=Number(r.new_users)||0;
+      return `<tr><td>${esc(r.channel)}</td><td class="n num">${n(r.sessions)}</td>
+      <td class="n num">${n(u)}</td>
+      ${haveNew?`<td class="n num">${n(nu)}</td>
+        <td class="n num">${n(Math.max(0,u-nu))}</td>`:''}
+      <td class="n num">${r.engagement==null?'—':Number(r.engagement).toFixed(1)+'%'}</td></tr>`
+    }).join('')}
+    <tr class="total"><td>Total</td><td class="n num">${n(tot.s)}</td>
+      <td class="n num">${n(tot.u)}</td>
+      ${haveNew?`<td class="n num">${n(tot.nu)}</td>
+        <td class="n num">${n(Math.max(0,tot.u-tot.nu))}</td>`:''}
+      <td class="n">—</td></tr></tbody></table></div>`
+   :'<p class="exp">No traffic data in this period.</p>';
+
+  const donuts=t.length?`<div class="dnuts" style="margin-top:15px">
+    ${donutCard('Total Users','Everyone who visited, by channel',
+       t.filter(r=>Number(r.users)>0).map(r=>({k:r.channel,v:Number(r.users)})))}
+    ${haveNew?donutCard('First-time Visitors','People arriving for the first time, by channel',
+       t.filter(r=>Number(r.new_users)>0).map(r=>({k:r.channel,v:Number(r.new_users)})))
+      :donutPending('First-time Visitors','People arriving for the first time, by channel',
+       'No first-time visitor counts were returned for this period.')}
+    </div>`:'';
+
   return `<section><p class="kick">Website Traffic</p><h2>Where visitors came from</h2>
-  <p class="exp">Engagement is the share of visits where someone stayed, scrolled or interacted.</p>
-  ${t.length?`<div class="tw"><table><thead><tr><th>Channel</th><th class="n">Sessions</th>
-    <th class="n">Users</th><th class="n">Engagement</th><th class="n">Conversions</th></tr></thead><tbody>
-    ${t.map(r=>`<tr><td>${esc(r.channel)}</td><td class="n num">${n(r.sessions)}</td>
-      <td class="n num">${n(r.users)}</td><td class="n num">${pct(r.engagement)}</td>
-      <td class="n num">${n(r.conversions)}</td></tr>`).join('')}
-    <tr class="total"><td>Total</td><td class="n num">${n(tot.s)}</td><td class="n num">${n(tot.u)}</td>
-      <td class="n">—</td><td class="n num">${n(tot.c)}</td></tr></tbody></table></div>`
-   :'<p class="exp">No traffic data in this period.</p>'}
-  <h3>Sessions by month</h3>${barChart(d.traffic_months,'sessions','month',r=>r.days<26)}</section>`;
+  <p class="exp">Engagement is the share of visits where someone stayed, scrolled or interacted.
+  ${haveNew?'First-time visitors are people GA4 had not seen before; returning is the remainder.':''}</p>
+  ${table}${donuts}
+  <h3>Sessions by month</h3>${barChart(d.traffic_months,'sessions','month',r=>r.days<26)}</section>
+  <section><p class="kick">Traffic Quality</p><h2>Human or automated — an estimate</h2>
+  <p class="exp">Not every session is a person. This scores each country and device combination
+  on how much its behaviour resembles automated traffic, so headline visit counts can be read
+  with that in mind.</p>
+  ${botEstimate()}</section>`;
+}
+
+/* ---------- AI Visibility: branded vs non-branded ---------- */
+// A branded prompt is someone already searching for the firm by name, so it
+// almost always cites them. Blending it into one headline rate flatters the
+// number; the discovery rate is the one that reflects winning new clients.
+function intentSplit(a){
+  const bi=a.by_intent||[];
+  const find=re=>bi.filter(x=>re.test(String(x.kind||'')))[0]||null;
+  let branded=find(/brand/i),discovery=find(/discover|non|unbrand/i);
+  if(!branded&&!discovery&&(a.prompts||[]).length){
+    // Fall back to the per-prompt flag if the RPC did not pre-aggregate.
+    const agg=flag=>{
+      const p=(a.prompts||[]).filter(x=>!!x.branded===flag);
+      if(!p.length)return null;
+      const ans=p.reduce((s,x)=>s+(Number(x.engines)||0),0);
+      const cit=p.reduce((s,x)=>s+(Number(x.cited)||0),0);
+      const men=p.reduce((s,x)=>s+(Number(x.mentioned)||0),0);
+      return{kind:flag?'Branded questions':'Discovery questions',answers:ans,
+        citation_rate:ans?100*cit/ans:null,mention_rate:ans?100*men/ans:null,
+        sov:p.reduce((s,x)=>s+(Number(x.sov)||0),0)/p.length};
+    };
+    branded=agg(true); discovery=agg(false);
+  }
+  return{branded,discovery};
+}
+
+/* ---------- Backlinks: value flags + disavow ---------- */
+// Toxicity decides toxic; among the rest, a strong referring domain is what
+// makes a link worth having. Both numbers come from the collector.
+function linkValue(r){
+  const tox=Number(r.toxicity)||0, rank=r.best_rank==null?null:Number(r.best_rank);
+  if(tox>=40)return{k:'tox',label:'Toxic'};
+  if(tox<20&&rank!=null&&rank>=50)return{k:'hi',label:'High value'};
+  return{k:'lo',label:'Low value'};
+}
+function disavowText(){
+  const tox=(S.toxic||[]).filter(r=>linkValue(r).k==='tox');
+  const c=cliRow();
+  const head=['# Google Disavow file',
+    `# ${c.name||''}${c.domain?' · '+c.domain:''}`,
+    `# Generated ${iso(new Date())} from the AIM analytics dashboard`,
+    `# ${tox.length} domain${tox.length===1?'':'s'} scoring 40 or above on the toxicity rubric`,
+    '# Review every line before submitting. A disavow filed in error can cost rankings.',''];
+  return head.concat(tox.map(r=>'domain:'+String(r.source_domain||'').trim())).join('\n')+'\n';
+}
+
+/* ---------- Readiness trend ---------- */
+function readinessTrend(type){
+  const h=(S.auditHist||{})[type]||[];
+  if(h.length<2)return `<p class="exp" style="margin-top:10px">${
+    h.length===1?'Only one run recorded so far — the trend appears once this audit is re-run.'
+                :'No run history recorded yet.'}</p>`;
+  const pts=h.map(r=>({d:r.run_date,v:Number(r.overall_score)||0,g:r.grade}));
+  const max=Math.max(...pts.map(p=>p.v),100);
+  const first=pts[0].v,last=pts[pts.length-1].v,delta=last-first;
+  return `<h3 style="margin-top:16px">Score over time</h3>
+    <div class="trend">${pts.map(p=>`<div class="tb" title="${esc(p.d)} — ${
+      p.v} (${esc(p.g||'')})">
+      <span class="tv" style="color:${bandColor(p.v)}">${Math.round(p.v)}</span>
+      <span class="tf" style="height:${Math.max(3,100*p.v/max)}%;background:${
+        bandColor(p.v)}"></span></div>`).join('')}</div>
+    <div class="trendx">${pts.map(p=>`<span>${esc(String(p.d).slice(5))}</span>`).join('')}</div>
+    <p class="exp" style="margin-top:9px">${
+      delta>0?`Up <b>${delta.toFixed(1)}</b> points since ${esc(pts[0].d)}.`
+      :delta<0?`Down <b>${Math.abs(delta).toFixed(1)}</b> points since ${esc(pts[0].d)}.`
+      :`Unchanged since ${esc(pts[0].d)}.`} Each bar is one audit run — the score moves when the
+      site changes and the audit is run again.</p>`;
 }
 
 function ai(d){
@@ -931,16 +1534,26 @@ function ai(d){
     = ${n(a.results)} answers analysed${a.failures?` · ${n(a.failures)} failed`:''}</p>
   </div></div>`;
 
+  // Branded questions almost always cite the firm, so a blended rate flatters the
+  // number. The non-branded figures lead; the blended pair is kept below, labelled.
+  const sp=intentSplit(a);
+  const dis=sp.discovery,brd=sp.branded;
   const tiles=`<div class="stats">
-    ${stat(r1(now.citation_rate),'%','Citation rate',
-      'Answers citing a brand-owned domain')}
-    ${stat(r1(now.mention_rate),'%','Mention rate',
-      'Answers naming the brand at all')}
-    ${stat(r1(now.sov),'%','Share of voice',
-      'Brand mentions vs all tracked brands')}
-    ${stat(r1(now.primary_rate),'%','Primary-domain rate',
-      'Answers citing the main site specifically')}
-  </div>`;
+    ${stat(r1(dis?dis.citation_rate:null),'%','Citation rate — non-branded',
+      'Questions that never name the firm'+(dis?` · ${n(dis.answers)} answers`:''))}
+    ${stat(r1(dis?dis.mention_rate:null),'%','Mention rate — non-branded',
+      'Answers naming the firm when the question did not')}
+    ${stat(r1(dis?dis.sov:null),'%','Share of voice — non-branded',
+      'Mentions against every tracked competitor')}
+    ${stat(r1(brd?brd.citation_rate:null),'%','Citation rate — branded',
+      'Asked about by name'+(brd?` · ${n(brd.answers)} answers`:'')+
+      ' — reported apart, not blended in')}
+  </div>
+  <div class="callout"><b>Why these are split.</b> A branded question is someone who has already
+  found the firm and is asking about it by name; AI nearly always cites them back. Blending that
+  into one number inflates it. The non-branded rates are the ones that show whether AI recommends
+  this firm to someone who has never heard of it. Blended across every question, citation runs
+  ${r1(now.citation_rate)}% and mention ${r1(now.mention_rate)}%.</div>`;
 
   const sent=a.sentiment||{};
   const comp=a.competitors||[];
@@ -1057,7 +1670,15 @@ function forms(f){
       </tbody></table></div>`;
   }
   const subs=f.submissions||[];
-  html+=`<h3>Every submission received</h3>`;
+  html+=`<h3>Every submission received</h3>
+    <div class="tbar"><button class="xbtn" data-act="forms-xlsx"${subs.length?'':' disabled'}>
+      Export submissions (.xlsx)</button>
+      <span class="cnt">${n(subs.length)} in this period</span></div>
+    <div class="pending" style="border-color:var(--orange);margin-bottom:12px">
+      <b>Read the badges with care.</b> Submissions are currently sorted by a fixed rule at
+      collection time, not by the reading the Form Report skill gives them, and the rule does not
+      weigh the message body. Some items badged as a valid lead are solicitations. The export
+      below carries the full message text for every submission so it can be checked.</div>`;
   if(!subs.length)html+='<p class="exp">No submissions in this period.</p>';
   else html+=subs.map(s=>{
     const flds=s.fields?Object.entries(s.fields).map(([k,v])=>`<div><b>${esc(k)}:</b> ${esc(v)}</div>`).join(''):'';
@@ -1176,6 +1797,7 @@ function readiness(d){
         <div>${rows||'<p class="exp">No category detail recorded for this run.</p>'}</div>
       </div>
       ${a.summary?`<p class="exp">${esc(a.summary)}</p>`:''}
+      ${readinessTrend(a.audit_type)}
     </div>`;
   }).join('');
 
@@ -1215,16 +1837,36 @@ function backlinks(d){
       ${tile('Severe',bands.severe,'80+')}
     </div>`:'';
 
-  const table=tox.length?`<h3>Highest-risk referring domains</h3>
-    <div class="tw"><table><thead><tr><th>Domain</th><th class="n">Toxicity</th>
-      <th class="n">Links</th><th>Why it was flagged</th><th>Status</th></tr></thead><tbody>
-    ${tox.slice(0,40).map(r=>{const[lab,col]=toxBand(r.toxicity);
+  const vc={hi:0,lo:0,tox:0};
+  tox.forEach(r=>{vc[linkValue(r).k]++});
+  const table=tox.length?`<h3>Referring domains by value</h3>
+    <div class="tiles">
+      ${tile('High value',vc.hi,'clean, and from a strong domain')}
+      ${tile('Low value',vc.lo,'safe, but carrying little authority')}
+      ${tile('Toxic',vc.tox,'scoring 40+ — disavow candidates')}
+    </div>
+    <div class="tbar">
+      <button class="xbtn" data-act="disavow"${vc.tox?'':' disabled'}>
+        Export toxic links for Google Disavow (.txt)</button>
+      <button class="xbtn" data-act="links-xlsx">Export all scored domains (.xlsx)</button>
+      <span class="cnt">${n(tox.length)} domains scored</span>
+    </div>
+    <div class="tw"><table><thead><tr><th>Domain</th><th>Value</th><th class="n">Toxicity</th>
+      <th class="n">Domain rank</th><th class="n">Links</th><th>Why it was flagged</th>
+      <th>Status</th></tr></thead><tbody>
+    ${tox.slice(0,60).map(r=>{const[lab,col]=toxBand(r.toxicity),v=linkValue(r);
       return `<tr><td>${esc(r.source_domain)}</td>
+      <td><span class="vflag ${v.k}">${v.label}</span></td>
       <td class="n num" style="color:${col};font-weight:600">${Number(r.toxicity||0).toFixed(0)}</td>
+      <td class="n num">${r.best_rank==null?'—':r.best_rank}</td>
       <td class="n num">${n(r.link_count)}</td>
       <td class="exp">${esc((r.reasons||[]).join(' · '))||'—'}</td>
       <td>${esc(r.disavow_status||'none')}</td></tr>`}).join('')}
-    </tbody></table></div>`:'';
+    </tbody></table></div>
+    <p class="exp" style="margin-top:11px"><b>High value</b> scores under 20 on the toxicity
+    rubric and comes from a domain ranked 50 or above. <b>Toxic</b> is 40 or above and is what
+    the disavow export contains. Everything else is <b>low value</b> — not harmful, just not
+    doing much for the site.</p>`:'';
 
   const disavow=`<h3>Disavow</h3>
     <p class="exp">${flagged.length
@@ -1253,6 +1895,67 @@ function render(){
     forms:()=>forms(f),backlinks:()=>backlinks(d)}[S.tab];
   $('body').innerHTML=v?v():'';
   const g=$('gensum'); if(g)g.onclick=genSummary;
+  bindTab();
+}
+
+// Rendered markup is a string, so handlers are attached after each render rather
+// than inlined — keeps the templates free of javascript: and onclick payloads.
+function bindTab(){
+  const body=$('body');
+  (body.querySelectorAll('th[data-sort]')||[]).forEach(th=>th.onclick=()=>{
+    const col=th.dataset.sort, cur=S.kwSort||{col:'best',dir:1};
+    // First click on a new column sorts the way that column is usually read:
+    // phrases A-Z, positions best-first.
+    S.kwSort=cur.col===col?{col,dir:-cur.dir}:{col,dir:1};
+    render();
+  });
+  const q=body.querySelector?body.querySelector('#kwq'):null;
+  if(q){
+    q.oninput=()=>{S.kwFilter=q.value;};
+    // Re-render on a pause rather than on every keystroke, so 300 rows do not
+    // redraw mid-word and steal the caret.
+    let t=null;
+    q.oninput=()=>{S.kwFilter=q.value; clearTimeout(t);
+      t=setTimeout(()=>{render();const el=$('kwq');
+        if(el&&el.focus){el.focus();if(el.setSelectionRange)
+          el.setSelectionRange(el.value.length,el.value.length)}},260)};
+  }
+  (body.querySelectorAll('[data-act]')||[]).forEach(b=>b.onclick=()=>doAct(b.dataset.act));
+}
+
+function doAct(act){
+  const c=cliRow(), base=`${slug(c.name)}-${S.from}-to-${S.to}`;
+  if(act==='pdf'){ window.print(); return }
+  if(act==='kw-xlsx'){
+    saveXlsx(kwExportRows(true),'Page one phrases',`${base}-page-one-phrases.xlsx`); return }
+  if(act==='kw-all-xlsx'){
+    saveXlsx(kwExportRows(false),'Tracked phrases',`${base}-tracked-phrases.xlsx`); return }
+  if(act==='disavow'){ saveText(disavowText(),`${base}-disavow.txt`); return }
+  if(act==='links-xlsx'){
+    const rows=[['Referring domain','Value','Toxicity','Domain rank','Links',
+                 'Why it was flagged','Disavow status']].concat(
+      (S.toxic||[]).map(r=>[r.source_domain,linkValue(r).label,
+        r.toxicity==null?'':Number(r.toxicity),r.best_rank==null?'':Number(r.best_rank),
+        Number(r.link_count)||0,(r.reasons||[]).join(' · '),r.disavow_status||'none']));
+    saveXlsx(rows,'Referring domains',`${base}-referring-domains.xlsx`); return }
+  if(act==='forms-xlsx'){
+    const subs=(S.forms||{}).submissions||[];
+    // Field names vary per form, so the sheet gets one column per field actually
+    // present, plus the whole payload verbatim so nothing is lost in flattening.
+    const keys=[];
+    subs.forEach(s=>Object.keys(s.fields||{}).forEach(k=>{if(keys.indexOf(k)<0)keys.push(k)}));
+    const head=['Received','Form','Name','Email','Phone','Classification','Why',
+                'Confidence','Delivered'].concat(keys).concat(['All fields']);
+    const rows=[head].concat(subs.map(s=>{
+      const f=s.fields||{};
+      return [String(s.ts||'').replace('T',' ').slice(0,19),s.form||'',s.name||'',
+        s.email||'',s.phone||'',String(s.class||'').replace(/_/g,' '),s.why||'',
+        s.confidence==null?'':Number(s.confidence),
+        s.delivered===false?'no':s.delivered===true?'yes':'']
+        .concat(keys.map(k=>f[k]==null?'':String(f[k])))
+        .concat([Object.entries(f).map(([k,v])=>k+': '+v).join('\n')]);
+    }));
+    saveXlsx(rows,'Form submissions',`${base}-form-submissions.xlsx`); return }
 }
 
 /* ---------- boot ---------- */
