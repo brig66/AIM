@@ -449,7 +449,7 @@ const S={toxic:[],aiFull:null,audits:[],auditCats:{},clients:[],client:null,tab:
   trafficDaily:null,tech:null,kw:null,kwSort:{col:'best',dir:1},kwFilter:'',auditHist:{},
   role:'admin',prompts:null,promptBusy:null,promptErr:'',
   cAdmin:null,cEdit:null,cKw:null,cNew:false,cBusy:null,cErr:'',cFilter:'',
-  cRecent:null,cLoc:''};
+  cRecent:null,cLoc:'',reclass:null,reclassBusy:null,reclassErr:''};
 
 const TABS=[['overview','Overview'],['search','Search'],['rankings','Rankings'],['movement','Movement'],
             ['traffic','Traffic'],['ai','AI Visibility'],['readiness','AI Readiness'],
@@ -1604,6 +1604,92 @@ function traffic(d){
   ${botEstimate()}</section>`:''}`;
 }
 
+/* ---------- form reclassification (AIM only) ----------
+   The rule that runs at ingest promotes anything with contact details and three
+   or more fields to a valid lead, which is how vendor pitches reached client
+   reports. This asks a model to read the message instead.
+
+   Preview before apply, always: these numbers may already have been quoted to a
+   client, so the change is shown as a list of moves before anything is written. */
+
+const CLASS_LABEL={valid_lead:'Valid lead',needs_review:'Needs review',
+  needs_attention:'Needs attention',suspicious:'Suspicious',spam:'Spam',
+  test_submission:'Test submission'};
+const CLASS_BADGE={valid_lead:'good',needs_review:'info',needs_attention:'warn',
+  suspicious:'warn',spam:'warn',test_submission:'info'};
+
+function reclassPanel(){
+  if(!isAdmin())return '';
+  const r=S.reclass;
+  const busy=S.reclassBusy;
+
+  const moves=r&&r.changes?r.changes.filter(c=>c.to&&c.from!==c.to):[];
+  const same=r&&r.changes?r.changes.filter(c=>c.to&&c.from===c.to).length:0;
+  const errs=r&&r.changes?r.changes.filter(c=>c.error):[];
+
+  return `<section><h3>Re-read these submissions${intBadge}</h3>
+    <p class="intnote">Working material. Clients never see this control.</p>
+    <p class="exp">Submissions are sorted at collection time by a fixed rule that
+    counts fields rather than reading them — anything with contact details and three
+    filled boxes becomes a valid lead. This re-reads the actual message and sorts it
+    the way the Form Report skill would: a genuine customer enquiry, a vendor pitch,
+    a scam pattern, or something a person should look at.</p>
+    <div class="tbar">
+      <button class="xbtn" data-act="reclass-preview" ${busy?'disabled':''}>${
+        busy==='preview'?'Reading…':'Preview changes'}</button>
+      <button class="xbtn" data-act="reclass-apply"
+        ${busy||!moves.length?'disabled':''}>${
+        busy==='apply'?'Applying…':`Apply${moves.length?` ${n(moves.length)} change${
+          moves.length===1?'':'s'}`:''}`}</button>
+      <span class="cnt">${r?`${n(r.considered||0)} read${
+        r.remaining?` · ${n(r.remaining)} still to do`:''}`:'nothing read yet'}</span>
+    </div>
+    <div class="cerr">${esc(S.reclassErr||'')}</div>
+    ${busy==='preview'?`<div class="pending"><b>Reading the messages…</b>
+      Each one is read in full, so this takes a moment. Nothing is changed until you
+      press Apply.</div>`:''}
+    ${r&&!busy?(moves.length?`
+      <div class="plist">${moves.slice(0,60).map(c=>`<div class="prow">
+        <div><div class="ptxt">${esc(c.why||'')}</div>
+          <div class="pmeta">submission ${esc(String(c.id))} · confidence ${
+            c.confidence==null?'—':Number(c.confidence).toFixed(2)}</div></div>
+        <span class="badge ${CLASS_BADGE[c.from]||'info'}">${
+          esc(CLASS_LABEL[c.from]||c.from||'—')}</span>
+        <span class="badge ${CLASS_BADGE[c.to]||'info'}">→ ${
+          esc(CLASS_LABEL[c.to]||c.to)}</span>
+      </div>`).join('')}</div>
+      ${moves.length>60?`<p class="exp">Showing the first 60 of ${n(moves.length)}.</p>`:''}
+      <p class="exp">${n(moves.length)} would change, ${n(same)} would stay as ${
+        'they are'}.${errs.length?` ${n(errs.length)} could not be read.`:''}
+        ${r.dry_run?'Nothing has been written yet.':'These have been applied.'}</p>`
+     :`<p class="exp">Nothing to change — every submission read came back with the
+        classification it already had.${errs.length?` ${n(errs.length)} could not be
+        read.`:''}</p>`):''}
+    <p class="exp">Submissions the relay confirmed without retaining their content are
+    never touched: there is no message to read, so they keep saying so rather than being
+    guessed at. A submission you have marked yourself is never overwritten.</p>
+    </section>`;
+}
+
+async function doReclass(act){
+  const dry=act==='reclass-preview';
+  S.reclassErr=''; S.reclassBusy=dry?'preview':'apply'; render();
+  try{
+    const r=await apiPost('/api/forms_reclassify',
+      {limit:200,dry_run:dry,client:S.client});
+    if(r&&r.error)throw new Error(r.detail||r.error);
+    S.reclass=r;
+    if(!dry){
+      // The tab's counts come from the report bundle, so re-read it after a write.
+      const q=`?client=${S.client}&from=${S.from}&to=${S.to}&limit=200`;
+      try{ S.forms=await api('/api/forms'+q); S.data=S.forms.report||S.data; }catch(_e){}
+    }
+  }catch(e){
+    if(e.message!=='unauthorized')S.reclassErr=e.message;
+  }
+  S.reclassBusy=null; render();
+}
+
 /* ---------- Clients tab (AIM only) ----------
    Adding a client, filling in the two connection properties the collectors read,
    and pasting the phrase list. Every write goes through the admin-gated API; the
@@ -2159,11 +2245,10 @@ function forms(f){
     <div class="tbar"><button class="xbtn" data-act="forms-xlsx"${subs.length?'':' disabled'}>
       Export submissions (.xlsx)</button>
       <span class="cnt">${n(subs.length)} in this period</span></div>
-    <div class="pending" style="border-color:var(--orange);margin-bottom:12px">
-      <b>Read the badges with care.</b> Submissions are currently sorted by a fixed rule at
-      collection time, not by the reading the Form Report skill gives them, and the rule does not
-      weigh the message body. Some items badged as a valid lead are solicitations. The export
-      below carries the full message text for every submission so it can be checked.</div>`;
+    ${isAdmin()?'':`<div class="pending" style="margin-bottom:12px">
+      <b>How these are sorted.</b> Every submission is read and sorted into a genuine
+      enquiry, a vendor approach, or something worth a second look. The export carries
+      the full message text so any of it can be checked.</div>`}`;
   if(!subs.length)html+='<p class="exp">No submissions in this period.</p>';
   else html+=subs.map(s=>{
     const flds=s.fields?Object.entries(s.fields).map(([k,v])=>`<div><b>${esc(k)}:</b> ${esc(v)}</div>`).join(''):'';
@@ -2178,7 +2263,7 @@ function forms(f){
     Detailed message content is available for ${n(cov.days_full)} day${cov.days_full==1?'':'s'} in this
     window. ${n(cov.days_counts)} day${cov.days_counts==1?'':'s'} are counted but their content was not
     retained.</p>`;
-  return html+'</section>';
+  return html+'</section>'+reclassPanel();
 }
 
 function toxBand(t){
@@ -2426,6 +2511,7 @@ function doAct(act){
   if(act.indexOf('prompt-')===0){ doPromptAct(act); return }
   if(act.indexOf('client-')===0||act.indexOf('kw-add')===0
      ||act.indexOf('kw-remove')===0){ doClientAct(act); return }
+  if(act.indexOf('reclass-')===0){ doReclass(act); return }
   const c=cliRow(), base=`${slug(c.name)}-${S.from}-to-${S.to}`;
   if(act==='pdf'){ window.print(); return }
   if(act==='kw-xlsx'){

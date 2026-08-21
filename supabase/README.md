@@ -90,3 +90,66 @@ Prompts live in `ai_prompts`, joined to a client through `ai_prompt_sets`
 (342 prompts across 32 sets). `dash_prompts` returns each with its collected
 answer count and a `branded` flag computed from the set's brand aliases on word
 boundaries — the same rule the tracker skill applies.
+
+## Form classification
+
+`forms-classify-edge-function.ts` is the deployed source of `forms-classify`.
+
+### What was wrong
+
+Classification happened in `forms_classify()`, a Postgres rule called from
+`forms_ingest`. Its final branch was:
+
+```
+if contactable and (substantive or nfields >= 3) then valid_lead, confidence 0.8
+```
+
+`nfields >= 3` alone is enough. Any form with an email and three filled boxes
+became a valid lead regardless of what the message said, and the spam keyword
+list matched 1 of the 195 rows classified that way. That is how vendor pitches
+reached client reports as leads.
+
+### What replaced it
+
+The rule still runs at ingest as a first pass. `forms-classify` then re-reads
+the message with a model, using the taxonomy from the Form Submission Report
+skill: valid_lead, needs_review, needs_attention, suspicious, spam,
+test_submission.
+
+The prompt turns on one distinction — is the sender trying to **buy** from this
+business or **sell** to it — and is given the client's name and domain so it can
+tell a customer from a supplier. Contact details never make a lead.
+
+Three things it will not do:
+
+- **Rows with no retained content are never touched.** 482 of 781 submissions
+  were confirmed by the relay without a body. They keep saying so rather than
+  being guessed at.
+- **A human ruling always wins.** `human_reviewed` rows are excluded from the
+  select and the update carries the same predicate, so a decision made mid-run
+  is not overwritten.
+- **Nothing is written without a preview.** `dry_run` returns the full list of
+  proposed moves and changes nothing. The dashboard's Forms tab previews first
+  and only enables Apply once there is something to apply.
+
+It reads every key *and* value, not just a field called "message". The email
+parser sometimes splits a prose body across many keys, so the text that matters
+can end up as a key — reading the whole payload makes classification immune to
+how well the body happened to parse.
+
+`classified_by` records which pass decided: `rule` or `llm`.
+
+### Triggering it
+
+`POST /api/forms_reclassify` on the dashboard function, admin only. It reads the
+collector token from `internal_config` and calls `forms-classify` server to
+server, so the browser never holds that credential.
+
+### Still to do
+
+- **The parser shreds some bodies.** 28 rows have prose split into fake keys,
+  because `parseBody` falls back to pairing consecutive lines when it finds
+  fewer than two `Label: Value` matches. Classification is unaffected — it reads
+  keys as well as values — but those rows display badly.
+- **No scheduled run.** New submissions get the rule at ingest and keep it until
+  someone presses the button. It should run automatically after each collection.

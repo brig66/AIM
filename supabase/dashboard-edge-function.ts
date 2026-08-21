@@ -284,6 +284,30 @@ Deno.serve(async (req: Request) => {
   const q = url.searchParams;
 
   try {
+    // Reclassifying form submissions runs in its own function under the
+    // collector credential. The browser must never hold that token, so it is
+    // read here and the call is made server to server.
+    if (path === "/api/forms_reclassify") {
+      if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+      if (role !== "admin") return json({ error: "forbidden", need: "admin" }, 403);
+      let body: any = {};
+      try { body = await req.json(); } catch { /* defaults */ }
+      const { data: tok } = await db.from("internal_config").select("value")
+        .eq("key", "collector_token").single();
+      if (!tok?.value) return json({ error: "collector_token_missing" }, 500);
+      const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/forms-classify`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-collector-token": tok.value },
+        body: JSON.stringify({
+          limit: Math.min(Math.max(Number(body.limit ?? 40), 1), 200),
+          dry_run: body.dry_run === true,
+          client: body.client ? Number(body.client) : undefined,
+        }),
+      });
+      const out = await r.json().catch(() => ({ error: "classifier_returned_no_json" }));
+      return json(out, r.ok ? 200 : 502);
+    }
+
     // ---- writes: admin only -------------------------------------------------
     const w = WRITES[path];
     if (w) {
