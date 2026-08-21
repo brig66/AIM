@@ -401,6 +401,7 @@ th[data-sort].on .ar{opacity:1}
 .cfull{margin-bottom:12px}
 .crh{font-size:12.5px;font-weight:600;color:var(--secondary);margin:14px 0 7px}
 .cerr{font-size:12.5px;color:var(--magenta);min-height:16px;margin:9px 0}
+.cok{font-size:12.5px;color:var(--good);min-height:0;margin:0 0 9px;font-weight:600}
 @media(max-width:640px){.crow{grid-template-columns:1fr}.cgrid{grid-template-columns:1fr}}
 </style></head><body>
 
@@ -449,7 +450,8 @@ const S={toxic:[],aiFull:null,audits:[],auditCats:{},clients:[],client:null,tab:
   trafficDaily:null,tech:null,kw:null,kwSort:{col:'best',dir:1},kwFilter:'',auditHist:{},
   role:'admin',prompts:null,promptBusy:null,promptErr:'',
   cAdmin:null,cEdit:null,cKw:null,cNew:false,cBusy:null,cErr:'',cFilter:'',
-  cRecent:null,cLoc:'',reclass:null,reclassBusy:null,reclassErr:''};
+  cRecent:null,cLoc:'',cDraft:null,cNewDraft:null,cMsg:'',
+  reclass:null,reclassBusy:null,reclassErr:''};
 
 const TABS=[['overview','Overview'],['search','Search'],['rankings','Rankings'],['movement','Movement'],
             ['traffic','Traffic'],['ai','AI Visibility'],['readiness','AI Readiness'],
@@ -1729,23 +1731,27 @@ function cAdminRow(c){
 
 function cEditForm(c){
   const busy=S.cBusy?'disabled':'';
+  // While a save is in flight the record still holds the old values, so the
+  // form reads from the draft to avoid appearing to discard what was typed.
+  const d=(S.cDraft&&S.cDraft.id===c.id)?S.cDraft.patch:null;
+  const fv=(k,fallback)=>esc((d&&d[k]!=null?d[k]:fallback)||'');
   return `<div class="cform">
     <div class="cgrid">
-      <label>Client name<input id="ce-name" value="${esc(c.name||'')}" ${busy}></label>
-      <label>Domain<input id="ce-domain" value="${esc(c.domain||'')}"
+      <label>Client name<input id="ce-name" value="${fv('name',c.name)}" ${busy}></label>
+      <label>Domain<input id="ce-domain" value="${fv('domain',c.domain)}"
         placeholder="example.com" ${busy}></label>
       <label>GA4 property ID
-        <input id="ce-ga4" value="${esc(c.ga4_property_id||'')}"
+        <input id="ce-ga4" value="${fv('ga4_property_id',c.ga4_property_id)}"
           placeholder="312345678" ${busy}>
         <span class="chelp">GA4 → Admin → Property Settings. Digits only; pasting
           "properties/312345678" is fine.</span></label>
       <label>Search Console property
-        <input id="ce-gsc" value="${esc(c.gsc_site_url||'')}"
+        <input id="ce-gsc" value="${fv('gsc_site_url',c.gsc_site_url)}"
           placeholder="sc-domain:example.com" ${busy}>
         <span class="chelp">Copy it exactly as Search Console shows it — either
           sc-domain:example.com or https://example.com/</span></label>
       <label>Google Business Profile location ID
-        <input id="ce-gbp" value="${esc(c.gbp_location_id||'')}"
+        <input id="ce-gbp" value="${fv('gbp_location_id',c.gbp_location_id)}"
           placeholder="not connected yet" ${busy}>
         <span class="chelp">Optional. Nothing reads this until the GBP collector
           is built.</span></label>
@@ -1833,9 +1839,9 @@ function clientsTab(){
     ${S.cNew?`<div class="cform">
       <div class="cgrid">
         <label>Client name<input id="cn-name" placeholder="Mercury Chophouse"
-          ${S.cBusy?'disabled':''}></label>
+          value="${esc((S.cNewDraft||{}).name||'')}" ${S.cBusy?'disabled':''}></label>
         <label>Domain<input id="cn-domain" placeholder="mercurychophouse.com"
-          ${S.cBusy?'disabled':''}></label>
+          value="${esc((S.cNewDraft||{}).domain||'')}" ${S.cBusy?'disabled':''}></label>
         <label>Market scope<select id="cn-scope" class="pick" ${S.cBusy?'disabled':''}>${
           SCOPES.map(s=>`<option value="${s}"${s==='local'?' selected':''}>${s}</option>`).join('')
         }</select></label>
@@ -1845,6 +1851,7 @@ function clientsTab(){
         <span class="cnt">GA4 and Search Console come next, on the client's Edit panel</span></div>
     </div>`:''}
     <div class="cerr">${esc(S.cErr||'')}</div>
+    <div class="cok">${esc(S.cMsg||'')}</div>
     <div class="clist">${rows.map(cAdminRow).join('')||
       '<p class="exp">No clients match that filter.</p>'}</div>
     </section>`;
@@ -1853,10 +1860,12 @@ function clientsTab(){
 /* ---- actions ---- */
 async function doClientAct(act){
   const [kind,id,extra]=act.split(':');
-  S.cErr='';
+  S.cErr=''; S.cMsg='';
   const val=i=>{const el=$(i);return el&&el.value!=null?String(el.value).trim():''};
   try{
-    if(kind==='client-new'){S.cNew=!S.cNew;render();return}
+    if(kind==='client-new'){S.cNew=!S.cNew;
+      if(!S.cNew)S.cNewDraft=null;
+      render();return}
     if(kind==='client-edit'){
       S.cEdit=S.cEdit===Number(id)?null:Number(id); S.cKw=null; render(); return}
     if(kind==='client-kw'){
@@ -1871,24 +1880,36 @@ async function doClientAct(act){
       return}
 
     if(kind==='client-create'){
-      const name=val('cn-name'),domain=val('cn-domain');
+      const name=val('cn-name'),domain=val('cn-domain'),scope=val('cn-scope')||'local';
       if(!name||!domain){S.cErr='A name and a domain are both needed.';render();return}
+      // Held across the re-render, so a refused create does not make the name
+      // and domain be retyped.
+      S.cNewDraft={name,domain,scope};
       S.cBusy='new'; render();
-      const r=await apiPost('/api/client_add',
-        {name,domain,market_scope:val('cn-scope')||'local'});
-      S.cNew=false;
+      const r=await apiPost('/api/client_add',{name,domain,market_scope:scope});
+      S.cNew=false; S.cNewDraft=null; S.cMsg='Client created.';
       // Open the new client straight into its edit panel: it is not collecting
       // anything until GA4 and Search Console are filled in.
       const made=(r.result&&r.result[0])||null;
       if(made&&made.new_id)S.cEdit=Number(made.new_id);
     }else if(kind==='client-save'){
-      S.cBusy='save'; render();
-      await apiPost('/api/client_update',{id:Number(id),patch:{
+      // Read every field BEFORE anything re-renders. render() replaces the
+      // tab's markup, which destroys these inputs and rebuilds them from the
+      // stored record — reading after that sends back what was already saved
+      // rather than what was typed, which silently wrote nulls.
+      const patch={
         name:val('ce-name'),domain:val('ce-domain'),
         ga4_property_id:val('ce-ga4')||null,
         gsc_site_url:val('ce-gsc')||null,
         gbp_location_id:val('ce-gbp')||null,
-        market_scope:val('ce-scope')||'local'}});
+        market_scope:val('ce-scope')||'local'};
+      // Held so the busy re-render shows what was typed instead of blanking it.
+      S.cDraft={id:Number(id),patch};
+      S.cBusy='save'; render();
+      await apiPost('/api/client_update',{id:Number(id),patch});
+      // The reloaded list below is now the truth, so the draft is done with.
+      S.cDraft=null;
+      S.cMsg='Saved.';
     }else if(kind==='client-active'){
       S.cBusy='save'; render();
       await apiPost('/api/client_update',{id:Number(id),patch:{active:extra==='1'}});
@@ -1916,6 +1937,7 @@ async function doClientAct(act){
     }
   }catch(e){
     if(e.message!=='unauthorized')S.cErr=e.message;
+    S.cMsg='';   // the draft is deliberately kept, so a retry still has the values
   }
   S.cBusy=null;
   // The client list carries the readiness flags, so it is re-read after any write.
