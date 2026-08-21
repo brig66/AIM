@@ -1,117 +1,121 @@
 # Overview tab rebuild — backend findings
 
-Notes captured while preparing the Overview tab rebuild for `index.html`
-(the dashboard at analytics.aim-tex.com).
+Notes for `index.html`, the dashboard at analytics.aim-tex.com.
 
 **This repo is public.** Everything below is structural — API routes, function
 names and JSON field names. No client figures are recorded here. Real payloads
 are reproducible in one call each (see "Reproducing payloads").
 
-## Status: blocked on the source file
+## Status
 
-`index.html` is not in this repo and was not reachable from the session that
-wrote these notes:
+The Overview tab has been rebuilt and `index.html` is now committed to this
+repo. The earlier blocker — the file was not in the repo and
+`analytics.aim-tex.com` was refused by the environment's egress policy — is
+resolved: the environment now allows that host, so the live file was fetched,
+rebuilt and committed.
 
-- The repo was empty — zero commits, zero branches.
-- `analytics.aim-tex.com` was denied by the cloud environment's egress policy
-  (403 on CONNECT). The environment was set to **Trusted** network access,
-  which allows only package registries, GitHub and cloud SDKs.
+Two backend items are still outstanding. The front end is written to handle
+both, and to light up on its own once either lands:
 
-To let a session fetch the live file, set the environment's **Network access**
-to **Custom** and add `analytics.aim-tex.com` to **Allowed domains** (tick
-"Also include default list of common package managers"). Network policy is read
-once at session start, so this only takes effect in a **new** session.
+1. **`/api/summary` is not in `ROUTES`.** `dash_summary(p_client, p_from, p_to)`
+   exists in the database but the `dashboard` edge function (version 19) has no
+   route to it, so the page cannot reach it. One line adds it:
 
-The Supabase MCP connector is unaffected by that policy — MCP traffic does not
-go through the session allowlist — which is why the findings below were
-obtainable anyway.
+   ```ts
+   "/api/summary": { fn: "dash_summary", args: ["client", "from", "to"] },
+   ```
 
-## Edge function
+   Until then the page's summary read 404s, which it treats as "nothing cached"
+   and falls through to the Generate button — not as an error.
 
-`dashboard` edge function, version 19. Auth is unchanged: `POST /login` returns
-`{token, expires}`; `/api/*` requires the token in the `x-aim-session` header.
+2. **`ask` does not cache its own output.** `POST /ask` with
+   `{"mode":"report", ...}` returns a report but never writes to
+   `report_summaries`, so only the hand-seeded row (Exceptional HR,
+   2026-07-22 → 2026-08-20) has a stored summary. The page says so explicitly:
+   a summary generated in the browser is labelled as unstored.
 
-`ROUTES` maps each API path to one `dash_*` RPC. The map is an allowlist by
-design — do not replace it with a name-prefix rule, because `dash_set_password`
-is also a `dash_` function.
+`ROUTES` is an allowlist by design — do not replace it with a name-prefix rule,
+because `dash_set_password` is also a `dash_` function.
 
-### `/api/summary` is still missing
+## What the rebuilt Overview reads
 
-`dash_summary(p_client, p_from, p_to)` **exists in the database** but has no
-entry in `ROUTES`, so the dashboard cannot reach it yet. Adding it is one line:
+| Call | Used for |
+| --- | --- |
+| `/api/forms` → `.report` (`dash_report`) | every section except bounce rate |
+| `/api/traffic_totals` (`dash_traffic_totals`) | bounce rate, sitewide and organic |
+| `/api/summary` (`dash_summary`) | the cached executive summary |
+| `POST /ask` `{mode:"report"}` | generating a summary on demand |
 
-```ts
-"/api/summary": { fn: "dash_summary", args: ["client", "from", "to"] },
-```
+`dash_summary` `RETURNS TABLE`, so the RPC answers with an **array** of zero or
+one rows. The page handles an array, a bare object and an absent route.
 
-The RPC returns exactly the documented shape:
+The two summary sources disagree on one field name: `dash_summary` returns
+`next_steps`, `ask` returns `next`. The page accepts either.
 
-```
-{ summary, points: [{label, text}], why, next_steps: [], generated_at, model, age_hours }
-```
+`dash_report` keys and the sections they feed:
 
-`POST /ask` with `{"mode":"report", ...}` still does not write to
-`report_summaries`, so only the hand-seeded row has a cached summary. Every
-other client falls through to the "Generate summary" button.
+| Key | Fields | Feeds |
+| --- | --- | --- |
+| `rankings_by_engine` | `engine, tracked, top3, p4_10, page1, page2` | Front Page Placement |
+| `rankings_unified` | same, minus `engine` | Front Page Placement footnote |
+| `traffic` | `channel, users, sessions, engagement, conversions` | Search Traffic donuts, engagement |
+| `backlinks` | `referring_domains, total_backlinks, new_links, lost_links, spam_score, domain_rank, dofollow_pct, referring_ips, day` | Backlinks |
+| `health` | `source, status, last_success` | source chips and every "not connected" state |
+| `gsc` | `clicks, impressions, ctr, position` | — (Search tab) |
+| `ai`, `movers`, `top_queries`, `top_pages`, `gsc_months`, `traffic_months` | — | other tabs |
 
-## Which RPC feeds which Overview section
+`engine` values: `google`, `google_local`, `bing`, `google_mobile`. The three
+big tiles cover the first three; the stacked bars cover every engine returned,
+so nothing is hidden.
 
-`dash_report(p_client, p_from, p_to)` covers most of the page in one call:
-
-| Key | Type | Fields | Feeds |
-| --- | --- | --- | --- |
-| `rankings_by_engine` | array | `engine, tracked, top3, p4_10, page1, page2` | Front Page Placement |
-| `rankings_unified` | object | same, minus `engine` | Front Page Placement |
-| `traffic` | array | `channel, users, sessions, engagement, conversions` | Search Traffic donuts |
-| `backlinks` | object | `referring_domains, total_backlinks, new_links, lost_links, spam_score, domain_rank, dofollow_pct, referring_ips, day` | Backlinks |
-| `gsc` | object | `clicks, impressions, ctr, position` | header context |
-| `health` | array | `source, status, last_success` | "not connected" states |
-| `ai` | array | `engine, answers, mention_rate, citation_rate, competitor_presence, primary_domain_rate` | — |
-| `movers`, `top_queries`, `top_pages`, `gsc_months`, `traffic_months` | arrays | — | — |
-
-`engine` values seen in `rankings_by_engine`: `google`, `google_local`, `bing`
-— matching the three tiles the Overview needs.
-
-`dash_traffic_totals(p_client, p_from, p_to)` returns one row per channel:
-`channel, users, sessions, bounce_rate, conversions`. `bounce_rate` is a
-fraction (0–1), not a percentage.
+`traffic[].engagement` is already a percentage. `traffic_totals[].bounce_rate`
+is a fraction (0–1). Both are combined session-weighted for the sitewide figure
+so a three-visit channel cannot swing it.
 
 Channel names seen: `Direct`, `Organic Search`, `Referral`, `Email`,
 `Organic Social`, `Cross-network`, `AI Assistant`, `Unassigned`.
 
-## Three gaps that change what sections 5–8 can honestly show
+## Gaps that shape what sections 5–8 can honestly show
 
-The "never invent a number" rule bites here. Confirmed against the schema:
+The "never invent a number" rule bites here. Confirmed against the schema.
 
 1. **Google Business Profile has no data and no route.** `fact_gbp` exists with
-   the right columns (`profile_views, search_views, maps_views, calls,
-   direction_requests, website_clicks, reviews_total, avg_rating`) but holds
-   **0 rows for 0 clients**. There is no `dash_*` function and no `/api/` route
-   exposing it, and `dash_health` does not report a `gbp` source at all — so
-   the existing `vHealth()` pattern cannot even describe it as stale. Section 8
-   can only render a "not connected" state until the GBP ingest is built.
-   `fact_gbp` also has no mobile-vs-desktop split; `device_category` lives on
+   the right columns but holds **0 rows for 0 clients**. There is no `dash_*`
+   function, no `/api/` route, and `client_connections` carries no `gbp` source,
+   so `dash_health` cannot even describe it as stale. Section 8 renders a
+   "not connected" state naming the five metrics it will carry. `fact_gbp` also
+   has no mobile-vs-desktop split; `device_category` lives on
    `fact_traffic_tech`, which is site traffic, not GBP.
 
-2. **"New Users" and "Views" for the Search Traffic donuts.** `new_users` is
-   populated on `fact_traffic` but `dash_traffic_totals` does not select it.
-   **Views/pageviews are not in the schema at all** — no column on
-   `fact_traffic` or `fact_traffic_tech`. Either the donut set drops to Total
-   Users + New Users, or a pageviews ingest is added first.
+2. **"New Users" and "Views" for the traffic donuts.** `new_users` is populated
+   on `fact_traffic` but neither `dash_report` nor `dash_traffic_totals` selects
+   it. **Views are not in the schema at all** — no column on `fact_traffic` or
+   `fact_traffic_tech`. Both donuts render a "not measured yet" card that names
+   the reason.
 
-3. **Engagement rate.** Also populated on `fact_traffic`, also not returned by
-   `dash_traffic_totals`. Bounce rate *is* returned per channel, so the
-   sitewide-vs-organic bounce comparison works today; the engagement half of
-   Website Performance needs the RPC widened.
+   Adding `new_users` to the `traffic` CTE in `dash_report` is enough to light
+   the New Users donut up — the page draws a donut for any measure whose key is
+   present on the traffic rows and needs no front-end change. Views need an
+   ingest first.
 
-Gaps 2 and 3 are both fixed by adding `new_users` and `engagement_rate` to the
-`dash_traffic_totals` select list — the underlying data is already there.
+3. **Engagement rate** is on `fact_traffic` and *is* already returned by
+   `dash_report` as `traffic[].engagement`, so Website Performance works today.
+   `dash_traffic_totals` still omits it, which is why bounce and engagement are
+   read from two different calls.
 
-## `dash_health` sources
+## `client_connections` and `dash_health`
 
-`rankings`, `search_console`, `traffic`, `ai_visibility`, `backlinks`, `forms`,
-`paid_media`, `social`. Each row is `{source, nrows, last_data, days_stale}`.
-A source with `nrows: 0` and `last_data: null` is the "not connected" case.
+`d.health` comes from `client_connections`, whose `source` values are
+`backlinks`, `ga4`, `gsc` and whose `status` values are `connected`, `error`,
+`not_connected`. `dash_health(p_client)` is a separate, richer read
+(`source, last_data, days_stale, nrows`) over eight fact tables: `rankings`,
+`search_console`, `traffic`, `ai_visibility`, `backlinks`, `forms`,
+`paid_media`, `social`. The Overview uses the bundled `health` array, via
+`vHealth()`, so it costs no extra call.
+
+A source with no row at all, a row with `status: 'not_connected'`, and a live
+source that simply returned nothing in the window are three different states
+and the page words each one differently. None of them renders as a zero.
 
 ## Reproducing payloads
 
@@ -120,11 +124,34 @@ data is client analytics. Regenerate them against Supabase when needed:
 
 ```sql
 select to_jsonb(public.dash_report(:client, :from, :to));
-select to_jsonb(public.dash_summary(:client, :from, :to));
-select to_jsonb(public.dash_traffic_totals(:client, :from, :to));
+select coalesce(jsonb_agg(to_jsonb(s)), '[]'::jsonb)
+  from public.dash_summary(:client, :from, :to) s;
+select coalesce(jsonb_agg(to_jsonb(t)), '[]'::jsonb)
+  from public.dash_traffic_totals(:client, :from, :to) t;
 select to_jsonb(public.dash_health(:client));
 ```
 
-Capture those to local fixture files (outside the repo) to drive the headless
-render tests, so an empty payload can be checked to produce an empty state
-rather than a throw.
+Capture those to fixture files outside the repo (`fixtures/` and
+`*.fixture.json` are gitignored) to drive the headless render checks, so an
+empty payload can be checked to produce an empty state rather than a throw.
+
+## Checking a change to the tab
+
+No build step. Extract the script block and syntax-check it, then render the
+tab against a captured payload and against `{}`:
+
+```js
+global.document={getElementById:()=>({innerHTML:'',textContent:'',
+  classList:{add(){},remove(){}},style:{},dataset:{},addEventListener(){},
+  querySelectorAll:()=>[]}),addEventListener(){},querySelectorAll:()=>[],body:{}};
+global.window={addEventListener(){},matchMedia:()=>({matches:false,addEventListener(){}})};
+global.sessionStorage={getItem:()=>null,setItem(){},removeItem(){}};
+global.fetch=async()=>({ok:true,status:200,json:async()=>({})});
+global.location={href:'',origin:'https://analytics.aim-tex.com'};
+```
+
+Then `new Function(src + ';return {overview,S};')()` and assert on the returned
+string. The rebuild was checked this way against a real payload, an empty
+payload, a connected-but-empty payload, an errored connector, all four summary
+states, and a payload with `new_users`/`views` added to confirm the donuts
+appear with no code change.
