@@ -537,6 +537,8 @@ const PROMPT_ERR={
   prompt_too_short:'That phrase is too short to track.',
   prompt_too_long:'That phrase is too long — keep it under 500 characters.',
   duplicate_prompt:'That phrase is already being tracked for this client.',
+  // Kept as a safety net: the set is now created on demand, so this should no
+  // longer be reachable from the Add button.
   no_prompt_set:'This client has no AI prompt set yet, so there is nothing to add to.',
   prompt_not_found:'That phrase no longer exists.',
   forbidden:'Adding and removing phrases is limited to the AIM login.'};
@@ -1955,9 +1957,20 @@ async function doClientAct(act){
 function promptManager(){
   if(!isAdmin())return '';
   const ps=S.prompts;
+  // The admin client list carries set-level facts the per-question read cannot:
+  // whether a set exists at all, and whether it has competitors to measure
+  // share of voice against.
+  const ca=(S.cAdmin||[]).filter(c=>c.id==S.client)[0]||null;
+  const noComp=ca&&ca.prompt_set_id&&!Number(ca.competitors);
   const head=`<h3>Tracked questions${intBadge}</h3>
     <p class="intnote">Working material. Changing this set changes what every future
-    tracker run asks, for this client only.</p>`;
+    tracker run asks, for this client only.</p>
+    ${noComp?`<div class="pending" style="border-color:var(--orange)">
+      <b>No competitors recorded for this client.</b> Citation and mention rates will
+      still be right, but share of voice compares this client's mentions against named
+      competitors — with none listed it cannot be calculated. Competitors are not
+      editable here yet; tell me who they are and I will add them before the next run.
+      </div>`:''}`;
 
   if(ps===null)return `<section>${head}<div class="pending">
     <b>The question set could not be read.</b> Nothing is shown rather than an empty list
@@ -2027,6 +2040,9 @@ async function doPromptAct(act){
   }
   S.promptBusy=null;
   try{ S.prompts=await api(`/api/prompts?client=${S.client}`)||[]; }catch(_e){}
+  // Adding the first question creates the set, which changes the client's
+  // set-level facts, so the admin list is re-read too.
+  if(isAdmin()){try{ S.cAdmin=await api('/api/clients_admin')||S.cAdmin; }catch(_e){}}
   render();
 }
 

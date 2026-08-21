@@ -49,6 +49,25 @@ The edge function only forwards a fixed allowlist of keys. `slug` is not among
 them: other systems join on it, so it is generated once at creation and never
 edited.
 
+### The AI prompt set is created on demand
+
+`dash_client_add` seeds the collector connection rows but not an AI prompt set,
+so the first tracked question for a new client had nothing to attach to and was
+refused. Seven active clients were in that state.
+
+`dash_prompt_set_ensure(p_client)` now creates one the first time a question is
+added. Platforms and models are copied from the most recently created active set
+rather than hardcoded, so a set made this way matches whatever the tracker
+currently runs. Brand carries only what the client record says — name, and the
+domain with and without `www.`.
+
+**Competitors are left empty on purpose.** Naming a client's competitors is a
+judgement call, and inventing them would put fabricated names into a client
+deliverable. Every pre-existing set has them; a set created here does not, so
+`dash_clients_admin` returns `prompt_set_id` and a `competitors` count and the
+AI Visibility tab warns that share of voice cannot be calculated until they are
+filled in. There is no UI for editing them yet.
+
 ### What a new client needs before it collects anything
 
 `dash_clients_admin` returns a `ready` flag, true only when the client has a GA4
