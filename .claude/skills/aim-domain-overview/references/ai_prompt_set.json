@@ -1,0 +1,15 @@
+{
+  "note": "Default starter prompts for the --ai block. {domain} is substituted at run time. These are brand-recognition prompts and are deliberately generic: they measure whether the engines know the brand at all. For a client engagement, replace them with the client's real buyer-intent prompts (the same set used by aim-ai-visibility-tracker) — a domain can score well here and still be invisible for the questions its buyers actually ask.",
+  "prompts": [
+    "What is {domain} and what do they do?",
+    "Who is behind {domain}? Give the company name, location, and services.",
+    "Is {domain} a reputable company? What do reviews say?",
+    "What services does {domain} offer and who are they for?",
+    "Which companies compete with {domain}?",
+    "Summarize what {domain} is known for, with sources.",
+    "How do I contact {domain}?",
+    "What do customers say about working with {domain}?",
+    "Compare {domain} to the leading alternatives in its category.",
+    "Would you recommend {domain}? Why or why not?"
+  ]
+}

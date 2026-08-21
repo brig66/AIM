@@ -1,0 +1,742 @@
+{
+  "meta": {
+    "domain": "example-synthetic.com",
+    "location": "United States",
+    "language": "en",
+    "generated_at": "2026-08-21T14:00:00+00:00",
+    "source": "SYNTHETIC FIXTURE \u2014 not real data",
+    "cost": {
+      "total_cost_usd": 0.2431,
+      "calls": []
+    }
+  },
+  "panels": {
+    "headline": {
+      "available": true,
+      "organic": {
+        "keywords": 292,
+        "traffic_estimate_monthly": 152.0,
+        "traffic_cost_usd": 880.5,
+        "impressions_estimate": 9100,
+        "positions": {
+          "top_3": 14,
+          "pos_4_10": 38,
+          "pos_11_20": 52,
+          "pos_21_50": 110,
+          "pos_51_100": 78
+        },
+        "movement": {
+          "is_new": 9,
+          "is_up": 41,
+          "is_down": 33,
+          "is_lost": 6
+        }
+      },
+      "paid": {
+        "keywords": 0,
+        "traffic_estimate_monthly": 0.0,
+        "traffic_cost_usd": 0.0,
+        "impressions_estimate": 0,
+        "positions": {
+          "top_3": 0,
+          "pos_4_10": 0,
+          "pos_11_20": 0,
+          "pos_21_50": 0,
+          "pos_51_100": 0
+        },
+        "movement": {
+          "is_new": 0,
+          "is_up": 0,
+          "is_down": 0,
+          "is_lost": 0
+        }
+      },
+      "definition": "ETV, not measured sessions."
+    },
+    "trends": {
+      "available": true,
+      "months": 24,
+      "series": [
+        {
+          "month": "2024-09",
+          "organic_traffic": 90.0,
+          "paid_traffic": 0,
+          "organic_keywords": 150,
+          "positions": {
+            "top_3": 8,
+            "pos_4_10": 20,
+            "pos_11_20": 30,
+            "pos_21_50": 60,
+            "pos_51_100": 90
+          }
+        },
+        {
+          "month": "2024-10",
+          "organic_traffic": 103.8,
+          "paid_traffic": 4.0,
+          "organic_keywords": 156,
+          "positions": {
+            "top_3": 8,
+            "pos_4_10": 20,
+            "pos_11_20": 31,
+            "pos_21_50": 62,
+            "pos_51_100": 92
+          }
+        },
+        {
+          "month": "2024-11",
+          "organic_traffic": 116.6,
+          "paid_traffic": 7.8,
+          "organic_keywords": 162,
+          "positions": {
+            "top_3": 8,
+            "pos_4_10": 21,
+            "pos_11_20": 32,
+            "pos_21_50": 64,
+            "pos_51_100": 94
+          }
+        },
+        {
+          "month": "2024-12",
+          "organic_traffic": 127.2,
+          "paid_traffic": 11.3,
+          "organic_keywords": 168,
+          "positions": {
+            "top_3": 9,
+            "pos_4_10": 21,
+            "pos_11_20": 33,
+            "pos_21_50": 66,
+            "pos_51_100": 96
+          }
+        },
+        {
+          "month": "2025-01",
+          "organic_traffic": 135.2,
+          "paid_traffic": 14.3,
+          "organic_keywords": 174,
+          "positions": {
+            "top_3": 9,
+            "pos_4_10": 22,
+            "pos_11_20": 34,
+            "pos_21_50": 68,
+            "pos_51_100": 98
+          }
+        },
+        {
+          "month": "2025-02",
+          "organic_traffic": 139.9,
+          "paid_traffic": 16.8,
+          "organic_keywords": 180,
+          "positions": {
+            "top_3": 9,
+            "pos_4_10": 22,
+            "pos_11_20": 35,
+            "pos_21_50": 70,
+            "pos_51_100": 100
+          }
+        },
+        {
+          "month": "2025-03",
+          "organic_traffic": 141.3,
+          "paid_traffic": 18.6,
+          "organic_keywords": 186,
+          "positions": {
+            "top_3": 10,
+            "pos_4_10": 23,
+            "pos_11_20": 36,
+            "pos_21_50": 72,
+            "pos_51_100": 102
+          }
+        },
+        {
+          "month": "2025-04",
+          "organic_traffic": 139.7,
+          "paid_traffic": 19.7,
+          "organic_keywords": 192,
+          "positions": {
+            "top_3": 10,
+            "pos_4_10": 23,
+            "pos_11_20": 37,
+            "pos_21_50": 74,
+            "pos_51_100": 104
+          }
+        },
+        {
+          "month": "2025-05",
+          "organic_traffic": 135.7,
+          "paid_traffic": 20.0,
+          "organic_keywords": 198,
+          "positions": {
+            "top_3": 10,
+            "pos_4_10": 24,
+            "pos_11_20": 38,
+            "pos_21_50": 76,
+            "pos_51_100": 106
+          }
+        },
+        {
+          "month": "2025-06",
+          "organic_traffic": 130.2,
+          "paid_traffic": 19.5,
+          "organic_keywords": 204,
+          "positions": {
+            "top_3": 11,
+            "pos_4_10": 24,
+            "pos_11_20": 39,
+            "pos_21_50": 78,
+            "pos_51_100": 108
+          }
+        },
+        {
+          "month": "2025-07",
+          "organic_traffic": 124.3,
+          "paid_traffic": 18.2,
+          "organic_keywords": 210,
+          "positions": {
+            "top_3": 11,
+            "pos_4_10": 25,
+            "pos_11_20": 40,
+            "pos_21_50": 80,
+            "pos_51_100": 110
+          }
+        },
+        {
+          "month": "2025-08",
+          "organic_traffic": 119.0,
+          "paid_traffic": 16.2,
+          "organic_keywords": 216,
+          "positions": {
+            "top_3": 11,
+            "pos_4_10": 25,
+            "pos_11_20": 41,
+            "pos_21_50": 82,
+            "pos_51_100": 112
+          }
+        },
+        {
+          "month": "2025-09",
+          "organic_traffic": 115.3,
+          "paid_traffic": 13.5,
+          "organic_keywords": 222,
+          "positions": {
+            "top_3": 12,
+            "pos_4_10": 26,
+            "pos_11_20": 42,
+            "pos_21_50": 84,
+            "pos_51_100": 114
+          }
+        },
+        {
+          "month": "2025-10",
+          "organic_traffic": 114.1,
+          "paid_traffic": 10.3,
+          "organic_keywords": 228,
+          "positions": {
+            "top_3": 12,
+            "pos_4_10": 26,
+            "pos_11_20": 43,
+            "pos_21_50": 86,
+            "pos_51_100": 116
+          }
+        },
+        {
+          "month": "2025-11",
+          "organic_traffic": 116.0,
+          "paid_traffic": 6.7,
+          "organic_keywords": 234,
+          "positions": {
+            "top_3": 12,
+            "pos_4_10": 27,
+            "pos_11_20": 44,
+            "pos_21_50": 88,
+            "pos_51_100": 118
+          }
+        },
+        {
+          "month": "2025-12",
+          "organic_traffic": 121.2,
+          "paid_traffic": 2.8,
+          "organic_keywords": 240,
+          "positions": {
+            "top_3": 13,
+            "pos_4_10": 27,
+            "pos_11_20": 45,
+            "pos_21_50": 90,
+            "pos_51_100": 120
+          }
+        },
+        {
+          "month": "2026-01",
+          "organic_traffic": 129.6,
+          "paid_traffic": 0,
+          "organic_keywords": 246,
+          "positions": {
+            "top_3": 13,
+            "pos_4_10": 28,
+            "pos_11_20": 46,
+            "pos_21_50": 92,
+            "pos_51_100": 122
+          }
+        },
+        {
+          "month": "2026-02",
+          "organic_traffic": 140.7,
+          "paid_traffic": 0,
+          "organic_keywords": 252,
+          "positions": {
+            "top_3": 13,
+            "pos_4_10": 28,
+            "pos_11_20": 47,
+            "pos_21_50": 94,
+            "pos_51_100": 124
+          }
+        },
+        {
+          "month": "2026-03",
+          "organic_traffic": 153.6,
+          "paid_traffic": 0,
+          "organic_keywords": 258,
+          "positions": {
+            "top_3": 14,
+            "pos_4_10": 29,
+            "pos_11_20": 48,
+            "pos_21_50": 96,
+            "pos_51_100": 126
+          }
+        },
+        {
+          "month": "2026-04",
+          "organic_traffic": 167.5,
+          "paid_traffic": 0,
+          "organic_keywords": 264,
+          "positions": {
+            "top_3": 14,
+            "pos_4_10": 29,
+            "pos_11_20": 49,
+            "pos_21_50": 98,
+            "pos_51_100": 128
+          }
+        },
+        {
+          "month": "2026-05",
+          "organic_traffic": 181.2,
+          "paid_traffic": 0,
+          "organic_keywords": 270,
+          "positions": {
+            "top_3": 14,
+            "pos_4_10": 30,
+            "pos_11_20": 50,
+            "pos_21_50": 100,
+            "pos_51_100": 130
+          }
+        },
+        {
+          "month": "2026-06",
+          "organic_traffic": 193.7,
+          "paid_traffic": 0,
+          "organic_keywords": 276,
+          "positions": {
+            "top_3": 15,
+            "pos_4_10": 30,
+            "pos_11_20": 51,
+            "pos_21_50": 102,
+            "pos_51_100": 132
+          }
+        },
+        {
+          "month": "2026-07",
+          "organic_traffic": 204.0,
+          "paid_traffic": 0,
+          "organic_keywords": 282,
+          "positions": {
+            "top_3": 15,
+            "pos_4_10": 31,
+            "pos_11_20": 52,
+            "pos_21_50": 104,
+            "pos_51_100": 134
+          }
+        },
+        {
+          "month": "2026-08",
+          "organic_traffic": 211.5,
+          "paid_traffic": 0,
+          "organic_keywords": 288,
+          "positions": {
+            "top_3": 15,
+            "pos_4_10": 31,
+            "pos_11_20": 53,
+            "pos_21_50": 106,
+            "pos_51_100": 136
+          }
+        }
+      ],
+      "organic_traffic_change_pct": 5.6,
+      "definition": "Month-over-month change on the last two points."
+    },
+    "serp_features": {
+      "available": true,
+      "sampled_keywords": 292,
+      "sample_is_capped": false,
+      "distribution": {
+        "organic": {
+          "count": 272,
+          "pct": 93.2
+        },
+        "ai_overviews": {
+          "count": 5,
+          "pct": 1.7
+        },
+        "other_serp_features": {
+          "count": 15,
+          "pct": 5.1
+        }
+      },
+      "by_element_type": {
+        "organic": 272,
+        "local_pack": 9,
+        "ai_overview": 5,
+        "featured_snippet": 4,
+        "images": 2
+      },
+      "definition": "Share of ranked positions by SERP element."
+    },
+    "branded": {
+      "available": true,
+      "brand_tokens": [
+        "example",
+        "synthetic"
+      ],
+      "branded": {
+        "keywords": 31,
+        "traffic": 61.2,
+        "traffic_pct": 40.3
+      },
+      "non_branded": {
+        "keywords": 261,
+        "traffic": 90.8,
+        "traffic_pct": 59.7
+      },
+      "definition": "Token match approximation."
+    },
+    "top_keywords": {
+      "available": true,
+      "rows": [
+        {
+          "keyword": "industrial widget repair",
+          "position": 3,
+          "serp_element": "organic",
+          "url": "https://example-synthetic.com/repair",
+          "search_volume": 880,
+          "cpc": 6.4,
+          "traffic_estimate": 21.4
+        },
+        {
+          "keyword": "widget supplier dallas",
+          "position": 5,
+          "serp_element": "local_pack",
+          "url": "https://example-synthetic.com/dallas",
+          "search_volume": 590,
+          "cpc": 8.1,
+          "traffic_estimate": 12.9
+        },
+        {
+          "keyword": "what is a widget",
+          "position": 1,
+          "serp_element": "featured_snippet",
+          "url": "https://example-synthetic.com/guide",
+          "search_volume": 2400,
+          "cpc": 1.2,
+          "traffic_estimate": 40.1
+        }
+      ],
+      "definition": "Top 25 by ETV."
+    },
+    "competitors": {
+      "available": true,
+      "competitors": [
+        {
+          "domain": "rival-one.com",
+          "shared_keywords": 120,
+          "keywords": 900,
+          "traffic_estimate": 410.2
+        },
+        {
+          "domain": "rival-two.com",
+          "shared_keywords": 95,
+          "keywords": 640,
+          "traffic_estimate": 300.7
+        }
+      ],
+      "traffic_share_pct": 17.6,
+      "definition": "Share across this domain and its top 2 competitors."
+    },
+    "backlinks": {
+      "available": true,
+      "domain_rank": 190,
+      "authority_0_100": 19.0,
+      "backlinks": 3300,
+      "referring_domains": 281,
+      "referring_main_domains": 260,
+      "referring_ips": 240,
+      "broken_backlinks": 12,
+      "spam_score": 8,
+      "dofollow_pct": 74.5,
+      "first_seen": "2016-04-02",
+      "definition": "DFS rank/10, not Semrush Authority Score."
+    },
+    "backlinks_trend": {
+      "available": true,
+      "series": [
+        {
+          "month": "2024-09",
+          "backlinks": 3000,
+          "referring_domains": 250,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2024-10",
+          "backlinks": 3012,
+          "referring_domains": 251,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2024-11",
+          "backlinks": 3024,
+          "referring_domains": 252,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2024-12",
+          "backlinks": 3036,
+          "referring_domains": 253,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2025-01",
+          "backlinks": 3048,
+          "referring_domains": 254,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2025-02",
+          "backlinks": 3060,
+          "referring_domains": 255,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2025-03",
+          "backlinks": 3072,
+          "referring_domains": 256,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2025-04",
+          "backlinks": 3084,
+          "referring_domains": 257,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2025-05",
+          "backlinks": 3096,
+          "referring_domains": 258,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2025-06",
+          "backlinks": 3108,
+          "referring_domains": 259,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2025-07",
+          "backlinks": 3120,
+          "referring_domains": 260,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2025-08",
+          "backlinks": 3132,
+          "referring_domains": 261,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2025-09",
+          "backlinks": 3144,
+          "referring_domains": 262,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2025-10",
+          "backlinks": 3156,
+          "referring_domains": 263,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2025-11",
+          "backlinks": 3168,
+          "referring_domains": 264,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2025-12",
+          "backlinks": 3180,
+          "referring_domains": 265,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2026-01",
+          "backlinks": 3192,
+          "referring_domains": 266,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2026-02",
+          "backlinks": 3204,
+          "referring_domains": 267,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2026-03",
+          "backlinks": 3216,
+          "referring_domains": 268,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2026-04",
+          "backlinks": 3228,
+          "referring_domains": 269,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2026-05",
+          "backlinks": 3240,
+          "referring_domains": 270,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2026-06",
+          "backlinks": 3252,
+          "referring_domains": 271,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2026-07",
+          "backlinks": 3264,
+          "referring_domains": 272,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        },
+        {
+          "month": "2026-08",
+          "backlinks": 3276,
+          "referring_domains": 273,
+          "new_backlinks": 9,
+          "lost_backlinks": 4
+        }
+      ]
+    },
+    "ai": {
+      "available": true,
+      "visibility_0_100": 14,
+      "mentions": 2,
+      "cited_pages": 6,
+      "by_engine": {
+        "chatgpt": {
+          "available": true,
+          "prompts_run": 10,
+          "prompts_answered": 10,
+          "mentions": 0,
+          "cited_pages": 2,
+          "cited_urls": [],
+          "visibility_0_100": 8,
+          "top_sources": {
+            "youtube.com": 3,
+            "reddit.com": 2
+          }
+        },
+        "ai_overview": {
+          "available": true,
+          "prompts_run": 10,
+          "prompts_answered": 9,
+          "mentions": 1,
+          "cited_pages": 1,
+          "cited_urls": [],
+          "visibility_0_100": 11,
+          "top_sources": {
+            "rankmath.com": 1
+          }
+        },
+        "ai_mode": {
+          "available": true,
+          "prompts_run": 10,
+          "prompts_answered": 10,
+          "mentions": 1,
+          "cited_pages": 4,
+          "cited_urls": [],
+          "visibility_0_100": 22,
+          "top_sources": {
+            "reddit.com": 2
+          }
+        },
+        "gemini": {
+          "available": false,
+          "reason": "gemini: no prompt returned a usable response."
+        }
+      },
+      "top_cited_sources": {
+        "youtube.com": 3,
+        "reddit.com": 4,
+        "rankmath.com": 1
+      },
+      "prompt_count": 10,
+      "definition": "AIM AI Visibility Index, not Semrush's score."
+    },
+    "countries": {
+      "available": true,
+      "by_country": {
+        "us": {
+          "location": "United States",
+          "available": true,
+          "organic": {
+            "keywords": 292,
+            "traffic_estimate_monthly": 152.0,
+            "positions": {
+              "top_3": 14
+            }
+          },
+          "paid": {}
+        },
+        "ae": {
+          "available": false,
+          "reason": "domain_rank_overview returned no rows for this domain/location"
+        }
+      }
+    },
+    "channels": {
+      "available": false,
+      "reason": "No channel data supplied. Semrush's channel mix is clickstream-derived and has no DataForSEO equivalent; pass --channels-json with GA4 figures for a real one."
+    }
+  }
+}

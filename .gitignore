@@ -2,3 +2,11 @@
 # This repo is public; keep payloads out of it.
 fixtures/
 *.fixture.json
+
+__pycache__/
+*.pyc
+
+# Generated domain-overview runs and rendered reports
+*-overview.json
+!*.synthetic.json
+*-Domain-Overview-AIM.pdf
