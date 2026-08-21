@@ -334,6 +334,17 @@ th[data-sort].on .ar{opacity:1}
 }
 .prfoot{display:none}
 .pdfbar{display:flex;justify-content:flex-end;margin-bottom:12px}
+
+/* ---- Internal-only content ---- */
+.rolebar{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.rolebar button{padding:6px 11px;border:0;background:var(--surface);color:var(--muted);
+  font-size:12px;font-weight:600;cursor:pointer}
+.rolebar button.on{background:var(--indigo);color:#fff}
+.intbadge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10px;
+  font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:rgba(231,115,13,.14);
+  color:#b45c09;vertical-align:middle;margin-left:9px}
+.intnote{font-size:11.5px;color:var(--muted);margin:-4px 0 12px}
+@media print{.rolebar,.intbadge{display:none !important}}
 </style></head><body>
 
 <div id="login" class="hide">
@@ -354,6 +365,7 @@ th[data-sort].on .ar{opacity:1}
   </div>
   <div style="display:flex;gap:9px;align-items:center">
     <select class="pick" id="client"></select>
+    <span class="rolebar" id="rolebar"></span>
     <button class="rg" id="out">Sign out</button>
   </div>
 </div></div>
@@ -377,13 +389,32 @@ const STORE='aim_session';
 const S={toxic:[],aiFull:null,audits:[],auditCats:{},clients:[],client:null,tab:'overview',
   range:'30d',from:null,to:null,data:null,forms:null,busy:false,
   trafficTotals:null,summary:null,summaryState:'idle',summaryErr:null,summaryCache:{},
-  trafficDaily:null,tech:null,kw:null,kwSort:{col:'best',dir:1},kwFilter:'',auditHist:{}};
+  trafficDaily:null,tech:null,kw:null,kwSort:{col:'best',dir:1},kwFilter:'',auditHist:{},
+  role:'admin'};
 
 const TABS=[['overview','Overview'],['search','Search'],['rankings','Rankings'],['movement','Movement'],
             ['traffic','Traffic'],['ai','AI Visibility'],['readiness','AI Readiness'],
             ['forms','Forms'],['backlinks','Backlinks']];
 const RANGES=[['7d','Week'],['30d','30 days'],['60d','60 days'],['90d','90 days'],
               ['6m','6 months'],['12m','12 months'],['py','Prior year']];
+
+/* ---------- who is looking ----------
+   'admin' is AIM; 'client' is the view a client is meant to see. Some of this
+   dashboard is working material — the automation estimate reads as an accusation
+   about a client's own traffic, and the rank matrix is our worksheet, not their
+   report.
+
+   IMPORTANT: this is a presentation filter, not access control. Every login
+   still receives the same token and the API still answers for any client id it
+   is asked about. It stops internal material appearing on screen in a client
+   meeting or in an exported PDF. It would NOT stop a client with a login from
+   reading the same data directly, so before real client logins ship the role
+   has to come from the signed token and the API has to scope by client. */
+const INTERNAL_TABS=['rankings'];
+const isAdmin=()=>S.role!=='client';
+// Marks a heading as internal so it is obvious on screen what a client is not
+// seeing. Hidden in print, because an exported PDF has no internal sections.
+const intBadge='<span class="intbadge">AIM only</span>';
 
 const $=id=>document.getElementById(id);
 const tok=()=>sessionStorage.getItem(STORE);
@@ -427,9 +458,22 @@ async function api(path){
 
 /* ---------- chrome ---------- */
 function chrome(){
-  $('tabs').innerHTML=TABS.map(([k,l])=>
+  const tabs=TABS.filter(([k])=>isAdmin()||INTERNAL_TABS.indexOf(k)<0);
+  // Switching to client view while standing on an internal tab must not leave a
+  // blank page.
+  if(tabs.every(([k])=>k!==S.tab))S.tab=tabs[0][0];
+  $('tabs').innerHTML=tabs.map(([k,l])=>
     `<button class="tab${S.tab===k?' on':''}" data-t="${k}">${l}</button>`).join('');
   $('tabs').querySelectorAll('.tab').forEach(b=>b.onclick=()=>{S.tab=b.dataset.t;chrome();render()});
+  $('rolebar').innerHTML=
+    `<button data-role="admin" class="${isAdmin()?'on':''}">Full view</button>
+     <button data-role="client" class="${isAdmin()?'':'on'}">Client view</button>`;
+  $('rolebar').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    S.role=b.dataset.role;
+    // Survives tab switches within the session; never persisted beyond it.
+    try{sessionStorage.setItem('aim_role',S.role)}catch(_e){}
+    chrome(); render();
+  });
   $('ranges').innerHTML=RANGES.map(([k,l])=>
     `<button class="rg${S.range===k?' on':''}" data-r="${k}">${l}</button>`).join('')
     +`<span class="rg" style="border-style:dashed">From <input type="date" id="cf" value="${S.from||''}">
@@ -1126,16 +1170,38 @@ function overview(d,f){
 }
 
 function engineTable(d){
-  const rows=(d.rankings_by_engine||[]),u=d.rankings_unified||{};
-  const name={google:'Google',google_mobile:'Google Mobile',google_local:'Google Local',bing:'Bing'};
+  const rows=(d.rankings_by_engine||[]);
   if(!rows.length)return '<p class="exp">No ranking data in this period.</p>';
-  return `<div class="tw"><table><thead><tr><th>Search engine</th><th class="n">Top 3</th>
-    <th class="n">Positions 4–10</th><th class="n">Page 2 (11–20)</th><th class="n">Page one total</th></tr></thead><tbody>
-    ${rows.map(r=>`<tr><td>${name[r.engine]||esc(r.engine)}</td><td class="n num">${n(r.top3)}</td>
-      <td class="n num">${n(r.p4_10)}</td><td class="n num">${n(r.page2)}</td><td class="n num">${n(r.page1)}</td></tr>`).join('')}
-    <tr class="total"><td>All engines — unique terms</td><td class="n num">${n(u.top3)}</td>
-      <td class="n num">${n(u.p4_10)}</td><td class="n num">${n(u.page2)}</td><td class="n num">${n(u.page1)}</td></tr>
-  </tbody></table></div>`;
+  const byEng={}; rows.forEach(r=>{byEng[r.engine]=r});
+  const ordered=ENG_ORDER.map(k=>byEng[k]).filter(Boolean)
+    .concat(rows.filter(r=>ENG_ORDER.indexOf(r.engine)<0));
+  // "Page 2 and beyond" is everything not on page one, so it is derived rather
+  // than read: the RPC's page2 field counts 11-20 only and would understate it.
+  const sum=k=>ordered.reduce((a,r)=>a+(Number(r[k])||0),0);
+  const row=r=>{
+    const tracked=Number(r.tracked)||0,p1=Number(r.page1)||0;
+    return `<tr><td>${esc(ENGN[r.engine]||r.engine)}</td>
+      <td class="n num">${n(r.top3)}</td><td class="n num">${n(r.p4_10)}</td>
+      <td class="n num"><b>${n(p1)}</b></td>
+      <td class="n num">${n(Math.max(0,tracked-p1))}</td>
+      <td class="n num">${n(tracked)}</td></tr>`;
+  };
+  const tTracked=sum('tracked'),tP1=sum('page1');
+  return `<div class="tw"><table><thead><tr><th>Search engine</th>
+    <th class="n">Positions 1–3</th><th class="n">Positions 4–10</th>
+    <th class="n">Ranking 1–10</th><th class="n">Page 2 and beyond</th>
+    <th class="n">Tracked</th></tr></thead><tbody>
+    ${ordered.map(row).join('')}
+    <tr class="total"><td>All engines combined</td>
+      <td class="n num">${n(sum('top3'))}</td><td class="n num">${n(sum('p4_10'))}</td>
+      <td class="n num"><b>${n(tP1)}</b></td>
+      <td class="n num">${n(Math.max(0,tTracked-tP1))}</td>
+      <td class="n num">${n(tTracked)}</td></tr>
+  </tbody></table></div>
+  <p class="exp" style="margin-top:11px">Each engine is counted separately, so a phrase ranking
+  on three engines contributes to all three rows and the combined row counts it three times —
+  these are placements, not unique phrases. Page 2 and beyond is every tracked phrase not in the
+  top ten, including phrases that do not appear in the top 100 at all.</p>`;
 }
 
 /* ---------- keyword matrix ---------- */
@@ -1431,11 +1497,15 @@ function traffic(d){
   ${haveNew?'First-time visitors are people GA4 had not seen before; returning is the remainder.':''}</p>
   ${table}${donuts}
   <h3>Sessions by month</h3>${barChart(d.traffic_months,'sessions','month',r=>r.days<26)}</section>
-  <section><p class="kick">Traffic Quality</p><h2>Human or automated — an estimate</h2>
+  ${isAdmin()?`<section><p class="kick">Traffic Quality</p>
+  <h2>Human or automated — an estimate${intBadge}</h2>
+  <p class="intnote">Working material. A client does not see this section — an estimate that
+  half their visits are machines reads as an accusation, and it is a signal to act on, not a
+  figure to hand over.</p>
   <p class="exp">Not every session is a person. This scores each country and device combination
   on how much its behaviour resembles automated traffic, so headline visit counts can be read
   with that in mind.</p>
-  ${botEstimate()}</section>`;
+  ${botEstimate()}</section>`:''}`;
 }
 
 /* ---------- AI Visibility: branded vs non-branded ---------- */
@@ -1886,10 +1956,12 @@ function backlinks(d){
 function render(){
   const d=S.data||{},f=S.forms||{};
   const v={overview:()=>overview(d,f),search:()=>search(d),
-    rankings:()=>`<section><p class="kick">Rank Tracking</p><h2>Rankings by search engine</h2>
-      <p class="exp">Each engine tracked separately. The combined row counts every term once, at its
-      best position across all four — a term third on Bing and twelfth on Google counts once, in the
-      top three.</p>${engineTable(d)}</section>`,
+    rankings:()=>`<section><p class="kick">Rank Tracking</p>
+      <h2>Rankings by search engine${intBadge}</h2>
+      <p class="intnote">Working material. A client sees Front Page Placement on the Overview
+      instead.</p>
+      <p class="exp">Every tracked phrase, counted by where it sits on each engine.</p>
+      ${engineTable(d)}</section>`,
     movement:()=>movement(d),traffic:()=>traffic(d),ai:()=>ai(d),
     readiness:()=>readiness(d),
     forms:()=>forms(f),backlinks:()=>backlinks(d)}[S.tab];
@@ -1961,6 +2033,7 @@ function doAct(act){
 /* ---------- boot ---------- */
 async function start(){
   $('login').classList.add('hide'); $('app').classList.remove('hide');
+  try{ S.role=sessionStorage.getItem('aim_role')==='client'?'client':'admin' }catch(_e){}
   chrome();
   try{
     S.clients=await api('/api/clients');

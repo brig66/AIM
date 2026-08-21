@@ -1,0 +1,304 @@
+diff -ru '--exclude=*.woff2' '--exclude=*.png' /tmp/claude-0/-home-user-AIM/593371d9-ccbb-5917-b6ae-bbb79a5ec9a9/scratchpad/tracker-backup/SKILL.md /root/.claude/skills/synced/aim-ai-visibility-tracker/SKILL.md
+--- /tmp/claude-0/-home-user-AIM/593371d9-ccbb-5917-b6ae-bbb79a5ec9a9/scratchpad/tracker-backup/SKILL.md	2026-08-21 17:30:09.900141461 +0000
++++ /root/.claude/skills/synced/aim-ai-visibility-tracker/SKILL.md	2026-08-21 17:30:09.935373663 +0000
+@@ -60,6 +60,11 @@
+ - `competitors` — 4–8 real competitors with their domains.
+ - `prompts` — 8–12 real buyer-intent prompts (see `references/prompt-library.md`).
+   Mix unbranded category/use-case prompts with branded comparison/product ones.
++  The two are scored in separate buckets — prompts naming the brand are detected
++  automatically, and `branded: true|false` on a prompt overrides that. Report the
++  non-branded rates as the headline: AI cites a company back to itself nearly
++  every time it is asked about by name, so a blended rate rises whenever branded
++  prompts are added and says nothing about winning new business.
+ Confirm the final config with the user before running.
+ 
+ **Step 4 — Run.**
+diff -ru '--exclude=*.woff2' '--exclude=*.png' /tmp/claude-0/-home-user-AIM/593371d9-ccbb-5917-b6ae-bbb79a5ec9a9/scratchpad/tracker-backup/references/config.example-luraco.yaml /root/.claude/skills/synced/aim-ai-visibility-tracker/references/config.example-luraco.yaml
+--- /tmp/claude-0/-home-user-AIM/593371d9-ccbb-5917-b6ae-bbb79a5ec9a9/scratchpad/tracker-backup/references/config.example-luraco.yaml	2026-08-21 17:30:09.896469372 +0000
++++ /root/.claude/skills/synced/aim-ai-visibility-tracker/references/config.example-luraco.yaml	2026-08-21 17:30:09.935047420 +0000
+@@ -48,6 +48,16 @@
+     domains: ["zarifausa.com"]
+ 
+ # Buyer-intent prompts. Mix category, comparison, use-case, and trust queries.
++#
++# Branded vs non-branded: a prompt that names the brand (or an alias) is detected
++# as branded automatically and scored in its own bucket, because AI cites a
++# company back to itself far more readily than it recommends one to a stranger.
++# Set `branded: true` or `branded: false` on a prompt to override the detection —
++# useful for a prompt that circles the company without naming it, or a competitor
++# comparison you want counted as discovery.
++#
++# Keep most of the set non-branded. Branded prompts confirm AI has the facts
++# right; non-branded prompts are the ones that win new business.
+ prompts:
+   - id: "best-american-made"
+     text: "What is the best American-made massage chair?"
+@@ -67,6 +77,7 @@
+   - id: "luraco-vs-competitor"
+     text: "How does Luraco compare to other premium massage chair brands?"
+     tags: ["comparison", "brand"]
++    branded: true
+   - id: "medicare-hsa-eligible"
+     text: "Are there massage chairs that qualify for HSA, FSA, or are Medicare approved?"
+     tags: ["trust", "financing"]
+diff -ru '--exclude=*.woff2' '--exclude=*.png' /tmp/claude-0/-home-user-AIM/593371d9-ccbb-5917-b6ae-bbb79a5ec9a9/scratchpad/tracker-backup/references/metrics-guide.md /root/.claude/skills/synced/aim-ai-visibility-tracker/references/metrics-guide.md
+--- /tmp/claude-0/-home-user-AIM/593371d9-ccbb-5917-b6ae-bbb79a5ec9a9/scratchpad/tracker-backup/references/metrics-guide.md	2026-08-21 17:30:09.896107648 +0000
++++ /root/.claude/skills/synced/aim-ai-visibility-tracker/references/metrics-guide.md	2026-08-21 17:30:09.935253237 +0000
+@@ -4,6 +4,23 @@
+ reproducible and comparable run-over-run.
+ 
+ ## Headline metrics
++### Branded and non-branded are scored separately
++
++A **branded** prompt names the company or one of its aliases; a **non-branded**
++prompt describes a need with no company in mind. The tracker classifies every
++prompt automatically (override with `branded:` in the config) and reports the two
++buckets apart.
++
++This matters more than it sounds. AI cites a company back to itself almost every
++time it is asked about by name, so a blended rate is dominated by however many
++branded prompts happen to be in the set — add three branded prompts and the score
++rises without anything improving. **Lead with the non-branded rates.** They answer
++the question a client is actually paying to have answered: would AI recommend us
++to someone who has never heard of us?
++
++The blended figures are still reported, labelled as blended, so a number quoted
++from an earlier run can be reconciled. Never put one on the cover of a report.
++
+ - **Citation rate** — % of answers that cite at least one brand-owned domain.
+   The core AI-citation KPI: are you a *source*, not just a mention?
+ - **Mention rate** — % of answers that name the brand (with or without a link).
+Only in /root/.claude/skills/synced/aim-ai-visibility-tracker/scripts: __pycache__
+diff -ru '--exclude=*.woff2' '--exclude=*.png' /tmp/claude-0/-home-user-AIM/593371d9-ccbb-5917-b6ae-bbb79a5ec9a9/scratchpad/tracker-backup/scripts/aim_ai_visibility_tracker.py /root/.claude/skills/synced/aim-ai-visibility-tracker/scripts/aim_ai_visibility_tracker.py
+--- /tmp/claude-0/-home-user-AIM/593371d9-ccbb-5917-b6ae-bbb79a5ec9a9/scratchpad/tracker-backup/scripts/aim_ai_visibility_tracker.py	2026-08-21 17:30:09.900807690 +0000
++++ /root/.claude/skills/synced/aim-ai-visibility-tracker/scripts/aim_ai_visibility_tracker.py	2026-08-21 17:30:09.931188040 +0000
+@@ -57,6 +57,8 @@
+     id: str
+     text: str
+     tags: list[str] = field(default_factory=list)
++    # None = work it out from the text; True/False = the config said so.
++    branded: bool | None = None
+ 
+ @dataclass
+ class Config:
+@@ -78,7 +80,8 @@
+         brand = Entity(b["name"], b.get("aliases", [b["name"]]), b.get("domains", []))
+         comps = [Entity(c["name"], c.get("aliases", [c["name"]]), c.get("domains", []))
+                  for c in data.get("competitors", [])]
+-        prompts = [Prompt(p["id"], p["text"], p.get("tags", [])) for p in data["prompts"]]
++        prompts = [Prompt(p["id"], p["text"], p.get("tags", []), p.get("branded"))
++                   for p in data["prompts"]]
+         return Config(
+             client=data["client"], slug=data["slug"], brand=brand,
+             primary_domain=data.get("primary_domain", (brand.domains[0] if brand.domains else "")),
+@@ -100,6 +103,30 @@
+     raw: dict = field(default_factory=dict)
+     error: str | None = None
+ 
++def is_branded(prompt: "Prompt", brand: "Entity") -> bool:
++    """Does this prompt name the brand?
++
++    A branded prompt is someone who has already found the company and is asking
++    about it by name. AI nearly always cites a company back to itself for those,
++    so blending them into one citation rate flatters the number: a client with a
++    strong name and no category presence looks visible when they are not.
++
++    An explicit `branded:` in the config always wins. Otherwise the prompt is
++    branded if it names the brand or one of its aliases. Matching is on word
++    boundaries so "Osaki" does not match inside another word, and a `brand` tag
++    is honoured as a fallback for prompts that circle the company without
++    naming it.
++    """
++    if prompt.branded is not None:
++        return bool(prompt.branded)
++    text = prompt.text.lower()
++    for alias in brand.aliases or [brand.name]:
++        a = str(alias).strip().lower()
++        if a and re.search(r"\b" + re.escape(a) + r"\b", text):
++            return True
++    return "brand" in [str(t).lower() for t in (prompt.tags or [])]
++
++
+ def _domain(url: str) -> str:
+     try:
+         net = urllib.parse.urlparse(url).netloc.lower()
+@@ -329,6 +356,7 @@
+     run_id       INTEGER REFERENCES runs(run_id),
+     prompt_id    TEXT,
+     prompt_text  TEXT,
++    branded      INTEGER,
+     platform     TEXT,
+     model        TEXT,
+     answer_text  TEXT,
+@@ -362,16 +390,25 @@
+ def db_connect(path: str) -> sqlite3.Connection:
+     con = sqlite3.connect(path)
+     con.executescript(SCHEMA)
++    # Databases created before the branded split exist in the wild; SQLite has no
++    # ADD COLUMN IF NOT EXISTS, so check the table and add it when missing. Old
++    # rows keep NULL, which compute_metrics reports as unclassified rather than
++    # silently counting them as non-branded.
++    cols = {r[1] for r in con.execute("PRAGMA table_info(results)")}
++    if "branded" not in cols:
++        con.execute("ALTER TABLE results ADD COLUMN branded INTEGER")
++        con.commit()
+     return con
+ 
+ def persist(con, run_id, prompt: Prompt, res: ProviderResult, a: dict, cfg: Config):
+     now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+     cur = con.execute(
+-        """INSERT INTO results (run_id,prompt_id,prompt_text,platform,model,answer_text,
++        """INSERT INTO results (run_id,prompt_id,prompt_text,branded,platform,model,answer_text,
+             brand_mentioned,brand_mention_count,brand_cited,cited_primary,
+             competitor_mentioned,competitor_cited,competitors_json,sov,sentiment,error,created_at)
+-           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+-        (run_id, prompt.id, prompt.text, res.platform, res.model, res.answer_text,
++           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
++        (run_id, prompt.id, prompt.text, int(is_branded(prompt, cfg.brand)),
++         res.platform, res.model, res.answer_text,
+          a["brand_mentioned"], a["brand_mention_count"], a["brand_cited"], a["cited_primary"],
+          a["competitor_mentioned"], a["competitor_cited"], json.dumps(a["competitors_mentioned"]),
+          a["sov"], a["sentiment"], res.error, now))
+@@ -434,13 +471,43 @@
+     if run_id is None:
+         return {"error": "no runs"}
+     rows = con.execute(
+-        "SELECT platform,brand_mentioned,brand_cited,cited_primary,competitor_mentioned,sov,sentiment "
++        "SELECT platform,brand_mentioned,brand_cited,cited_primary,competitor_mentioned,sov,"
++        "sentiment,branded "
+         "FROM results WHERE run_id=? AND (error IS NULL OR error='')", (run_id,)).fetchall()
+     n = len(rows)
+     def rate(idx): return round(100 * sum(r[idx] for r in rows) / n, 1) if n else 0.0
++
++    # Branded and non-branded are scored separately. The non-branded block is the
++    # one that answers "would AI recommend this company to someone who has never
++    # heard of it" — the blended figures stay, clearly labelled as blended, so a
++    # number quoted from an earlier run can still be reconciled.
++    def block(subset):
++        m = len(subset)
++        if not m:
++            return None
++        return {
++            "answers": m,
++            "mention_rate": round(100 * sum(r[1] for r in subset) / m, 1),
++            "citation_rate": round(100 * sum(r[2] for r in subset) / m, 1),
++            "primary_domain_rate": round(100 * sum(r[3] for r in subset) / m, 1),
++            "share_of_voice": round(100 * sum(r[5] for r in subset) / m, 1),
++        }
++    branded_rows     = [r for r in rows if r[7] == 1]
++    non_branded_rows = [r for r in rows if r[7] == 0]
++    unclassified     = [r for r in rows if r[7] is None]
++
+     metrics = {
+         "run_id": run_id, "client": cfg.client, "slug": cfg.slug,
+         "results": n, "prompts": len(cfg.prompts), "platforms": cfg.platforms,
++        "branded_prompts": sum(1 for p in cfg.prompts if is_branded(p, cfg.brand)),
++        "non_branded_prompts": sum(1 for p in cfg.prompts if not is_branded(p, cfg.brand)),
++        "non_branded": block(non_branded_rows),
++        "branded": block(branded_rows),
++        "unclassified_answers": len(unclassified),
++        # Blended across every prompt, branded and not. Kept for continuity with
++        # runs recorded before the split; do not lead a report with these.
++        "blended_mention_rate": rate(1),
++        "blended_citation_rate": rate(2),
+         "mention_rate": rate(1),
+         "citation_rate": rate(2),
+         "primary_domain_rate": rate(3),
+diff -ru '--exclude=*.woff2' '--exclude=*.png' /tmp/claude-0/-home-user-AIM/593371d9-ccbb-5917-b6ae-bbb79a5ec9a9/scratchpad/tracker-backup/scripts/aim_tracker_report.py /root/.claude/skills/synced/aim-ai-visibility-tracker/scripts/aim_tracker_report.py
+--- /tmp/claude-0/-home-user-AIM/593371d9-ccbb-5917-b6ae-bbb79a5ec9a9/scratchpad/tracker-backup/scripts/aim_tracker_report.py	2026-08-21 17:30:09.900474177 +0000
++++ /root/.claude/skills/synced/aim-ai-visibility-tracker/scripts/aim_tracker_report.py	2026-08-21 17:32:03.369950690 +0000
+@@ -43,6 +43,28 @@
+ def color_for(v):  # 0-100
+     return c["good"] if v >= 50 else (c["orange"] if v >= 25 else c["magenta"])
+ 
++def _intent_note(m, bn):
++    """One sentence that never quotes a blended rate as if it were the headline."""
++    nb, br = m.get("non_branded"), m.get("branded")
++    if not nb and not br:
++        return (f"Across {m['results']} AI answers this period, {bn} was cited in "
++                f"<b>{m['citation_rate']:g}%</b> and named in <b>{m['mention_rate']:g}%</b>.")
++    out = []
++    if nb:
++        out.append(f"Across <b>{nb['answers']}</b> answers to questions that never name "
++                   f"{bn}, it was cited in <b>{nb['citation_rate']:g}%</b> and named in "
++                   f"<b>{nb['mention_rate']:g}%</b> — this is the number that reflects "
++                   f"winning someone new.")
++    if br:
++        out.append(f"Asked about by name, across <b>{br['answers']}</b> branded answers, "
++                   f"it was cited in <b>{br['citation_rate']:g}%</b>; reported separately "
++                   f"because a branded question is someone who has already found them.")
++    if nb and br:
++        out.append(f"Blended across all {m['results']} answers the citation rate reads "
++                   f"<b>{m['citation_rate']:g}%</b>.")
++    return " ".join(out)
++
++
+ def bar(v, maxv=100, col=None):
+     pct = 0 if not maxv else min(100, 100*v/maxv)
+     col = col or color_for(v)
+@@ -69,9 +91,19 @@
+     con.close()
+ 
+     # headline cards
+-    cards = [("Citation rate", m["citation_rate"], f"% of answers that cite a {bn} domain"),
+-             ("Mention rate", m["mention_rate"], "% of answers that name the brand"),
+-             ("Share of voice", m["share_of_voice"], f"{bn} mentions vs. all tracked brands"),
++    # Lead with non-branded: a branded prompt is someone who already found the
++    # company, and AI cites them back nearly every time. Fall back to blended only
++    # when a run has no non-branded prompts at all.
++    nb = m.get("non_branded") or {}
++    lead = nb if nb else m
++    cards = [("Citation rate" + (" · non-branded" if nb else ""), lead["citation_rate"],
++              f"% of answers to questions that never name {bn} that cite a {bn} domain"
++              if nb else f"% of answers that cite a {bn} domain"),
++             ("Mention rate" + (" · non-branded" if nb else ""), lead["mention_rate"],
++              "% of those answers that name the brand"
++              if nb else "% of answers that name the brand"),
++             ("Share of voice" + (" · non-branded" if nb else ""), lead["share_of_voice"],
++              f"{bn} mentions vs. all tracked brands"),
+              ("Primary-domain rate", m["primary_domain_rate"], f"% citing {pd} specifically")]
+     card_html = "".join(
+         f'<div class="card"><div class="cv" style="color:{color_for(v)}">{v:g}<span>%</span></div>'
+@@ -79,6 +111,26 @@
+ 
+     # platform table
+     plat_rows = ""
++    intent_rows = []
++    for label, blk in (("Non-branded questions", m.get("non_branded")),
++                       ("Branded questions", m.get("branded"))):
++        if blk:
++            intent_rows.append(
++                f"<tr><td><b>{label}</b></td>"
++                f"<td style='text-align:right' class='num'>{blk['answers']}</td>"
++                f"<td style='text-align:right' class='num'>{blk['mention_rate']:g}%</td>"
++                f"<td style='text-align:right' class='num'>{blk['citation_rate']:g}%</td>"
++                f"<td style='text-align:right' class='num'>{blk['share_of_voice']:g}%</td></tr>")
++    intent_table = ("" if not intent_rows else
++        "<h2>Branded vs non-branded</h2>"
++        "<p class='sub'>Branded questions name the company; non-branded ones describe a need "
++        "with no company in mind. They are scored separately because AI cites a company back "
++        "to itself far more readily than it recommends one to a stranger.</p>"
++        "<table><thead><tr><th>Question type</th><th style='text-align:right'>Answers</th>"
++        "<th style='text-align:right'>Mention</th><th style='text-align:right'>Citation</th>"
++        "<th style='text-align:right'>Share of voice</th></tr></thead><tbody>"
++        + "".join(intent_rows) + "</tbody></table>")
++
+     for p, pm in m["by_platform"].items():
+         plat_rows += (f"<tr><td><b>{p}</b></td><td>{pm['results']}</td>"
+                       f"<td>{pm['mention_rate']:g}%</td>"
+@@ -167,12 +219,14 @@
+ </div></div>
+ 
+ <div class="cards">{card_html}</div>
+-<div class="note">Across {m['results']} AI answers this period, {bn} was cited in <b>{m['citation_rate']:g}%</b> and named in <b>{m['mention_rate']:g}%</b>. A competitor appeared in <b>{comp:g}%</b> of answers. Sentiment where mentioned: {sent_str}.</div>
++<div class="note">{_intent_note(m, bn)} A competitor appeared in <b>{comp:g}%</b> of answers. Sentiment where mentioned: {sent_str}.</div>
+ 
+ <h2>Performance by AI engine</h2>
+ <table><thead><tr><th>Engine</th><th>Answers</th><th>Mention</th><th>Citation rate</th><th style="text-align:right">&nbsp;</th></tr></thead>
+ <tbody>{plat_rows}</tbody></table>
+ 
++{intent_table}
++
+ <h2>Which {bn} domain gets cited</h2>
+ <p class="muted" style="font-size:8.6pt;margin:0 0 2pt">When AI cites {bn}, this is the property it sends users to. A spread across many domains is the fragmentation signal &mdash; the goal is to concentrate citations on the primary hub.</p>
+ <table><tbody>{attr_rows}</tbody></table>
