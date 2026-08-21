@@ -1,0 +1,4 @@
+# Local API fixtures captured from Supabase — real client analytics.
+# This repo is public; keep payloads out of it.
+fixtures/
+*.fixture.json
