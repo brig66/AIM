@@ -152,6 +152,10 @@ const ROUTES: Record<string, { fn: string; args: Arg[] }> = {
 
   // AI tracking prompt set (read; the writes below are admin-only)
   "/api/prompts": { fn: "dash_prompts", args: ["client"] },
+
+  // Client + keyword administration (reads; writes are admin-only below)
+  "/api/clients_admin":   { fn: "dash_clients_admin", args: [] },
+  "/api/keywords_recent": { fn: "dash_keywords_recent", args: ["client", "limit"] },
 };
 const PARAM: Record<Arg, { key: string; cast: (v: string | null) => unknown }> = {
   client: { key: "p_client", cast: (v) => Number(v) },
@@ -186,6 +190,45 @@ const WRITES: Record<string, { fn: string; build: (b: any) => Record<string, unk
   },
   "/api/prompt_remove": {
     fn: "dash_prompt_remove",
+    build: (b) => ({ p_id: Number(b.id) }),
+  },
+  "/api/client_add": {
+    fn: "dash_client_add",
+    build: (b) => ({
+      p_name: String(b.name ?? ""),
+      p_domain: String(b.domain ?? ""),
+      p_market_scope: String(b.market_scope ?? "local"),
+    }),
+  },
+  "/api/client_update": {
+    // A patch object: keys present are written, keys absent are left alone, an
+    // explicit null clears. Only these fields are settable - slug is the join
+    // key other systems use and is deliberately not editable after creation.
+    fn: "dash_client_update",
+    build: (b) => {
+      const allow = ["name", "domain", "ga4_property_id", "gsc_site_url",
+                     "gbp_location_id", "market_scope", "active"];
+      const patch: Record<string, unknown> = {};
+      for (const k of allow) {
+        if (b && Object.prototype.hasOwnProperty.call(b.patch ?? {}, k)) {
+          patch[k] = (b.patch as Record<string, unknown>)[k];
+        }
+      }
+      return { p_id: Number(b.id), p_patch: patch };
+    },
+  },
+  "/api/keywords_add": {
+    fn: "dash_keywords_add",
+    build: (b) => ({
+      p_client: Number(b.client),
+      p_phrases: Array.isArray(b.phrases)
+        ? b.phrases.map((p: unknown) => String(p)).slice(0, 2000)
+        : [],
+      p_location: String(b.location ?? ""),
+    }),
+  },
+  "/api/keyword_remove": {
+    fn: "dash_keyword_remove",
     build: (b) => ({ p_id: Number(b.id) }),
   },
 };

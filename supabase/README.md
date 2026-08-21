@@ -30,6 +30,43 @@ carry a `client_id` alongside it and filter every read against it.
 | `POST /api/prompt_add` | `dash_prompt_add` | Refuses duplicates, phrases under 8 or over 500 characters, and clients with no prompt set |
 | `POST /api/prompt_active` | `dash_prompt_set_active` | Pause / resume |
 | `POST /api/prompt_remove` | `dash_prompt_remove` | Deletes a phrase never asked; deactivates one with answers, so the trend survives |
+| `POST /api/client_add` | `dash_client_add` | Generates the slug, refuses a duplicate domain, and seeds the three collector connection rows |
+| `POST /api/client_update` | `dash_client_update` | Patch semantics — see below |
+| `POST /api/keywords_add` | `dash_keywords_add` | Bulk; existing phrases are skipped rather than errored on |
+| `POST /api/keyword_remove` | `dash_keyword_remove` | Deletes a phrase never checked; deactivates one with rank readings |
+
+Reads added alongside them: `/api/clients_admin`, `/api/keywords_recent`.
+
+### Patch semantics on client_update
+
+The RPC takes a jsonb object. A key **present** is written, a key **absent** is
+left alone, and an **explicit null** clears the field. That three-way
+distinction is why it takes an object rather than one argument per column —
+with plain arguments there is no way to say "clear this" that is distinct from
+"do not touch this".
+
+The edge function only forwards a fixed allowlist of keys. `slug` is not among
+them: other systems join on it, so it is generated once at creation and never
+edited.
+
+### What a new client needs before it collects anything
+
+`dash_clients_admin` returns a `ready` flag, true only when the client has a GA4
+property, a Search Console property, and at least one active phrase. The Clients
+tab leads with the ones that are not ready, because an incomplete client sits in
+the dropdown collecting nothing and looks fine.
+
+Every one of the 32 existing clients carries exactly one `client_connections`
+row per collector, so `dash_client_add` seeds all three at `not_connected`.
+Without them the dashboard cannot tell "never connected" from "source unknown".
+
+### Normalisers
+
+`dash_norm_domain`, `dash_norm_ga4` and `dash_norm_location` clean input at the
+database rather than in the browser, so the same value typed three ways lands
+once. GA4 accepts a pasted `properties/312345678`. A Search Console property is
+validated against `sc-domain:…` or `https://…` and rejected otherwise, because a
+wrong string there fails silently at collection time.
 
 Named errors carry a plain-English `hint`, which the page shows verbatim rather
 than "request failed".
