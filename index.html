@@ -345,6 +345,27 @@ th[data-sort].on .ar{opacity:1}
   color:#b45c09;vertical-align:middle;margin-left:9px}
 .intnote{font-size:11.5px;color:var(--muted);margin:-4px 0 12px}
 @media print{.rolebar,.intbadge{display:none !important}}
+
+/* ---- Tracked question management (AIM only) ---- */
+.plist{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.prow{display:grid;grid-template-columns:1fr auto auto;gap:11px;align-items:center;
+  padding:10px 13px;border-bottom:1px solid var(--soft);font-size:13.5px}
+.prow:last-child{border-bottom:0}
+.prow:nth-child(even){background:var(--soft)}
+.prow.off .ptxt{color:var(--muted);text-decoration:line-through}
+.ptxt{min-width:0;word-break:break-word}
+.pmeta{font-size:11px;color:var(--muted);margin-top:3px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace}
+.pbtn{padding:4px 10px;border:1px solid var(--line);border-radius:7px;background:var(--surface);
+  color:var(--secondary);font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+.pbtn:hover{border-color:var(--indigo);color:var(--indigo)}
+.pbtn.danger:hover{border-color:var(--magenta);color:var(--magenta)}
+.pbtn[disabled]{opacity:.45;cursor:default}
+.paddbox{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+.paddbox input{flex:1;min-width:240px;padding:9px 12px;border:1px solid var(--line);
+  border-radius:8px;font:inherit;font-size:13.5px;background:var(--surface);color:var(--ink)}
+.perr{color:var(--magenta);font-size:12.5px;margin-top:9px;min-height:16px}
+@media(max-width:640px){.prow{grid-template-columns:1fr;gap:7px}}
 </style></head><body>
 
 <div id="login" class="hide">
@@ -390,7 +411,7 @@ const S={toxic:[],aiFull:null,audits:[],auditCats:{},clients:[],client:null,tab:
   range:'30d',from:null,to:null,data:null,forms:null,busy:false,
   trafficTotals:null,summary:null,summaryState:'idle',summaryErr:null,summaryCache:{},
   trafficDaily:null,tech:null,kw:null,kwSort:{col:'best',dir:1},kwFilter:'',auditHist:{},
-  role:'admin'};
+  role:'admin',prompts:null,promptBusy:null,promptErr:''};
 
 const TABS=[['overview','Overview'],['search','Search'],['rankings','Rankings'],['movement','Movement'],
             ['traffic','Traffic'],['ai','AI Visibility'],['readiness','AI Readiness'],
@@ -455,6 +476,30 @@ async function api(path){
   if(!r.ok)throw new Error('Request failed ('+r.status+')');
   return r.json();
 }
+
+// Writes are POST and admin-only at the API. The page still guards on role so a
+// client view never renders the controls, but the API is the boundary that
+// matters — this check is for tidiness, not security.
+async function apiPost(path,body){
+  const r=await fetch(API+path,{method:'POST',
+    headers:{'Content-Type':'application/json','x-aim-session':tok()||''},
+    body:JSON.stringify(body||{})});
+  if(r.status===401){sessionStorage.removeItem(STORE);
+    showLogin('Session expired — sign in again.');throw new Error('unauthorized')}
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok){
+    // The RPCs raise a named error plus a plain-English hint; prefer the hint.
+    throw new Error(j.detail||PROMPT_ERR[j.error]||j.error||`Request failed (${r.status})`);
+  }
+  return j;
+}
+const PROMPT_ERR={
+  prompt_too_short:'That phrase is too short to track.',
+  prompt_too_long:'That phrase is too long — keep it under 500 characters.',
+  duplicate_prompt:'That phrase is already being tracked for this client.',
+  no_prompt_set:'This client has no AI prompt set yet, so there is nothing to add to.',
+  prompt_not_found:'That phrase no longer exists.',
+  forbidden:'Adding and removing phrases is limited to the AIM login.'};
 
 /* ---------- chrome ---------- */
 function chrome(){
@@ -537,6 +582,11 @@ async function load(){
         `/api/audit_history?client=${S.client}&type=${encodeURIComponent(a.audit_type)}`)||[]; }
       catch(_e){ S.auditHist[a.audit_type]=[]; }
     }
+    // The tracked question set. Only AIM can change it, but the read is
+    // harmless, so it loads either way and the controls are what is gated.
+    try{ S.prompts=await api(`/api/prompts?client=${S.client}`)||[]; }
+    catch(_e){ S.prompts=null; }
+    S.promptErr=''; S.promptBusy=null;
     await loadSummary();
     S.data.aiFull=S.aiFull;
     $('genline').textContent=`Reporting ${S.from} to ${S.to} · generated ${iso(new Date())}`;
@@ -1175,33 +1225,36 @@ function engineTable(d){
   const byEng={}; rows.forEach(r=>{byEng[r.engine]=r});
   const ordered=ENG_ORDER.map(k=>byEng[k]).filter(Boolean)
     .concat(rows.filter(r=>ENG_ORDER.indexOf(r.engine)<0));
-  // "Page 2 and beyond" is everything not on page one, so it is derived rather
-  // than read: the RPC's page2 field counts 11-20 only and would understate it.
+  // page2 is read straight from the RPC, which counts 11-20 exactly. Page 3 and
+  // beyond is the remainder, derived so that the row always adds up to tracked.
   const sum=k=>ordered.reduce((a,r)=>a+(Number(r[k])||0),0);
   const row=r=>{
-    const tracked=Number(r.tracked)||0,p1=Number(r.page1)||0;
+    const tracked=Number(r.tracked)||0,p1=Number(r.page1)||0,p2=Number(r.page2)||0;
     return `<tr><td>${esc(ENGN[r.engine]||r.engine)}</td>
       <td class="n num">${n(r.top3)}</td><td class="n num">${n(r.p4_10)}</td>
       <td class="n num"><b>${n(p1)}</b></td>
-      <td class="n num">${n(Math.max(0,tracked-p1))}</td>
+      <td class="n num">${n(p2)}</td>
+      <td class="n num">${n(Math.max(0,tracked-p1-p2))}</td>
       <td class="n num">${n(tracked)}</td></tr>`;
   };
-  const tTracked=sum('tracked'),tP1=sum('page1');
+  const tTracked=sum('tracked'),tP1=sum('page1'),tP2=sum('page2');
   return `<div class="tw"><table><thead><tr><th>Search engine</th>
     <th class="n">Positions 1–3</th><th class="n">Positions 4–10</th>
-    <th class="n">Ranking 1–10</th><th class="n">Page 2 and beyond</th>
-    <th class="n">Tracked</th></tr></thead><tbody>
+    <th class="n">Ranking 1–10</th><th class="n">Page 2 (11–20)</th>
+    <th class="n">Page 3 and beyond</th><th class="n">Tracked</th></tr></thead><tbody>
     ${ordered.map(row).join('')}
     <tr class="total"><td>All engines combined</td>
       <td class="n num">${n(sum('top3'))}</td><td class="n num">${n(sum('p4_10'))}</td>
       <td class="n num"><b>${n(tP1)}</b></td>
-      <td class="n num">${n(Math.max(0,tTracked-tP1))}</td>
+      <td class="n num">${n(tP2)}</td>
+      <td class="n num">${n(Math.max(0,tTracked-tP1-tP2))}</td>
       <td class="n num">${n(tTracked)}</td></tr>
   </tbody></table></div>
   <p class="exp" style="margin-top:11px">Each engine is counted separately, so a phrase ranking
   on three engines contributes to all three rows and the combined row counts it three times —
-  these are placements, not unique phrases. Page 2 and beyond is every tracked phrase not in the
-  top ten, including phrases that do not appear in the top 100 at all.</p>`;
+  these are placements, not unique phrases. <b>Page 2 is striking distance</b>: positions 11–20,
+  where a modest gain moves a phrase onto page one. Page 3 and beyond is everything below that,
+  and includes phrases that do not appear in the top 100 at all.</p>`;
 }
 
 /* ---------- keyword matrix ---------- */
@@ -1508,6 +1561,85 @@ function traffic(d){
   ${botEstimate()}</section>`:''}`;
 }
 
+/* ---------- tracked question management (AIM only) ---------- */
+function promptManager(){
+  if(!isAdmin())return '';
+  const ps=S.prompts;
+  const head=`<h3>Tracked questions${intBadge}</h3>
+    <p class="intnote">Working material. Changing this set changes what every future
+    tracker run asks, for this client only.</p>`;
+
+  if(ps===null)return `<section>${head}<div class="pending">
+    <b>The question set could not be read.</b> Nothing is shown rather than an empty list
+    that would look like "no questions tracked".</div></section>`;
+
+  const rows=ps.map(p=>{
+    const collected=Number(p.answers)||0;
+    return `<div class="prow${p.active?'':' off'}">
+      <div><div class="ptxt">${esc(p.prompt)}${
+        p.branded?' <span class="rpill part">branded</span>':''}</div>
+        <div class="pmeta">${collected?`${n(collected)} answer${collected===1?'':'s'} collected`
+          :'not yet asked'}${p.added_on?` · added ${esc(p.added_on)}`:''}${
+          (p.tags||[]).length?` · ${esc((p.tags||[]).join(', '))}`:''}</div></div>
+      <button class="pbtn" data-act="prompt-toggle:${p.id}:${p.active?0:1}"
+        ${S.promptBusy?'disabled':''}>${p.active?'Pause':'Resume'}</button>
+      <button class="pbtn danger" data-act="prompt-remove:${p.id}:${collected}"
+        ${S.promptBusy?'disabled':''}>Remove</button>
+    </div>`;
+  }).join('');
+
+  const live=ps.filter(p=>p.active).length;
+  const branded=ps.filter(p=>p.active&&p.branded).length;
+
+  return `<section>${head}
+    ${ps.length?`<div class="plist">${rows}</div>
+      <p class="exp">${n(live)} question${live===1?'':'s'} live, ${n(branded)} of them branded.
+      Pausing keeps a question and its history but stops asking it. Removing deletes one that
+      has never been asked; if it has answers, it is paused instead so the trend survives.</p>`
+     :'<p class="exp">No questions are tracked for this client yet.</p>'}
+    <div class="paddbox">
+      <input id="pnew" type="text" maxlength="500"
+        placeholder="Add a question a buyer would actually ask…"
+        ${S.promptBusy?'disabled':''}>
+      <button class="xbtn" data-act="prompt-add" ${S.promptBusy?'disabled':''}>${
+        S.promptBusy==='add'?'Adding…':'Add question'}</button>
+    </div>
+    <div class="perr">${esc(S.promptErr||'')}</div>
+    <p class="exp">Write it the way someone with no knowledge of this company would type it.
+    A question naming the company is marked branded automatically and scored separately, because
+    AI cites a company back to itself far more readily than it recommends one to a stranger.</p>
+    </section>`;
+}
+
+async function doPromptAct(act){
+  const [kind,id,extra]=act.split(':');
+  S.promptErr='';
+  try{
+    if(kind==='prompt-add'){
+      const el=$('pnew'); const text=el&&el.value?el.value.trim():'';
+      if(!text){S.promptErr='Type a question first.';render();return}
+      S.promptBusy='add'; render();
+      await apiPost('/api/prompt_add',{client:S.client,prompt:text});
+    }else if(kind==='prompt-toggle'){
+      S.promptBusy=id; render();
+      await apiPost('/api/prompt_active',{id:Number(id),active:extra==='1'});
+    }else if(kind==='prompt-remove'){
+      const collected=Number(extra)||0;
+      const msg=collected
+        ? `This question has ${collected} answer${collected===1?'':'s'} recorded. Removing it stops future runs but keeps that history. Continue?`
+        : 'Remove this question? It has never been asked, so it will be deleted outright.';
+      if(!window.confirm(msg))return;
+      S.promptBusy=id; render();
+      await apiPost('/api/prompt_remove',{id:Number(id)});
+    }
+  }catch(e){
+    if(e.message!=='unauthorized')S.promptErr=e.message;
+  }
+  S.promptBusy=null;
+  try{ S.prompts=await api(`/api/prompts?client=${S.client}`)||[]; }catch(_e){}
+  render();
+}
+
 /* ---------- AI Visibility: branded vs non-branded ---------- */
 // A branded prompt is someone already searching for the firm by name, so it
 // almost always cites them. Blending it into one headline rate flatters the
@@ -1583,7 +1715,8 @@ function ai(d){
   if(!a||!a.results)return `<section><p class="kick">AI Search Practice</p>
     <h2>AI assistant visibility</h2>
     <p class="exp">No tracker run inside this window. AI visibility runs on a monthly
-    cadence — widen the date range to include the most recent run.</p></section>`;
+    cadence — widen the date range to include the most recent run.</p></section>`
+    + promptManager();
 
   const cli=(S.clients.filter(c=>c.id==S.client)[0]||{}).name||'';
   const now=a.now||{};
@@ -1708,7 +1841,7 @@ function ai(d){
     Figures reflect live AI responses for the period shown.</p>`;
 
   return `<section>${head}${tiles}${callout}${engTable}${intent}${domains}${league}
-    ${prompts}${meth}</section>`;
+    ${prompts}${meth}</section>` + promptManager();
 }
 
 function forms(f){
@@ -1993,9 +2126,13 @@ function bindTab(){
           el.setSelectionRange(el.value.length,el.value.length)}},260)};
   }
   (body.querySelectorAll('[data-act]')||[]).forEach(b=>b.onclick=()=>doAct(b.dataset.act));
+  const np=body.querySelector?body.querySelector('#pnew'):null;
+  if(np)np.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();doAct('prompt-add')}};
 }
 
 function doAct(act){
+  // Prompt actions talk to the API and re-render when they finish.
+  if(act.indexOf('prompt-')===0){ doPromptAct(act); return }
   const c=cliRow(), base=`${slug(c.name)}-${S.from}-to-${S.to}`;
   if(act==='pdf'){ window.print(); return }
   if(act==='kw-xlsx'){
