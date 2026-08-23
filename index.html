@@ -517,6 +517,20 @@ async function api(path){
   return r.json();
 }
 
+// ask is a separate function from dashboard, with its own copy of the token
+// check, and the two have already drifted apart once: ask kept reading the
+// pre-role two-part token after dashboard started minting three-part ones, so
+// every summary rejected a login that was perfectly good. A 401 from one
+// service is not evidence the other has expired, so confirm against the
+// dashboard API before throwing the session away. Network trouble is not an
+// auth failure and must not sign anyone out either.
+async function sessionAlive(){
+  try{
+    const r=await fetch(API+'/api/clients',{headers:{'x-aim-session':tok()||''}});
+    return r.status!==401;
+  }catch(_e){ return true; }
+}
+
 // Writes are POST and admin-only at the API. The page still guards on role so a
 // client view never renders the controls, but the API is the boundary that
 // matters — this check is for tidiness, not security.
@@ -931,7 +945,9 @@ function ovSummary(){
       s.model?` · ${esc(s.model)}`:''}${
       s.age_hours!=null?` · ${esc(String(s.age_hours))} hours old`:''}<br>
       ${s.cached?'Read from the stored summary for this period.'
-               :'Written for this session only — it is not stored yet, so it will need regenerating next visit.'}
+        :s.saved?'Written just now and stored, so it will be here next time you open this period.'
+        :`Written just now, but it could not be stored${
+            s.saveError?' ('+esc(s.saveError)+')':''}, so it will need regenerating next visit.`}
       </p>
     <button class="genbtn" id="gensum">Regenerate</button></section>`;
 }
@@ -943,14 +959,20 @@ async function genSummary(){
     const r=await fetch(ASK,{method:'POST',
       headers:{'Content-Type':'application/json','x-aim-session':tok()||''},
       body:JSON.stringify({mode:'report',client_id:S.client,from:S.from,to:S.to})});
-    if(r.status===401){sessionStorage.removeItem(STORE);
+    if(r.status===401){
+      if(await sessionAlive())
+        throw new Error('The summary service rejected this sign-in, but your session is '+
+          'still valid everywhere else, so you have not been signed out. This means the '+
+          'ask function is out of step with the dashboard and needs redeploying.');
+      sessionStorage.removeItem(STORE);
       showLogin('Session expired — sign in again.');return}
     const j=await r.json().catch(()=>({}));
     if(!r.ok||j.error)throw new Error(j.detail||j.error||`Request failed (${r.status})`);
     const rep=j.report||{};
     const rec={summary:rep.summary||'',points:rep.points||[],why:rep.why||'',
       next_steps:rep.next_steps||rep.next||[],model:j.model||null,
-      generated_at:new Date().toISOString(),cached:false};
+      generated_at:new Date().toISOString(),cached:false,
+      saved:j.saved===true,saveError:j.save_error||null};
     S.summaryCache[key]=rec;
     if(key===sumKey()){S.summary=rec;S.summaryState='ready';render()}
   }catch(e){

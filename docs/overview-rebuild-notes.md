@@ -196,14 +196,52 @@ with identical code (same `ezbr_sha256`). No `/ask` request arrived during the
 75 seconds it was wrong. Always pass `verify_jwt: false` when redeploying this
 function or `dashboard`.
 
+## Summaries are now stored (ask v13)
+
+`ask` writes every generated report to `report_summaries` before returning it,
+so a summary survives a reload and past periods can be read back and compared.
+
+`report_summaries` is `UNIQUE (client_id, period_from, period_to)`, so the write
+is an upsert on that key: regenerating a period replaces that period's row
+rather than piling up duplicates. One row per client per period is exactly what
+`dash_summary` reads, and what makes period-to-period comparison clean.
+
+A failed write must not discard a report the user waited a minute for, so the
+outcome is returned rather than thrown: the response carries `saved` and
+`save_error`, and the page's caption says which of the three states it is in —
+read from store, written and stored, or written but not stored (with the
+reason).
+
+### The date range has to be fixed for a summary to be found again
+
+`dash_summary` matches `period_from` and `period_to` **exactly**, and the preset
+range buttons (Week, 30 days, 90 days…) are computed from *today* — so their
+boundaries move every day. A summary generated under a preset is stored, but
+tomorrow's version of the same preset is a different period and will not find
+it.
+
+The From/To boxes are the ones to use for anything worth keeping: a fixed period
+such as a calendar month is stable, so it hits the stored row every time and can
+be compared against other fixed periods. This is a property of rolling windows,
+not a bug — "the last 30 days" genuinely means something different each day.
+
+## Fixed: a 401 from ask no longer signs the user out
+
+`genSummary()` treated any 401 from `ask` as proof the dashboard session had
+expired, cleared `sessionStorage` and dropped to the login screen. That is what
+made the token mismatch above so painful: a working login was thrown away every
+time the button was pressed.
+
+`ask` and `dashboard` are separate functions with separate copies of the token
+check, and they have already drifted apart once. So a 401 from one is no longer
+taken as evidence about the other: `sessionAlive()` re-checks the token against
+`/api/clients`, and the session is only cleared when the dashboard agrees it is
+dead. Otherwise the page keeps the session and shows an error explaining that
+`ask` is out of step and needs redeploying. A network failure returns "alive",
+so losing signal never signs anyone out.
+
 ### Still outstanding
 
-`ask` still does not write to `report_summaries`, so a generated summary lives
-only in the page's memory for that visit — the UI says so honestly ("it will
-need regenerating next visit"). `/api/summary` is wired and returns 200, so the
-moment `ask` caches its output, generated summaries start surviving a reload.
-
-The page also treats a 401 from `ask` — a different service — as proof the
-dashboard session is dead. Even with the token bug fixed, any future hiccup in
-`ask` will sign the user out rather than showing an error. Worth having
-`genSummary()` re-check the session against `/api/clients` before clearing it.
+Nothing on the summary path. The remaining gaps are the data ones above:
+Google Business Profile has no ingest, and `new_users` / `engagement_rate` are
+collected but not exposed by `dash_traffic_totals`.

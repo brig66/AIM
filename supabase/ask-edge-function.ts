@@ -326,12 +326,45 @@ ${isReport ? `How to answer:
         if (isReport) {
           // Models sometimes wrap JSON in a fence despite being asked not to.
           const m = text.match(/\{[\s\S]*\}/);
+          let report: any;
           try {
-            return json({ report: JSON.parse(m ? m[0] : text), sql: sqlUsed,
-                          model: MODEL, steps: step + 1 });
+            report = JSON.parse(m ? m[0] : text);
           } catch {
             return json({ error: "summary_not_json", raw: text.slice(0, 1500) }, 502);
           }
+
+          // Persist the report so it survives a reload and so periods can be
+          // compared later. report_summaries is unique on
+          // (client_id, period_from, period_to), so regenerating a period
+          // replaces that period's row rather than accumulating duplicates.
+          //
+          // A failed write must not discard a report the user waited a minute
+          // for, so the outcome is reported back instead of thrown, and the
+          // page says whether what it is showing was stored.
+          let saved = false;
+          let saveError: string | null = null;
+          const cid = Number(body.client_id);
+          if (Number.isFinite(cid) && cid > 0 && body.from && body.to) {
+            const { error } = await db.from("report_summaries").upsert({
+              client_id: cid,
+              period_from: String(body.from),
+              period_to: String(body.to),
+              summary: report.summary ?? null,
+              points: report.points ?? [],
+              why: report.why ?? null,
+              next_steps: report.next ?? report.next_steps ?? [],
+              model: MODEL,
+              queries_run: Math.min(sqlUsed.length, 32767),
+              generated_at: new Date().toISOString(),
+            }, { onConflict: "client_id,period_from,period_to" });
+            if (error) saveError = error.message;
+            else saved = true;
+          } else {
+            saveError = "no client or date range was supplied, so there was nothing to key the summary on";
+          }
+
+          return json({ report, sql: sqlUsed, model: MODEL, steps: step + 1,
+                        saved, save_error: saveError });
         }
         return json({ answer: text, sql: sqlUsed, model: MODEL, steps: step + 1 });
       }
