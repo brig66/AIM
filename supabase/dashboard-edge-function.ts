@@ -129,6 +129,12 @@ const ROUTES: Record<string, { fn: string; args: Arg[] }> = {
   "/api/report":   { fn: "dash_report", args: ["client", "from", "to"] },
   "/api/summary":  { fn: "dash_summary", args: ["client", "from", "to"] },
 
+  // Front Page Placement over time. Separate from dash_report because it
+  // rebuilds a snapshot of every tracked phrase at the end of every bucket and
+  // is the slowest read the Overview makes; the page fetches it alongside the
+  // report rather than inside it, so a slow history cannot hold up the tiles.
+  "/api/rank_movement": { fn: "dash_rank_movement", args: ["client", "from", "to"] },
+
   // Traffic (GA4)
   "/api/traffic":        { fn: "dash_traffic", args: ["client", "from", "to"] },
   "/api/traffic_totals": { fn: "dash_traffic_totals", args: ["client", "from", "to"] },

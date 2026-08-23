@@ -156,6 +156,15 @@ tr.total td:first-child{color:var(--indigo)}
 @media(prefers-color-scheme:dark){:root:not([data-theme=light]){
   --c1:#8478e6;--c2:#e05bac;--c3:#f0924a;--c4:#a79cf2;--c5:#ee8cc7;
   --c6:#f6b880;--c7:#3fa76b;--c8:#9a93ad;--bandbg:#4a3fa0}}
+/* One fixed hue per search engine, used wherever an engine is a series rather
+   than a row. Held apart from --c1..--c8 because those colour position bands
+   and traffic channels, and an engine must not change colour when the number of
+   channels does. Both sets are checked for colour-blind separation and for
+   contrast against the card they sit on, per mode -- the dark steps are chosen,
+   not lightened copies. */
+:root{--e1:#4a3ab8;--e2:#c0228a;--e3:#e7730d;--e4:#3d95ec}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --e1:#886bee;--e2:#df539f;--e3:#e16900;--e4:#00a1dc}}
 
 .ovhead{border:1px solid var(--line);border-radius:14px;overflow:hidden;
   background:var(--surface);box-shadow:var(--shadow);margin-bottom:20px}
@@ -230,6 +239,51 @@ tr.total td:first-child{color:var(--indigo)}
 .stkbar span{display:block;height:100%;overflow:hidden}
 .stkbar em{font-style:normal;font-family:"IBM Plex Mono",ui-monospace,monospace;
   font-size:10.5px;color:#fff;line-height:23px;padding:0 7px;white-space:nowrap}
+
+/* Placement over time: one chart, one line per engine */
+.mvhead{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;
+  justify-content:space-between;margin:22px 0 4px}
+.mvhead .t{font-family:'Fraunces',Georgia,serif;font-size:15.5px;font-weight:600;
+  color:var(--indigo);margin:0}
+.mvhead .n{font-size:11.5px;color:var(--muted);margin:3px 0 0;line-height:1.45}
+.seg{display:flex;gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;
+  background:var(--surface);flex:none}
+.seg button{border:0;background:none;padding:6px 13px;font:inherit;font-size:12px;
+  color:var(--secondary);cursor:pointer;white-space:nowrap}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--indigo);color:#fff;font-weight:600}
+.lnwrap{border:1px solid var(--line);border-radius:12px;background:var(--surface);
+  box-shadow:var(--shadow);padding:14px 16px 10px;overflow-x:auto}
+.lnchart{display:block;width:100%;min-width:680px;height:auto}
+/* The crosshair and its readout are invisible until the band is hovered, and
+   never hit-testable: an opacity-0 element still catches the pointer, and the
+   readout spans the whole plot, so without this it would swallow hovers meant
+   for other buckets. */
+.lnchart .cx,.lnchart .rdt{opacity:0;pointer-events:none}
+.lnchart .bnd:hover .cx{opacity:.5}
+.lnchart .bnd:hover .rdt{opacity:1}
+.mvtab{margin-top:13px}
+.mvtab summary{font-size:12.5px;color:var(--secondary);cursor:pointer}
+.mvtab summary:hover{color:var(--indigo)}
+.mvtab .tw{margin-top:9px}
+.mvleg{display:grid;gap:8px;margin-top:13px;
+  grid-template-columns:repeat(auto-fit,minmax(212px,1fr))}
+.mvleg .row{display:flex;gap:8px;align-items:baseline;font-size:12.5px;min-width:0}
+.mvleg .sw2{width:11px;height:11px;border-radius:3px;transform:translateY(1px)}
+.mvleg .nm{color:var(--secondary);font-weight:600;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.mvleg .vv{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums;
+  color:var(--ink);font-weight:600}
+.mvleg .dd{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;
+  font-variant-numeric:tabular-nums;margin-left:6px}
+.mvleg .dd.up{color:var(--good)}
+.mvleg .dd.down{color:var(--orange)}
+.mvleg .dd.flat{color:var(--muted)}
+.stat .mv{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;
+  font-variant-numeric:tabular-nums;margin-top:5px}
+.stat .mv.up{color:var(--good)}
+.stat .mv.down{color:var(--orange)}
+.stat .mv.flat{color:var(--muted)}
 
 /* Sitewide vs organic */
 .split{display:grid;gap:13px;grid-template-columns:repeat(auto-fit,minmax(262px,1fr))}
@@ -312,11 +366,16 @@ th[data-sort].on .ar{opacity:1}
 /* ---- Print: the Overview becomes the AIM PDF deliverable ---- */
 @media print{
   /* Restate the light palette: a viewer in dark mode must still print a light
-     document, and the browser will not flip these back on its own. */
-  :root{--cream:#fff;--surface:#fff;--ink:#241d3d;--secondary:#4d4763;--muted:#6b647f;
+     document, and the browser will not flip these back on its own.
+     The dark palette is declared on :root:not([data-theme=light]), which
+     outranks a bare :root whatever the order, so this has to match that
+     specificity or a dark-mode viewer prints a dark PDF. */
+  :root,:root:not([data-theme=light]){
+    --cream:#fff;--surface:#fff;--ink:#241d3d;--secondary:#4d4763;--muted:#6b647f;
     --line:#ddd6e6;--soft:#f4f0f8;--indigo:#352597;--magenta:#c0228a;--orange:#e7730d;
     --good:#2e8b57;--c1:#352597;--c2:#c0228a;--c3:#e7730d;--c4:#5343c9;--c5:#d9569f;
-    --c6:#f0924a;--c7:#1a8a5a;--c8:#8e8aa8;--bandbg:#352597;--shadow:none}
+    --c6:#f0924a;--c7:#1a8a5a;--c8:#8e8aa8;--bandbg:#352597;--shadow:none;
+    --e1:#4a3ab8;--e2:#c0228a;--e3:#e7730d;--e4:#3d95ec}
   @page{margin:12mm 11mm}
   *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
   html,body{background:#fff !important}
@@ -327,6 +386,12 @@ th[data-sort].on .ar{opacity:1}
   .ovhead{break-inside:avoid;page-break-inside:avoid}
   .rband{break-after:avoid;page-break-after:avoid;break-inside:avoid}
   .dcard,.pcol,.stat,.tile,.sub{break-inside:avoid;page-break-inside:avoid}
+  /* The measure toggle and the table are on-screen controls; the printed page
+     carries whichever measure was chosen, and its heading names it. */
+  .seg,.mvtab{display:none !important}
+  .mvhead{break-after:avoid;page-break-after:avoid}
+  .lnwrap{overflow:visible;break-inside:avoid;page-break-inside:avoid}
+  .lnchart{min-width:0}
   .dnuts{grid-template-columns:1fr 1fr}
   .foot{break-inside:avoid;page-break-inside:avoid}
   a[href]:after{content:""}
@@ -448,6 +513,7 @@ const S={toxic:[],aiFull:null,audits:[],auditCats:{},clients:[],client:null,tab:
   range:'30d',from:null,to:null,data:null,forms:null,busy:false,
   trafficTotals:null,summary:null,summaryState:'idle',summaryErr:null,summaryCache:{},
   trafficDaily:null,tech:null,kw:null,kwSort:{col:'best',dir:1},kwFilter:'',auditHist:{},
+  rankMove:null,placeMetric:'page1',
   role:'admin',prompts:null,promptBusy:null,promptErr:'',
   cAdmin:null,cEdit:null,cKw:null,cNew:false,cBusy:null,cErr:'',cFilter:'',
   cRecent:null,cLoc:'',cDraft:null,cNewDraft:null,cMsg:'',
@@ -592,6 +658,13 @@ async function load(){
   $('body').innerHTML='<div class="spin">Loading…</div>';
   try{
     const q=`?client=${S.client}&from=${S.from}&to=${S.to}&limit=200`;
+    // Placement over time rebuilds a snapshot of every tracked phrase at the end
+    // of every bucket, which makes it the slowest read on the page. Started here
+    // and awaited at the bottom, it runs alongside the other reads and costs no
+    // extra wall clock. null means it did not answer, which the section says
+    // rather than drawing a flat line.
+    const movePromise=api(`/api/rank_movement?client=${S.client}&from=${S.from}&to=${S.to}`)
+      .then(r=>r||null).catch(()=>null);
     S.forms=await api('/api/forms'+q);
     S.data=S.forms.report||{};
     // Toxicity is a separate read: it is link-level and not date-scoped,
@@ -648,6 +721,7 @@ async function load(){
       try{ S.cAdmin=await api('/api/clients_admin')||[]; }catch(_e){ S.cAdmin=null; }
     }
     S.cErr=''; S.cBusy=null;
+    S.rankMove=await movePromise;
     await loadSummary();
     S.data.aiFull=S.aiFull;
     $('genline').textContent=`Reporting ${S.from} to ${S.to} · generated ${iso(new Date())}`;
@@ -981,6 +1055,274 @@ async function genSummary(){
 }
 
 /* ---- 4. front page placement ---- */
+/* ---- 4a. placement over time ----
+   Agency Analytics answers "which way is this going" with one stacked bar chart
+   per engine. That puts four y-axes on the page, so the engines cannot be read
+   against each other and the eye has to hold four pictures at once. This is one
+   chart instead: a line per engine on a single axis, so the shape of each engine
+   and the gap between them are both readable at a glance. The stacked bars below
+   still answer "how is today split", which a line cannot.
+
+   Two measures, because they are different questions. Page one is reach — how
+   much of the tracked list a searcher could find at all. The top three is the
+   part that actually gets clicked. */
+const MOVEM=[['page1','Page one (1–10)'],['top3','Top three (1–3)']];
+const MOVEW={page1:'on page one',top3:'in the top three'};
+// Colour follows the engine, never its position in the payload, so an engine
+// that drops out of one period does not repaint the others.
+const ENGC={google:'var(--e1)',google_local:'var(--e2)',
+            google_mobile:'var(--e3)',bing:'var(--e4)'};
+// Short forms for the crosshair readout, where four full names will not fit.
+const ENGS={google:'Google',google_local:'Local',google_mobile:'Mobile',bing:'Bing'};
+
+function moveSeries(mv,metric){
+  const pts=(mv&&mv.points)||[];
+  const seen=[];
+  pts.forEach(p=>(p.engines||[]).forEach(e=>{
+    if(seen.indexOf(e.engine)<0)seen.push(e.engine)}));
+  const order=ENG_ORDER.filter(e=>seen.indexOf(e)>=0)
+    .concat(seen.filter(e=>ENG_ORDER.indexOf(e)<0));
+  return order.map((eng,i)=>({
+    engine:eng,
+    color:ENGC[eng]||CHAN[i%CHAN.length],
+    values:pts.map(p=>{
+      const r=(p.engines||[]).filter(x=>x.engine===eng)[0];
+      return r?(Number(r[metric])||0):null;
+    })
+  }));
+}
+
+// First and last reading a series actually has, so an engine that started
+// mid-window is compared against its own first point rather than against zero.
+function movDelta(vals){
+  const at=[];
+  (vals||[]).forEach((v,i)=>{if(v!=null)at.push(i)});
+  if(at.length<2)return null;
+  const a=vals[at[0]],b=vals[at[at.length-1]];
+  return {from:a,to:b,d:b-a,i0:at[0],i1:at[at.length-1]};
+}
+// The arrow carries the direction as well as the colour, so the change is not
+// signalled by colour alone.
+function deltaTag(dl,cls,unit){
+  if(!dl)return '';
+  const w=dl.d>0?'up':dl.d<0?'down':'flat';
+  const t=dl.d>0?'▲ +'+n(dl.d):dl.d<0?'▼ '+n(dl.d):'▬ 0';
+  return `<span class="${cls} ${w}">${t}${unit?' '+esc(unit):''}</span>`;
+}
+
+// A round ceiling above the tallest point. The steps are chosen so the gap
+// between gridlines is always a whole number of phrases, and fine enough that a
+// chart topping out at 255 is not drawn on an axis running to 400.
+function axisTop(max){
+  const want=Math.max(1,max)/4;
+  const mag=Math.pow(10,Math.max(0,Math.floor(Math.log10(want))));
+  const steps=mag<10?[1,2,3,4,5,6,8,10]:[1,1.5,2,2.5,3,4,5,6,7.5,8,10];
+  for(const st of steps)if(st*mag>=want)return st*mag*4;
+  return 40*mag;
+}
+
+/* One SVG, no chart library. Grid and axes are hairlines behind the data; the
+   lines are 2px; every bucket has a full-height hover band that reveals a
+   crosshair and a one-line readout of all four engines at that date, and
+   carries the same text as a native title so touch and screen readers get it
+   too. Each line is labelled at its right-hand end as well as in the legend,
+   so identity never rests on colour alone. */
+function lineChart(labels,series,aria){
+  const W=820,H=274,PL=46,PR=112,PT=28,PB=32;
+  const iw=W-PL-PR,ih=H-PT-PB;
+  const flat=[].concat.apply([],series.map(s=>s.values)).filter(v=>v!=null);
+  const top=axisTop(flat.length?Math.max.apply(null,flat):1);
+  const x=i=>labels.length<2?PL+iw/2:PL+iw*i/(labels.length-1);
+  const y=v=>PT+ih-ih*v/top;
+  const mono='IBM Plex Mono,ui-monospace,monospace';
+
+  let grid='';
+  for(let g=0;g<=4;g++){
+    const v=top*g/4,yy=y(v);
+    grid+=`<line x1="${PL}" x2="${PL+iw}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}"
+      stroke="var(--line)" stroke-width="1"/>
+      <text x="${PL-9}" y="${(yy+3.6).toFixed(1)}" text-anchor="end" font-size="10.5"
+        font-family="${mono}" fill="var(--muted)">${n(v)}</text>`;
+  }
+
+  // Thin the date labels rather than let them overlap; the crosshair readout
+  // names the exact bucket for the ones that are not printed.
+  // Thin the date labels rather than let them collide; the crosshair readout
+  // names the exact bucket for the ones that are not printed. The last bucket
+  // is always labelled, and the one before it is dropped if that would crowd it.
+  const every=Math.ceil(labels.length/8),last=labels.length-1,keep=[];
+  for(let i=0;i<labels.length;i+=every)keep.push(i);
+  if(keep[keep.length-1]!==last){
+    if(last-keep[keep.length-1]<every)keep.pop();
+    keep.push(last);
+  }
+  const xax=keep.map(i=>{
+    // The end labels anchor inwards so neither hangs off the plotted area.
+    const an=i===0?'start':i===last?'end':'middle';
+    return `<text x="${x(i).toFixed(1)}" y="${H-11}" text-anchor="${an}" font-size="10.5"
+      font-family="${mono}" fill="var(--muted)">${esc(labels[i])}</text>`;
+  }).join('');
+
+  const paths=series.map(s=>{
+    let d='',pen=false;
+    s.values.forEach((v,i)=>{
+      if(v==null){pen=false;return}
+      d+=(pen?'L':'M')+x(i).toFixed(1)+' '+y(v).toFixed(1)+' ';pen=true;
+    });
+    return d?`<path d="${d.trim()}" fill="none" stroke="${s.color}" stroke-width="2"
+      stroke-linecap="round" stroke-linejoin="round"/>`:'';
+  }).join('');
+
+  // Markers on every bucket while they still fit; past that only the last one,
+  // so a twelve-month view is a line rather than a string of beads.
+  const dense=labels.length>14;
+  const dots=series.map(s=>s.values.map((v,i)=>{
+    if(v==null)return '';
+    if(dense&&i!==s.values.length-1)return '';
+    return `<circle cx="${x(i).toFixed(1)}" cy="${y(v).toFixed(1)}" r="4"
+      fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>`;
+  }).join('')).join('');
+
+  // Right-hand labels, nudged apart when two engines finish close together.
+  const ends=series.map(s=>{
+    const dl=[];s.values.forEach((v,i)=>{if(v!=null)dl.push(i)});
+    if(!dl.length)return null;
+    const i=dl[dl.length-1];
+    return {s:s,v:s.values[i],y:y(s.values[i])};
+  }).filter(Boolean).sort((a,b)=>a.y-b.y);
+  for(let i=1;i<ends.length;i++)
+    if(ends[i].y-ends[i-1].y<14)ends[i].y=ends[i-1].y+14;
+  const spill=ends.length?ends[ends.length-1].y-(PT+ih):0;
+  if(spill>0)ends.forEach(e=>{e.y-=spill});
+  const endlab=ends.map(e=>`<text x="${PL+iw+11}" y="${(e.y+3.6).toFixed(1)}"
+    font-size="11" font-family="${mono}" fill="var(--secondary)"
+    ><tspan fill="${e.s.color}">■</tspan> ${esc(ENGS[e.s.engine]||e.s.engine)} ${
+      n(e.v)}</text>`).join('');
+
+  const bw=labels.length<2?iw:iw/(labels.length-1);
+  const bands=labels.map((lb,i)=>{
+    const bx=Math.max(PL,x(i)-bw/2),wd=Math.min(bw,PL+iw-bx);
+    const parts=series.map(s=>s.values[i]==null?null
+      :`${ENGS[s.engine]||s.engine} ${n(s.values[i])}`).filter(Boolean).join('   ');
+    const line=`${lb} — ${parts||'no reading'}`;
+    return `<g class="bnd">
+      <rect x="${bx.toFixed(1)}" y="${PT}" width="${Math.max(1,wd).toFixed(1)}"
+        height="${ih}" fill="transparent"><title>${esc(line)}</title></rect>
+      <line class="cx" x1="${x(i).toFixed(1)}" x2="${x(i).toFixed(1)}"
+        y1="${PT}" y2="${PT+ih}" stroke="var(--muted)" stroke-width="1"
+        stroke-dasharray="3 3"/>
+      <text class="rdt" x="${PL}" y="${PT-9}" font-size="11" font-family="${mono}"
+        fill="var(--secondary)">${esc(line)}</text></g>`;
+  }).join('');
+
+  return `<svg class="lnchart" viewBox="0 0 ${W} ${H}" role="img"
+    aria-label="${esc(aria)}">${grid}${xax}${paths}${dots}${endlab}${bands}</svg>`;
+}
+
+function moveTable(mv,series,metric){
+  const pts=(mv&&mv.points)||[];
+  const head=series.map(s=>`<th class="n">${esc(ENGN[s.engine]||s.engine)}</th>`).join('');
+  const body=pts.map((p,i)=>`<tr><td>${esc(p.label)}</td>${
+    series.map(s=>`<td class="n num">${n(s.values[i])}</td>`).join('')}
+    <td class="n num">${n(p.unified?p.unified[metric]:null)}</td>
+    <td class="n num">${n(p.unified?p.unified.tracked:null)}</td></tr>`).join('');
+  return `<details class="mvtab"><summary>Show these numbers as a table</summary>
+    <div class="tw"><table><thead><tr><th>Period ending</th>${head}
+      <th class="n">Any engine</th><th class="n">Tracked</th></tr></thead>
+      <tbody>${body}</tbody></table></div></details>`;
+}
+
+function ovMovement(){
+  const mv=S.rankMove;
+  if(!mv||!mv.points)
+    return `<div class="pending" style="margin-top:22px"><b>Movement over time is
+      unavailable.</b> The placement history read did not answer, so nothing is drawn
+      rather than a flat line. The figures above come from a separate call and are
+      unaffected.</div>`;
+  const pts=mv.points;
+  if(!pts.length)
+    return `<div class="pending" style="margin-top:22px"><b>No ranking history inside
+      this window.</b> Nothing was recorded between these dates, so there is no movement
+      to draw.</div>`;
+
+  const metric=S.placeMetric==='top3'?'top3':'page1';
+  const series=moveSeries(mv,metric);
+  const labels=pts.map(p=>p.label||String(p.d||'').slice(5));
+  const unit=mv.unit==='week'?'week':'month';
+
+  const toggle=`<div class="seg">${MOVEM.map(([k,l])=>
+    `<button data-act="place-${k}" class="${metric===k?'on':''}">${l}</button>`).join('')}</div>`;
+
+  const leg=series.map(s=>{
+    const dl=movDelta(s.values);
+    const last=s.values.filter(v=>v!=null).slice(-1)[0];
+    return `<div class="row"><span class="sw2" style="background:${s.color}"></span>
+      <span class="nm">${esc(ENGN[s.engine]||s.engine)}</span>
+      <span class="vv">${n(last==null?null:last)}${deltaTag(dl,'dd')}</span></div>`;
+  }).join('');
+
+  const uni=movDelta(pts.map(p=>p.unified?Number(p.unified[metric]):null));
+
+  // Coverage moves as well as placement. A phrase added mid-window, or an engine
+  // the collector only began reading part way through, changes a count without
+  // anything having ranked differently — so where the change is big enough to
+  // read the line wrongly, the paragraph says so.
+  const cover=series.map(s=>{
+    const dl=movDelta(pts.map(p=>{
+      const r=(p.engines||[]).filter(x=>x.engine===s.engine)[0];
+      return r?(Number(r.tracked)||0):null;
+    }));
+    if(!dl||!dl.from||Math.abs(dl.d)/dl.from<0.1)return null;
+    return `${esc(ENGN[s.engine]||s.engine)} was read on ${n(dl.from)} of them at the start
+      of this window and ${n(dl.to)} at the end`;
+  }).filter(Boolean);
+  const track=cover.length
+    ? ` Coverage changed too, so part of the movement is the tracked list rather than the
+        ranking: ${cover.join('; ')}.`
+    : '';
+
+  const chart=pts.length<2
+    ? `<div class="pending"><b>Only one reading falls inside this window.</b>
+       Movement needs two, so widen the date range — a quarter or more gives a full set
+       of monthly points.</div>`
+    : `<div class="lnwrap">${lineChart(labels,series,
+        `Tracked phrases ${MOVEW[metric]} by ${unit}, one line per search engine`)}
+       <div class="mvleg">${leg}</div></div>`;
+
+  // The note names the measure as well as the toggle showing it, because the
+  // toggle is a control and does not print.
+  return `<div class="mvhead"><div>
+      <p class="t">How this moved over the period</p>
+      <p class="n">Tracked phrases ${MOVEW[metric]}, where they stood at the end of each
+      ${unit}, on one axis. The last point is the same figure as the tiles above.</p>
+    </div>${toggle}</div>
+    ${chart}
+    <p class="exp" style="margin-top:12px">${
+      uni?`Counting every phrase once at its best position across all engines, the number
+           ${MOVEW[metric]} went from <b>${n(uni.from)}</b> to <b>${n(uni.to)}</b> across
+           this window${uni.d===0?'':`, a ${uni.d>0?'gain':'fall'} of <b>${
+             n(Math.abs(uni.d))}</b>`}.`
+        :'Each line counts placements on one engine, so a phrase ranking on three engines appears on three lines.'
+      }${track}</p>
+    ${pts.length>1?moveTable(mv,series,metric):''}`;
+}
+
+// The change shown on a tile is read from the same series the chart draws, so
+// the headline and the line underneath it can never disagree.
+function tileMove(engine){
+  const pts=(S.rankMove&&S.rankMove.points)||[];
+  if(pts.length<2)return '';
+  const dl=movDelta(pts.map(p=>{
+    const r=(p.engines||[]).filter(x=>x.engine===engine)[0];
+    return r?(Number(r.page1)||0):null;
+  }));
+  if(!dl)return '';
+  const from=(pts[dl.i0]||{}).label;
+  return `<div class="mv ${dl.d>0?'up':dl.d<0?'down':'flat'}">${
+    dl.d>0?'\u25b2 +'+n(dl.d):dl.d<0?'\u25bc '+n(dl.d):'\u25ac no change'}${
+    from?' since '+esc(from):''}</div>`;
+}
+
 function ovPlacement(d){
   const rows=d.rankings_by_engine||[],u=d.rankings_unified||{};
   if(!rows.length)
@@ -998,6 +1340,7 @@ function ovPlacement(d){
     return `<div class="stat"><div class="v">${n(r.page1)}</div>
       <div class="l">${esc(ENGN[k])} — terms on page one</div>
       <div class="d">${n(r.top3)} of them in the top three, of ${n(r.tracked)} tracked</div>
+      ${tileMove(k)}
     </div>`;
   }).join('');
 
@@ -1030,7 +1373,8 @@ function ovPlacement(d){
     </div>
     <p class="exp" style="margin-top:14px">Counting every term once at its best position across
     all engines, <b>${n(u.page1)}</b> of ${n(u.tracked)} tracked terms are on page one, and
-    <b>${n(u.top3)}</b> are in the top three.</p>`;
+    <b>${n(u.top3)}</b> are in the top three.</p>
+    ${ovMovement()}`;
 }
 
 /* ---- 5. search traffic donuts ---- */
@@ -2567,6 +2911,10 @@ function bindTab(){
 }
 
 function doAct(act){
+  // The placement measure is a view of data already loaded, so it re-renders
+  // rather than re-reading.
+  if(act==='place-page1'||act==='place-top3'){
+    S.placeMetric=act.slice(6); render(); return }
   // Prompt actions talk to the API and re-render when they finish.
   if(act.indexOf('prompt-')===0){ doPromptAct(act); return }
   if(act.indexOf('client-')===0||act.indexOf('kw-add')===0

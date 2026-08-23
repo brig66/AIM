@@ -245,3 +245,71 @@ so losing signal never signs anyone out.
 Nothing on the summary path. The remaining gaps are the data ones above:
 Google Business Profile has no ingest, and `new_users` / `engagement_rate` are
 collected but not exposed by `dash_traffic_totals`.
+
+## Front Page Placement now shows movement, not just today
+
+Asked for after a side-by-side with Agency Analytics, which draws this as four
+separate stacked bar charts — one per engine, monthly. Four charts means four
+y-axes, so the engines cannot be read against each other and the eye has to
+hold four pictures at once.
+
+What the Overview draws instead is **one line chart on a single axis**, a line
+per engine, under the stacked bars that were already there. The bars answer
+"how is today split"; the lines answer "which way is this going". Neither
+answers the other's question, which is why both are on the page.
+
+What was added:
+
+| Piece | Where |
+| --- | --- |
+| `dash_rank_movement(p_client, p_from, p_to)` | database, mirrored in `supabase/dash_rank_movement.sql` |
+| `idx_rank_kw_asof` on `rank_intervals` | database, mirrored in `supabase/idx_rank_kw_asof.sql` |
+| `/api/rank_movement` | `ROUTES` in the `dashboard` edge function (v25) |
+| `ovMovement()`, `lineChart()`, `moveSeries()`, `movDelta()`, `tileMove()` | `index.html` |
+
+`supabase/README.md` carries the backend reasoning. The rest of this section is
+what the front end does with it.
+
+### Reading the chart
+
+- **Two measures, one toggle.** Page one (1–10) is reach; the top three (1–3)
+  is the part that actually gets clicked. The toggle is a view of data already
+  fetched, so switching re-renders and never re-reads.
+- **The last point equals the tiles above it.** That is a property of the RPC
+  (see the README), and the tiles' own "▲ +59 since May 2026" line is computed
+  from the same series, so the headline and the chart cannot drift apart.
+- **Buckets follow the selected range** — weekly at 70 days or less, monthly
+  beyond, up to 24 points. The x labels thin out rather than overlap, and the
+  crosshair readout names the bucket for the ones that are not printed.
+- **Coverage is called out when it moves.** Where an engine's tracked count
+  changed by 10% or more across the window, the paragraph under the chart says
+  so by name. Google Local went from 67 phrases to 303 at the DataForSEO
+  cutover; without that sentence its line reads as a collapse in ranking.
+
+### Why it is drawn the way it is
+
+- **One colour per engine, fixed, in `--e1`–`--e4`.** Held apart from
+  `--c1`–`--c8`, which colour position bands and traffic channels: an engine
+  must not change colour because the number of traffic channels did. Both the
+  light and dark sets were checked for colour-blind separation, chroma, the
+  lightness band and contrast against the card they sit on — the dark steps are
+  chosen, not lightened copies of the light ones.
+- **Identity never rests on colour alone.** Every line is labelled at its
+  right-hand end as well as in the legend, deltas carry ▲/▼ as well as green or
+  orange, and `Show these numbers as a table` renders the whole series as a
+  table for screen readers, for print, and for anyone who would rather read
+  figures.
+- **The crosshair and its readout are `pointer-events: none`.** An `opacity: 0`
+  element still catches the pointer, and the readout spans the whole plot, so
+  without that it would swallow hovers meant for other buckets.
+- **The chart floors at 680px and scrolls inside its card.** Below that the
+  SVG's own text stops being legible; the table is the small-screen answer.
+
+### Checking a change to it
+
+`ovPlacement()` is pure — it reads `S.rankMove` and its argument and returns a
+string — so it can be exercised head-first with the harness above. The states
+worth keeping green: a real payload on both measures, `S.rankMove` null (the
+route not deployed, or the read failed), `points: []`, a single bucket, an
+engine present in only some buckets, an all-zero client, and 24 buckets. None
+of them may throw, and none may render a zero where nothing was measured.

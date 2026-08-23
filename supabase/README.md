@@ -2,7 +2,16 @@
 
 `dashboard-edge-function.ts` is the deployed source of the `dashboard` edge
 function, kept here so the API surface is reviewable alongside the page that
-calls it. Deployed as version 20.
+calls it. Deployed as version 25.
+
+`dash_rank_movement.sql` and `idx_rank_kw_asof.sql` are the two database
+objects the Overview's placement-over-time chart needs, mirrored for the same
+reason. Both are already applied — as migrations `dash_rank_movement` and
+`idx_rank_kw_valid_to`.
+
+Redeploying `dashboard` needs `verify_jwt: false`. It does its own
+`x-aim-session` HMAC check and the browser sends no JWT, so leaving the default
+on takes the whole API offline.
 
 ## Roles
 
@@ -36,6 +45,40 @@ carry a `client_id` alongside it and filter every read against it.
 | `POST /api/keyword_remove` | `dash_keyword_remove` | Deletes a phrase never checked; deactivates one with rank readings |
 
 Reads added alongside them: `/api/clients_admin`, `/api/keywords_recent`.
+
+## Placement over time — `/api/rank_movement`
+
+`dash_rank_movement(p_client, p_from, p_to)` answers "which way is this going"
+for Front Page Placement: where every tracked phrase stood at the end of each
+bucket inside the selected window, per engine and unified.
+
+It is a separate route rather than another key on `dash_report` because it is
+the slowest read the Overview makes — it rebuilds a snapshot of the whole
+tracked list once per bucket, about a second for a 583-phrase client over
+twelve months. The page starts it before the report and awaits it at the end,
+so it runs alongside the other reads and adds no wall clock; a failure leaves
+the section saying so and the rest of the tab untouched.
+
+Three properties are worth keeping if it is ever rewritten:
+
+1. **The last bucket must equal the tiles.** Its as-of date is `p_to`, and it
+   resolves a position exactly the way `dash_report`'s `latest` CTE does —
+   newest interval with `valid_to <= as_of`, DataForSEO preferred over the
+   AgencyAnalytics history. A chart whose final point contradicts the headline
+   above it is worse than no chart.
+2. **Buckets follow the selected range.** 70 days or less buckets by week,
+   anything longer by month, newest 24 kept. A 30-day range would otherwise
+   draw one or two monthly points and show nothing.
+3. **`tracked` is returned per bucket, not assumed constant.** Phrases get
+   added, and the DataForSEO cutover widened some engines' coverage sharply —
+   Google Local went from tens of phrases to the full list. Without that
+   number a coverage change reads as a ranking change, so the page names it in
+   the paragraph under the chart.
+
+`rank_daily_summary` looks like the natural source and is not: it is a frozen
+import of AgencyAnalytics history that stops at 2026-08-17 and carries no
+DataForSEO readings, so its Google and Google Local figures already disagree
+with the tiles. `rank_intervals` is the live source of truth for both.
 
 ### Patch semantics on client_update
 
