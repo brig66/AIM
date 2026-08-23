@@ -1,21 +1,18 @@
 ---
 name: aim-domain-overview
 description: >-
-  Run a Semrush-style Domain Overview for any domain using the DataForSEO API instead of a
-  Semrush subscription, and return the whole dashboard: authority, organic and paid traffic
-  estimates, organic and paid keyword counts, referring domains and backlinks, traffic share
-  against the closest organic competitors, a 24-month traffic and keyword-position trend, the
-  Google SERP position distribution (organic vs AI Overviews vs other SERP features), the
-  branded/non-branded split, top keywords, per-country breakdown, and an optional AI search
-  visibility block covering AI Overviews, Google AI Mode, ChatGPT and Gemini. Use this
-  WHENEVER someone hands over a domain and wants the overview numbers — "run a domain
-  overview", "domain analysis for X", "what does this domain rank for", "how much traffic
-  does X get", "pull the Semrush numbers for this domain", "check their authority and
-  backlinks", "competitive snapshot", "AI visibility for this domain" — and whenever the ask
-  is to replace a Semrush Domain Overview with DataForSEO. Outputs a structured JSON plus an
-  AIM-branded one-page PDF. NOT for the full client-facing SEO audit deliverable (use
-  aim-seo-audit) and NOT for a site's real clicks and impressions (use aim-gsc-analysis —
-  DataForSEO estimates traffic, Search Console measures it).
+  Run a Semrush-style Domain Overview for any domain using DataForSEO instead of a Semrush
+  subscription: authority, organic and paid traffic and keyword counts, referring domains and
+  backlinks, traffic share against the closest organic competitors, 24-month traffic and
+  keyword-position trends, the Google SERP position distribution (organic vs AI Overviews vs
+  other SERP features), branded split, top keywords, per-country breakdown, and an optional AI
+  visibility block (AI Overviews, Google AI Mode, ChatGPT, Gemini). Use whenever someone hands
+  over a domain and wants the overview numbers: "run a domain overview", "domain analysis for
+  X", "what does this domain rank for", "how much traffic does X get", "pull the Semrush
+  numbers for this domain", "check their authority and backlinks", or any ask to replace a
+  Semrush Domain Overview with DataForSEO. Outputs JSON plus an AIM-branded PDF. NOT the full
+  client SEO audit (use aim-seo-audit) and NOT real clicks and impressions (use
+  aim-gsc-analysis).
 ---
 
 # AIM Domain Overview (DataForSEO)
