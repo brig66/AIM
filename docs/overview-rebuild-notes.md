@@ -155,3 +155,55 @@ string. The rebuild was checked this way against a real payload, an empty
 payload, a connected-but-empty payload, an errored connector, all four summary
 states, and a payload with `new_users`/`views` added to confirm the donuts
 appear with no code change.
+
+## Fixed: Generate summary signed you out (ask v10 → v12)
+
+Reported as "on iPad or phone, the Generate summary button kicks me out and I
+have to log back in". It was not mobile-specific and not a timeout — the iPad
+was simply the only device in the logs.
+
+`dashboard` v24 added roles and changed the token it mints:
+
+```
+exp.role.sig    signature covers "exp.role"      <- current
+exp.sig         signature covers "exp"           <- pre-roles, still accepted
+```
+
+`dashboard.tokenRole()` accepts both. The `ask` function was never updated and
+still read the two-part form:
+
+```ts
+const [e, sig] = tok.split(".");   // sig = "admin", not the signature
+if (sig.length !== want.length) return false;   // 5 !== 64 -> 401
+```
+
+So every `/ask` call 401'd in about 300 ms. `genSummary()` in the page treats a
+401 as a dead session — it clears `sessionStorage` and shows the login screen —
+so a perfectly good login was thrown away on every press of the button. The
+edge logs show exactly this: three `POST /functions/v1/ask` 401s from an iPad,
+each followed by a fresh login, while `/api/*` on the same token returned 200
+throughout.
+
+The fix ports `dashboard.tokenRole()` into `ask` verbatim, so both functions
+accept the same two shapes. It is strictly more permissive than before, so no
+existing session is invalidated by the deploy. Mirrored here in
+`supabase/ask-edge-function.ts`.
+
+Deploy note: `deploy_edge_function` defaults `verify_jwt` to **true**, and this
+function needs it **false** — it does its own `x-aim-session` HMAC check, and
+the browser sends no JWT. The first deploy (v11) flipped it on; v12 restored it
+with identical code (same `ezbr_sha256`). No `/ask` request arrived during the
+75 seconds it was wrong. Always pass `verify_jwt: false` when redeploying this
+function or `dashboard`.
+
+### Still outstanding
+
+`ask` still does not write to `report_summaries`, so a generated summary lives
+only in the page's memory for that visit — the UI says so honestly ("it will
+need regenerating next visit"). `/api/summary` is wired and returns 200, so the
+moment `ask` caches its output, generated summaries start surviving a reload.
+
+The page also treats a 401 from `ask` — a different service — as proof the
+dashboard session is dead. Even with the token bug fixed, any future hiccup in
+`ask` will sign the user out rather than showing an error. Worth having
+`genSummary()` re-check the session against `/api/clients` before clearing it.
