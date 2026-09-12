@@ -1,0 +1,64 @@
+/* AIM AI Visibility Toolkit — front-end styles.
+   Deliberately minimal: these inherit your theme's fonts and colours rather
+   than imposing their own, so the blocks look like the rest of the site. */
+
+.aim-avt-testimonials { margin: 2em 0; }
+.aim-avt-testimonial {
+	margin: 0 0 1.75em;
+	padding: 1.25em 1.5em;
+	border-left: 3px solid currentColor;
+	background: rgba(0, 0, 0, 0.025);
+}
+.aim-avt-testimonial__quote { margin: 0; font-size: 1.05em; }
+.aim-avt-testimonial__quote p:last-child { margin-bottom: 0; }
+.aim-avt-testimonial__meta { margin-top: 0.85em; font-size: 0.88em; opacity: 0.85; }
+.aim-avt-testimonial__meta > span { display: block; }
+.aim-avt-testimonial__who { font-weight: 700; }
+.aim-avt-testimonial__rating { font-weight: 700; margin-top: 0.25em; }
+.aim-avt-testimonials__aggregate { font-weight: 700; margin-top: 1.5em; }
+
+.aim-avt-press__list { list-style: none; margin: 0 0 1.5em; padding: 0; }
+.aim-avt-press__item { padding: 0.65em 0; border-bottom: 1px solid rgba(0, 0, 0, 0.08); }
+.aim-avt-press__meta { opacity: 0.75; font-size: 0.9em; }
+.aim-avt-press__summary { font-size: 0.92em; margin-top: 0.35em; }
+
+.aim-avt-case-study { padding: 1em 0; border-bottom: 1px solid rgba(0, 0, 0, 0.08); }
+.aim-avt-case-study__title { margin: 0 0 0.3em; }
+.aim-avt-case-study__meta { font-size: 0.88em; opacity: 0.8; margin: 0 0 0.4em; }
+.aim-avt-case-study__excerpt { margin: 0; }
+
+.aim-avt-pricing { margin: 2em 0; }
+.aim-avt-pricing__table { width: 100%; border-collapse: collapse; }
+.aim-avt-pricing__table th,
+.aim-avt-pricing__table td {
+	padding: 0.7em 0.85em;
+	text-align: left;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+	vertical-align: top;
+}
+.aim-avt-pricing__table thead th { border-bottom-width: 2px; }
+.aim-avt-pricing__figure { font-weight: 700; white-space: nowrap; }
+.aim-avt-pricing__assumptions { font-size: 0.9em; opacity: 0.85; }
+.aim-avt-pricing__note,
+.aim-avt-pricing__asof { font-size: 0.88em; opacity: 0.8; margin-top: 0.75em; }
+
+.aim-avt-locations { display: flex; flex-wrap: wrap; gap: 2em; margin: 1.5em 0; }
+.aim-avt-location { flex: 1 1 240px; }
+.aim-avt-location__name { margin: 0 0 0.4em; }
+.aim-avt-location__address { font-style: normal; margin: 0 0 0.4em; }
+.aim-avt-location__phone,
+.aim-avt-location__hours { margin: 0 0 0.25em; }
+
+.aim-avt-map { margin: 1.5em 0; }
+.aim-avt-map iframe { display: block; max-width: 100%; }
+
+.aim-avt-byline { font-size: 0.92em; opacity: 0.85; margin-bottom: 1.5em; }
+.aim-avt-byline__label { text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.85em; }
+.aim-avt-byline__name { font-weight: 700; }
+
+.aim-avt-notice {
+	padding: 0.85em 1.1em;
+	border: 1px dashed rgba(0, 0, 0, 0.3);
+	background: rgba(255, 235, 160, 0.35);
+	font-size: 0.92em;
+}
