@@ -1,0 +1,23 @@
+{
+  "firm_name": "Advanced Integrated Marketing, Inc.",
+  "firm_short": "AIM",
+  "product_name": "AI Visibility Assessment",
+  "website": "aim-tex.com",
+  "email": "info@aim-tex.com",
+  "phone": "(817) 592-5586",
+  "address": "1905 Ascension Blvd, Suite 154, Arlington, TX 76006",
+  "colors": {
+    "indigo": "#352597",
+    "magenta": "#c0228a",
+    "orange": "#e7730d",
+    "cream": "#FFFBFA",
+    "ink": "#1c1830",
+    "muted": "#6b6480",
+    "line": "#e7e1ee",
+    "good": "#2e8b57",
+    "warn": "#e7730d",
+    "bad": "#c0228a"
+  },
+  "logo_trans": "aim-logo-trans.png",
+  "logo_white": "aim-logo-white.png"
+}
