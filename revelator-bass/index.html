@@ -89,11 +89,13 @@ button:disabled{opacity:.5;cursor:not-allowed}
 
 /* Tab */
 .tabpanel{gap:12px}
-.tabhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px}
+.player{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 16px;position:sticky;top:env(safe-area-inset-top,0px);z-index:3;background:var(--panel);margin-inline:-10px;padding:8px 10px;border-bottom:1px solid var(--line);border-radius:8px}
+.pbtns,.pvols{display:flex;align-items:center;gap:8px 14px}
+.player.playing-now{box-shadow:0 6px 12px -8px rgba(0,0,0,.35)}
 .tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .vol{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .vol input{width:90px}
-.clock{font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:12ch}
+.clock{font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:13ch;white-space:nowrap}
 .tabbox{background:var(--tab-bg);border:1px solid var(--line);border-radius:8px;overflow-x:auto;padding:10px 0}
 .tabbox pre{margin:0;font-family:var(--mono);font-size:13px;line-height:1.38;padding:6px 16px;border-left:3px solid transparent;white-space:pre;color:var(--ink)}
 .tabbox pre.sys{cursor:pointer}
@@ -107,7 +109,25 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100% - 32px)}
 .toast.show{opacity:1}
 footer{font-size:13px;color:var(--muted)}
-@media (max-width:560px){.grid2{grid-template-columns:1fr}}
+@media (max-width:560px){
+  .grid2{grid-template-columns:1fr}
+  .panel{padding:14px}
+  .tabbox pre{font-size:12px;padding:6px 10px}
+  .player{margin-inline:-8px;padding:6px 8px}
+  .pbtns,.pvols{width:100%;gap:8px}
+  .pvols .vol{flex:1 1 0;min-width:0}
+  .vol input{width:100%;min-width:0}
+  .clock{font-size:12px;min-width:0;margin-left:auto}
+}
+.touch-only{display:none}
+@media (hover:none) and (pointer:coarse){
+  button{min-height:44px}
+  button.small{min-height:40px}
+  select,input[type=number],textarea{font-size:16px}
+  input[type=range]{height:28px}
+  .touch-only{display:inline}
+  .mouse-only{display:none}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -129,7 +149,7 @@ footer{font-size:13px;color:var(--muted)}
     <div class="panel" id="p1">
       <h2><small>1</small>Song</h2>
       <label class="drop" id="drop" for="file">
-        <strong>Choose a song or drop it here</strong>
+        <strong><span class="mouse-only">Choose a song or drop it here</span><span class="touch-only">Tap to choose a song</span></strong>
         <span class="hint">MP3, WAV, M4A/AAC, OGG or FLAC. The file stays on your computer.</span>
         <input type="file" id="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac">
       </label>
@@ -249,14 +269,16 @@ footer{font-size:13px;color:var(--muted)}
   </section>
 
   <section class="panel tabpanel" aria-label="Bass tablature">
-    <div class="tabhead">
-      <h2><small>4</small>Tablature</h2>
-      <div class="tools">
+    <h2><small>4</small>Tablature</h2>
+    <div class="player">
+      <div class="pbtns">
         <button class="primary small" id="playBtn" type="button">▶ Play with song</button>
         <button class="small" id="stopBtn" type="button" disabled>■ Stop</button>
+        <span class="clock" id="clock">0:00</span>
+      </div>
+      <div class="pvols">
         <label class="vol" for="songVol">Song<input type="range" id="songVol" min="0" max="1" step="0.01" value="0.7"></label>
         <label class="vol" for="bassVol">Bass<input type="range" id="bassVol" min="0" max="1" step="0.01" value="0.8"></label>
-        <span class="clock" id="clock">0:00</span>
       </div>
     </div>
     <div class="tools">
@@ -340,19 +362,29 @@ function makeFFT(n){
 const hann = n => { const w = new Float64Array(n); for (let i = 0; i < n; i++) w[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / n); return w; };
 
 // ---------- audio loading ----------
+const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+function renderOffline(ctx){
+  return new Promise((res, rej) => {
+    ctx.oncomplete = e => res(e.renderedBuffer);
+    try { const p = ctx.startRendering(); if (p && p.then) p.then(res, rej); } catch (e){ rej(e); }
+  });
+}
 async function decodeFile(arrayBuf){
-  const ctx = new OfflineAudioContext(1, 1, 44100);
+  const ctx = new OAC(1, 44100, 44100);
   return await new Promise((res, rej) => {
     const p = ctx.decodeAudioData(arrayBuf, res, rej);
     if (p && p.then) p.then(res, rej);
   });
 }
 async function toMono11k(buf){
-  const len = Math.max(1, Math.ceil(buf.duration * SR));
-  const off = new OfflineAudioContext(1, len, SR);
-  const src = off.createBufferSource(); src.buffer = buf; src.connect(off.destination); src.start();
-  const out = await off.startRendering();
-  return out.getChannelData(0).slice();
+  // Render a mono mix at 22,050 Hz (supported by every browser), then halve the rate with a small smoothing filter.
+  const len = Math.max(2, Math.ceil(buf.duration * SR * 2));
+  const off = new OAC(1, len, SR * 2);
+  const src = off.createBufferSource(); src.buffer = buf; src.connect(off.destination); src.start(0);
+  const a = (await renderOffline(off)).getChannelData(0);
+  const n = Math.floor(a.length / 2), x = new Float32Array(n);
+  for (let i = 0; i < n; i++){ const j = 2 * i; x[i] = 0.25 * (a[j - 1] || 0) + 0.5 * a[j] + 0.25 * (a[j + 1] || 0); }
+  return x;
 }
 
 // ---------- feature extraction ----------
@@ -991,13 +1023,17 @@ function assignFingering(notes){
 // ---------- tab rendering ----------
 const DUR = [[16,'w'],[12,'h.'],[8,'h'],[6,'q.'],[4,'q'],[3,'e.'],[2,'e'],[1,'s']];
 const durLabel = d => { for (const [n, l] of DUR) if (d >= n) return d === n ? l : l + '~'; return 's'; };
-function renderTab(meta){
-  const {bars, notes, bpb} = meta, spb = bpb * 4, W = 3, MAXW = 104;
+function renderTab(meta, opts = {}){
+  const {bars, notes, bpb} = meta, spb = bpb * 4, MAXW = opts.maxW || 104;
   const byBar = bars.map(() => []); for (const nt of notes) byBar[nt.bar].push(nt);
   const blocks = bars.map((bar, bi) => {
     const ns = byBar[bi];
     const res = ns.some(n => n.step % 2) || bar.chords.some(c => c.start % 2) ? 1 : ns.some(n => n.step % 4) || bar.chords.some(c => c.start % 4) ? 2 : 4;
-    const slots = spb / res, width = slots * W;
+    const slots = spb / res;
+    // On narrow screens, pack 16th-note bars two characters per slot when no two-digit fret would touch the next note.
+    const slotOf = new Set(ns.map(n => n.step / res));
+    const W = opts.compact && res === 1 && !ns.some(n => !n.dead && n.fret >= 10 && slotOf.has(n.step / res + 1)) ? 2 : 3;
+    const width = slots * W;
     const NS = STRINGS.length, rows = Array.from({length: NS}, () => Array(width).fill('-'));
     const chord = Array(width).fill(' '), count = Array(width).fill(' '), dur = Array(width).fill(' ');
     for (let i = 0; i < slots; i++){
@@ -1051,6 +1087,29 @@ function renderTab(meta){
   const text = header.join('\n') + '\n' + systems.map(s => s.lines.map(l => l.t.replace(/\s+$/, '')).join('\n')).join('\n\n') + '\n';
   return {systems, text};
 }
+function fitChars(){
+  const box = $('tabBox');
+  const pre = document.createElement('pre'); pre.style.cssText = 'position:absolute;visibility:hidden';
+  pre.textContent = 'M'.repeat(40); box.appendChild(pre);
+  const cw = pre.getBoundingClientRect().width / 40 || 8;
+  const pad = parseFloat(getComputedStyle(pre).paddingLeft) * 2 + 3;
+  box.removeChild(pre);
+  return Math.max(30, Math.floor((box.clientWidth - pad) / cw));
+}
+let fitW = 0;
+function showScreenTab(){
+  if (!S.tabMeta) return;
+  fitW = fitChars();
+  showTab(fitW >= 104 ? S.tab : renderTab(S.tabMeta, {maxW: fitW, compact: fitW < 70}));
+  // Shrink the text of any line that is still wider than the screen so it fits without sideways scrolling.
+  if (fitW < 104) $('tabBox').querySelectorAll('pre.sys').forEach(pre => {
+    const longest = Math.max(...pre.textContent.split('\n').map(l => l.replace(/\s+$/, '').length));
+    if (longest > fitW){ const fs = parseFloat(getComputedStyle(pre).fontSize); pre.style.fontSize = Math.max(8, fs * fitW / longest).toFixed(2) + 'px'; }
+  });
+  lastSys = -1;
+}
+let resizeT = 0;
+window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(() => { if (S.tabMeta && fitChars() !== fitW) showScreenTab(); }, 200); });
 function showTab(tab){
   const box = $('tabBox');
   box.innerHTML = tab.systems.map((s, i) => `<pre class="sys" data-i="${i}" data-first="${s.first}" title="Play from bar ${s.first + 1}">${s.lines.map(l => l.c ? `<span class="${l.c}">${esc(l.t)}</span>` : esc(l.t)).join('\n')}</pre>`).join('');
@@ -1204,7 +1263,7 @@ async function makeDemo(){
   const sr = 22050, bpm = 96, spb = 60 / bpm, bpb = 4, lead = 0.8;
   const prog = ['G','Em','C','D','G','Em','C','D','C','D','G/B','Em','Am7','D7','G','G'];
   const dur = lead + prog.length * bpb * spb + 2.5;
-  const ctx = new OfflineAudioContext(1, Math.ceil(dur * sr), sr);
+  const ctx = new OAC(1, Math.ceil(dur * sr), sr);
   const master = ctx.createGain(); master.gain.value = 0.55; master.connect(ctx.destination);
   const nb = ctx.createBuffer(1, sr, sr); const nd = nb.getChannelData(0); const rnd = mulberry32(7); for (let i = 0; i < nd.length; i++) nd[i] = rnd() * 2 - 1;
   const env = (g, t, a, peak, decay) => { g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0008, t + decay); };
@@ -1231,7 +1290,7 @@ async function makeDemo(){
     }
   });
   bassN(lead + prog.length * bpb * spb, 31, 1.5);
-  return await ctx.startRendering();
+  return await renderOffline(ctx);
 }
 
 // ---------- UI helpers ----------
@@ -1310,8 +1369,9 @@ function regenerate(){
   const notes = generateBass(S.bars, cfg);
   assignFingering(notes);
   S.notes = notes;
-  S.tab = renderTab({bars: S.bars, notes, bpb: S.bpb, key: S.key, bpm: S.bpm, style, swing: S.swing, seed: S.seed, song: S.isDemo ? 'Built-in demo track' : S.fileName});
-  showTab(S.tab);
+  S.tabMeta = {bars: S.bars, notes, bpb: S.bpb, key: S.key, bpm: S.bpm, style, swing: S.swing, seed: S.seed, song: S.isDemo ? 'Built-in demo track' : S.fileName};
+  S.tab = renderTab(S.tabMeta);
+  showScreenTab();
   $('varNum').textContent = S.seed;
   if (P.playing){ const st = P.songStart + (P.ctx.currentTime - P.ctxStart); P.events = buildEvents(); P.idx = 0; while (P.idx < P.events.length && P.events[P.idx].t < st + 0.05) P.idx++; lastSys = -1; }
 }
