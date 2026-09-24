@@ -117,12 +117,12 @@ footer{font-size:13px;color:var(--muted)}
   <header class="mast">
     <div class="mast-top">
       <h1>The Revelator <span>Bass Creation Tool</span></h1>
-      <div class="plate"><span>6-string · 24 frets</span><b>B E A D G C</b></div>
+      <div class="plate"><span id="plateTop">6-string · 24 frets</span><b id="plateTuning">B E A D G C</b></div>
     </div>
     <div class="strings" aria-hidden="true">
       <i style="--h:1px"></i><i style="--h:1.4px"></i><i style="--h:1.9px"></i><i style="--h:2.4px"></i><i style="--h:3px"></i><i style="--h:3.6px"></i>
     </div>
-    <p class="lede">Give it a recording of a song. It finds the tempo, key and chords, writes a bass line that fits, and lays it out as tablature for 6-string bass, from the low B up to the 24th fret on the high C.</p>
+    <p class="lede">Give it a recording of a song. It finds the tempo, key and chords, writes a bass line that fits, and lays it out as tablature for your bass: 4-string, 5-string or 6-string, using every string up to the 24th fret.</p>
   </header>
 
   <section class="bench">
@@ -169,6 +169,14 @@ footer{font-size:13px;color:var(--muted)}
 
     <div class="panel" id="p3">
       <h2><small>3</small>Bass line</h2>
+      <label class="f" for="instSel">Your bass
+        <select id="instSel">
+          <option value="4">4-string (E A D G)</option>
+          <option value="5b">5-string, low B (B E A D G)</option>
+          <option value="5c">5-string, high C (E A D G C)</option>
+          <option value="6">6-string (B E A D G C)</option>
+        </select>
+      </label>
       <label class="f" for="styleSel">Groove (the rhythm style of the song)
         <select id="styleSel">
           <option value="auto">Auto: match the song</option>
@@ -219,7 +227,7 @@ footer{font-size:13px;color:var(--muted)}
       <label class="f" for="regSel">Register
         <select id="regSel">
           <option value="full">Full range: follows the song's energy</option>
-          <option value="low">Low: B and E strings</option>
+          <option value="low">Low: the two lowest strings</option>
           <option value="standard">Standard: 4-string territory</option>
           <option value="mid">Middle of the neck</option>
           <option value="high">High: solo register, up to C5</option>
@@ -273,9 +281,21 @@ footer{font-size:13px;color:var(--muted)}
 'use strict';
 // ---------- constants ----------
 const SR = 11025;
-const STRINGS = [23, 28, 33, 38, 43, 48];          // B0 E1 A1 D2 G2 C3 (MIDI)
-const STRING_NAMES = ['B', 'E', 'A', 'D', 'G', 'C'];
-const MAX_FRET = 24, ABS_LO = 23, ABS_HI = 72;
+// Open-string pitches (MIDI), low to high. B0=23 E1=28 A1=33 D2=38 G2=43 C3=48.
+const INSTRUMENTS = {
+  '4':  {label: '4-string', strings: [28, 33, 38, 43], names: ['E', 'A', 'D', 'G']},
+  '5b': {label: '5-string (low B)', strings: [23, 28, 33, 38, 43], names: ['B', 'E', 'A', 'D', 'G']},
+  '5c': {label: '5-string (high C)', strings: [28, 33, 38, 43, 48], names: ['E', 'A', 'D', 'G', 'C']},
+  '6':  {label: '6-string', strings: [23, 28, 33, 38, 43, 48], names: ['B', 'E', 'A', 'D', 'G', 'C']}
+};
+const MAX_FRET = 24;
+let STRINGS, STRING_NAMES, ABS_LO, ABS_HI, INST;
+function setInstrument(id){
+  INST = INSTRUMENTS[id] || INSTRUMENTS['6'];
+  STRINGS = INST.strings; STRING_NAMES = INST.names;
+  ABS_LO = STRINGS[0]; ABS_HI = STRINGS[STRINGS.length - 1] + MAX_FRET;
+}
+setInstrument('6');
 const PC = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
 const QUALS = [{q:'', iv:[0,4,7]}, {q:'m', iv:[0,3,7]}, {q:'7', iv:[0,4,7,10]}, {q:'m7', iv:[0,3,7,10]}];
 const NSTATE = 48; // index of "no chord"
@@ -805,11 +825,13 @@ function generateBass(bars, cfg){
   const reg = bi => {
     if (register === 'full'){
       const it = bars[bi].intensity ?? 0.5;
-      const center = Math.round(31 + (1 - it) * 12 + (style === 'melodic' ? 5 : 0) - (style === 'metal' ? 4 : 0));
-      return {lo: ABS_LO, hi: ABS_HI, center};
+      const base = Math.max(31, ABS_LO + 3);
+      const center = Math.round(base + (1 - it) * 12 + (style === 'melodic' ? 5 : 0) - (style === 'metal' ? 4 : 0));
+      return {lo: ABS_LO, hi: ABS_HI, center: clamp(center, ABS_LO, ABS_HI - 12)};
     }
     const r = REG[register] || REG.standard;
-    return {lo: r.lo, hi: r.hi, center: r.center + (style === 'melodic' ? 4 : 0)};
+    const lo = Math.max(r.lo, ABS_LO), hi = Math.min(r.hi, ABS_HI);
+    return {lo, hi, center: clamp(r.center + (style === 'melodic' ? 4 : 0), lo + 2, hi - 2)};
   };
   const anchors = [];
   let prev = null;
@@ -942,7 +964,7 @@ function generateBass(bars, cfg){
 // ---------- fingering (string/fret choice) ----------
 function assignFingering(notes){
   const n = notes.length; if (!n) return;
-  const cands = notes.map(nt => { const a = []; for (let s = 0; s < 6; s++){ const f = nt.midi - STRINGS[s]; if (f >= 0 && f <= MAX_FRET) a.push({s, f}); } return a; });
+  const cands = notes.map(nt => { const a = []; for (let s = 0; s < STRINGS.length; s++){ const f = nt.midi - STRINGS[s]; if (f >= 0 && f <= MAX_FRET) a.push({s, f}); } return a; });
   const unary = c => (c.f === 0 ? 0.35 : 0) + (c.f > 15 ? (c.f - 15) * 0.35 : 0) + (c.s === 0 && c.f > 9 ? 0.6 : 0);
   const trans = (a, b, dead) => {
     if (dead) return a.s === b.s && a.f === b.f ? 0 : 50;
@@ -976,14 +998,14 @@ function renderTab(meta){
     const ns = byBar[bi];
     const res = ns.some(n => n.step % 2) || bar.chords.some(c => c.start % 2) ? 1 : ns.some(n => n.step % 4) || bar.chords.some(c => c.start % 4) ? 2 : 4;
     const slots = spb / res, width = slots * W;
-    const rows = Array.from({length: 6}, () => Array(width).fill('-'));
+    const NS = STRINGS.length, rows = Array.from({length: NS}, () => Array(width).fill('-'));
     const chord = Array(width).fill(' '), count = Array(width).fill(' '), dur = Array(width).fill(' ');
     for (let i = 0; i < slots; i++){
       const st = i * res, b = Math.floor(st / 4) + 1, sub = st % 4;
       count[i * W] = sub === 0 ? String(b) : sub === 2 ? '&' : sub === 1 ? 'e' : 'a';
     }
     for (const nt of ns){
-      const col = (nt.step / res) * W, row = 5 - nt.string;
+      const col = (nt.step / res) * W, row = NS - 1 - nt.string;
       const txt = nt.dead ? 'x' : String(nt.fret);
       for (let k = 0; k < txt.length; k++) rows[row][col + k] = txt[k];
       const dl = nt.dead ? 's' : durLabel(nt.dur); for (let k = 0; k < dl.length && col + k < width; k++) dur[col + k] = dl[k];
@@ -1005,7 +1027,7 @@ function renderTab(meta){
     lines.push({t: head, c: 'hd'});
     lines.push({t: '   ' + cur.map(b => b.chord + ' ').join(''), c: 'ch'});
     lines.push({t: '   ' + cur.map(b => b.count + ' ').join(''), c: 'ct'});
-    for (let r = 0; r < 6; r++) lines.push({t: STRING_NAMES[5 - r] + ' |' + cur.map(b => b.rows[r]).join(''), c: ''});
+    for (let r = 0; r < STRINGS.length; r++) lines.push({t: STRING_NAMES[STRINGS.length - 1 - r] + ' |' + cur.map(b => b.rows[r]).join(''), c: ''});
     lines.push({t: '   ' + cur.map(b => b.dur + ' ').join(''), c: 'ct'});
     systems.push({first, last, lines});
     cur = [];
@@ -1020,7 +1042,7 @@ function renderTab(meta){
     'THE REVELATOR BASS CREATION TOOL',
     `Song: ${meta.song}`,
     `Key: ${keyName(meta.key)}   Tempo: ${meta.bpm.toFixed(1)} BPM   Time: ${bpb}/4   Groove: ${GROOVES[meta.style].name}${meta.swing ? ' (swing: play eighth notes as triplets)' : ''}   Variation: ${meta.seed}`,
-    'Tuning (low to high): B E A D G C   6-string bass, 24 frets',
+    `Bass: ${INST.label}, tuned (low to high) ${STRING_NAMES.join(' ')}, 24 frets`,
     'Numbers = fret, x = dead note. Counts above each bar; note lengths below',
     '(w whole, h half, q quarter, e eighth, s 16th, . dotted, ~ held a bit longer).',
     'Times show where each line starts in the recording.',
@@ -1340,6 +1362,22 @@ async function loadDemo(){
 
 // ---------- wiring ----------
 fillKeySelect();
+function applyInstrument(id){
+  setInstrument(id);
+  $('plateTop').textContent = STRINGS.length + '-string · 24 frets';
+  $('plateTuning').textContent = STRING_NAMES.join(' ');
+}
+{
+  let saved = '6';
+  try { saved = localStorage.getItem('revelator-bass') || '6'; } catch (e){}
+  if (!INSTRUMENTS[saved]) saved = '6';
+  $('instSel').value = saved; applyInstrument(saved);
+}
+$('instSel').addEventListener('change', () => {
+  const id = $('instSel').value;
+  try { localStorage.setItem('revelator-bass', id); } catch (e){}
+  applyInstrument(id); regenerate(); toast('Tab rewritten for ' + INST.label + ' bass.');
+});
 $('file').addEventListener('change', e => { loadFile(e.target.files[0]); e.target.value = ''; });
 const drop = $('drop');
 ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
