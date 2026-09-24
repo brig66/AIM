@@ -169,18 +169,53 @@ footer{font-size:13px;color:var(--muted)}
 
     <div class="panel" id="p3">
       <h2><small>3</small>Bass line</h2>
-      <label class="f" for="styleSel">Style
+      <label class="f" for="styleSel">Groove (the rhythm style of the song)
         <select id="styleSel">
-          <option value="auto">Auto (match the song)</option>
-          <option value="rock">Rock: driving eighths</option>
-          <option value="pop">Pop: root and fifth</option>
-          <option value="ballad">Ballad: long notes</option>
-          <option value="funk">Funk / R&amp;B: syncopated 16ths</option>
-          <option value="walking">Walking: jazz and blues</option>
-          <option value="melodic">Melodic: arpeggios and 10ths</option>
-          <option value="metal">Metal: gallops and 16ths</option>
+          <option value="auto">Auto: match the song</option>
+          <option value="kick">Follow the drums in the recording</option>
+          <optgroup label="Rock and pop">
+            <option value="rock">Rock</option>
+            <option value="pop">Pop</option>
+            <option value="ballad">Ballad</option>
+            <option value="punk">Punk</option>
+            <option value="metal">Metal</option>
+          </optgroup>
+          <optgroup label="Funk, soul and R&amp;B">
+            <option value="funk">Funk</option>
+            <option value="motown">Motown / Soul</option>
+            <option value="disco">Disco</option>
+            <option value="hiphop">Hip-hop / Neo-soul</option>
+          </optgroup>
+          <optgroup label="Latin and Brazilian">
+            <option value="bossa">Bossa Nova</option>
+            <option value="samba">Samba</option>
+            <option value="tumbao">Salsa / Tumbao</option>
+          </optgroup>
+          <optgroup label="Caribbean">
+            <option value="reggae">Reggae (one drop)</option>
+            <option value="ska">Ska / Rocksteady</option>
+          </optgroup>
+          <optgroup label="Blues, jazz and country">
+            <option value="shuffle">Blues shuffle</option>
+            <option value="walking">Jazz walking bass</option>
+            <option value="country">Country</option>
+            <option value="waltz">Waltz (3/4)</option>
+          </optgroup>
+          <optgroup label="Other">
+            <option value="melodic">Melodic: arpeggios and 10ths</option>
+          </optgroup>
         </select>
       </label>
+      <div class="grid2">
+        <label class="f" for="feelSel">Feel
+          <select id="feelSel">
+            <option value="auto">Auto</option>
+            <option value="straight">Straight</option>
+            <option value="swing">Swing / shuffle</option>
+          </select>
+        </label>
+        <label class="row" style="gap:8px;font-size:14px;align-self:end;padding-bottom:8px;flex-wrap:nowrap" for="kickChk"><input type="checkbox" id="kickChk" checked> Lock to the kick drum</label>
+      </div>
       <label class="f" for="regSel">Register
         <select id="regSel">
           <option value="full">Full range: follows the song's energy</option>
@@ -244,7 +279,6 @@ const MAX_FRET = 24, ABS_LO = 23, ABS_HI = 72;
 const PC = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
 const QUALS = [{q:'', iv:[0,4,7]}, {q:'m', iv:[0,3,7]}, {q:'7', iv:[0,4,7,10]}, {q:'m7', iv:[0,3,7,10]}];
 const NSTATE = 48; // index of "no chord"
-const STYLE_NAMES = {rock:'Rock', pop:'Pop', ballad:'Ballad', funk:'Funk / R&B', walking:'Walking', melodic:'Melodic', metal:'Metal'};
 const $ = s => document.getElementById(s);
 const tick = () => new Promise(r => setTimeout(r, 0));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -632,25 +666,101 @@ function autoStyle(){
   let sev = 0, tot = 0; for (const b of S.bars) for (const c of b.chords){ if (c.none) continue; tot++; if (/7|9|11|13/.test(c.q || '')) sev++; }
   const sevShare = tot ? sev / tot : 0, bpm = S.bpm;
   let style;
-  if (bpm < 72) style = 'ballad';
+  if (S.songSwing) style = sevShare > 0.5 ? 'walking' : 'shuffle';
+  else if (bpm < 72) style = 'ballad';
   else if (sevShare > 0.6 && r16 < 0.55) style = 'walking';
   else if (r16 > 0.6 && bpm < 128) style = 'funk';
   else if (bpm < 92 && r8 < 0.5) style = 'melodic';
   else if (bpm < 105) style = 'pop';
   else style = 'rock';
-  return {style, why: `${Math.round(bpm)} BPM, ${r16 > 0.6 ? 'busy 16th-note rhythm' : r8 > 0.5 ? 'steady eighth-note pulse' : 'open, spacious rhythm'}${sevShare > 0.6 ? ', lots of 7th chords' : ''}`};
+  return {style, why: `${Math.round(bpm)} BPM, ${S.songSwing ? 'swung triplet feel' : r16 > 0.6 ? 'busy 16th-note rhythm' : r8 > 0.5 ? 'steady eighth-note pulse' : 'open, spacious rhythm'}${sevShare > 0.6 ? ', lots of 7th chords' : ''}`};
 }
 
 // ---------- bass line generation ----------
-const TPL = {
-  rock:   [["R.......R.......","R...R...R...R..."],["R.R.R.R.R.R.R.R.","R.R.R.R.R.R.R.A.","R.R.R.R.R.R.8.5."],["R.R.R.R.R.RRR.A.","R.R.8.R.R.R.5.A.","RRR.R.R.RRR.R.R."]],
-  pop:    [["R...............","R.......5......."],["R.....R.5.......","R.......5...R.A.","R.....5.R.....A."],["R..R..R.5..5..A.","R.R...R.5.8...A.","R..R..8.5..R..A."]],
-  ballad: [["R...............","R.......R......."],["R.......5.......","R.......5...A..."],["R.....R.5...3...","R.......5...8.A."]],
-  funk:   [["R.....R.x.R.....","R......8..R....."],["R_.xR_8.x.R_5.xA","R.8_xR..R_x.7_8_","R..R_x8_x.R..5.A"],["R_xR8_xRx.R_5.xA","RxR_8_xR.RxR7_5A","R.8R_x8_R.xR7_8A"]],
-  walking:[["R.......5......."],["R...C...P...A..."],["R...C...P...A...","R...5...C...A...","R...C..CP...A..."]],
-  melodic:[["R.......3.......","R.......5...8..."],["R...5...8...3...","R...3...5...8...","R.....5.8...H..."],["R.5.8.3.H.8.5.A.","R.3.5.8.H.5.3.A.","R..5..8.3.H.8.5A"]],
-  metal:  [["R.R.R.R.R.R.R.R."],["R.RRR.RRR.RRR.RR","RRR.RRR.RRR.R.A."],["RRRRRRRRRRRRRRRR","R.RRR.RRR.RRLLLL"]]
+// Rhythm templates, one character per 16th note. Roles: R root (or slash bass), 5 fifth, 8 octave, 3 third
+// (10th in Melodic), 7 seventh, 6 sixth, b flat seventh, C chord tone, P passing tone, A approach to the next
+// chord, N next chord's root played early, L low octave, H high chord tone, x dead note, _ rest, . hold.
+const GROOVES = {
+  rock:   {name:'Rock', desc:'Driving eighth notes locked to the kick and snare.',
+           levels:[["R.......R.......","R...R...R...R..."],["R.R.R.R.R.R.R.R.","R.R.R.R.R.R.R.A.","R.R.R.R.R.R.8.5."],["R.R.R.R.R.RRR.A.","R.R.8.R.R.R.5.A.","RRR.R.R.RRR.R.R."]]},
+  pop:    {name:'Pop', desc:'Roots and fifths with light syncopation.',
+           levels:[["R...............","R.......5......."],["R.....R.5.......","R.......5...R.A.","R.....5.R.....A."],["R..R..R.5..5..A.","R.R...R.5.8...A.","R..R..8.5..R..A."]]},
+  ballad: {name:'Ballad', desc:'Long, supportive notes that leave room for the vocal.',
+           levels:[["R...............","R.......R......."],["R.......5.......","R.......5...A..."],["R.....R.5...3...","R.......5...8.A."]]},
+  punk:   {name:'Punk', desc:'Relentless downpicked eighths on the root.',
+           levels:[["R.R.R.R.R.R.R.R."],["R.R.R.R.R.R.R.R.","R.R.R.R.R.R.R.A."],["RRRRRRRRRRRRRRRR","R.RRR.RRR.RRR.RA"]]},
+  metal:  {name:'Metal', desc:'Gallops and 16th-note chugs down low.',
+           levels:[["R.R.R.R.R.R.R.R."],["R.RRR.RRR.RRR.RR","RRR.RRR.RRR.R.A."],["RRRRRRRRRRRRRRRR","R.RRR.RRR.RRLLLL"]]},
+  funk:   {name:'Funk', desc:'Syncopated 16ths, octaves and dead notes. The one is strong.',
+           levels:[["R.....R.x.R.....","R......8..R....."],["R_.xR_8.x.R_5.xA","R.8_xR..R_x.7_8_","R..R_x8_x.R..5.A"],["R_xR8_xRx.R_5.xA","RxR_8_xR.RxR7_5A","R.8R_x8_R.xR7_8A"]]},
+  motown: {name:'Motown / Soul', desc:'Busy, melodic lines with pickups and chromatic approaches.',
+           levels:[["R.......5.....A.","R.....R.5......."],["R..R..5.8...5.A.","R..8..5.R..5..A."],["R..R.x5.8.x5R.3A","R.8R..5.3.x5R.PA"]]},
+  disco:  {name:'Disco', desc:'Octave jumps on every eighth note.',
+           levels:[["R...8...R...8..."],["R.8.R.8.R.8.R.8."],["R.8.R.8RR.8.R.8A","R8.8R8.8R8.8R.8A"]]},
+  hiphop: {name:'Hip-hop / Neo-soul', desc:'Laid-back, sparse notes that sit with the kick.',
+           levels:[["R.........R.....","R......R........"],["R......R..5....A","R..R......R..5.."],["R..x...R.x5.8..A","R..R.x.R..5.x8.A"]]},
+  bossa:  {name:'Bossa Nova', desc:'Root on 1, fifth on the & of 2 and on 3, root on the & of 4.',
+           levels:[["R.......5......."],["R.....5.5.....R.","R.....5.5.....5."],["R.....5.5.....A.","R.....5.5...8.A."]], noKick:true},
+  samba:  {name:'Samba', desc:'Surdo-style pulse: root and fifth with 16th-note pickups into each beat.',
+           levels:[["R.......5.......","R...5...R...5..."],["R..55..RR..55..A","R..5R..5R..5R..A"],["R.x55.xRR.x55.xA","R.x5R.x5R.x58.xA"]], noKick:true},
+  tumbao: {name:'Salsa / Tumbao', desc:'Anticipated bass: fifth on the & of 2 and the next chord’s root on 4, held over the bar line.',
+           levels:[["R.....5.....N..."],["......5.....N...","......5.....N..5"],["......5..8..N...","..R...5..5..N..."]], noForce:true, noKick:true},
+  reggae: {name:'Reggae (one drop)', desc:'Melodic, round lines that leave space and lean on beat 3.',
+           levels:[["R.......5.......","R...R...5......."],["R..._.R.5.3._R..","R...R.3.5..._..."],["R.R._.R.5.3.8_R.","R.3.5..R8.5.3.R."]], noKick:true},
+  ska:    {name:'Ska / Rocksteady', desc:'Walking quarter and eighth notes through the chord.',
+           levels:[["R...5...R...5..."],["R...3...5...8...","R...3...5...A..."],["R.R.3.3.5.5.8.A.","R.3.5.8.5.3.R.A."]]},
+  shuffle:{name:'Blues shuffle', desc:'Boogie line (root, 3, 5, 6, b7) with a swung triplet feel.', swing:true,
+           levels:[["R.......5.......","R...R...5...5..."],["R...3...5...6...","R...5...6...b..."],["R.3.5.6.b.6.5.3.","R.R.3.3.5.5.6.6."]]},
+  walking:{name:'Jazz walking bass', desc:'Quarter notes: root, chord tone, passing tone, approach to the next chord.', swing:true,
+           levels:[["R.......5......."],["R...C...P...A..."],["R...C...P...A...","R...5...C...A...","R...C..CP...A..."]]},
+  country:{name:'Country', desc:'Two-beat root and fifth, with walk-ups into chord changes.',
+           levels:[["R.......5......."],["R.......5.....A.","R.......5...R..."],["R.......5...P.A.","R...5...R...P.A."]]},
+  waltz:  {name:'Waltz', desc:'Root on 1, fifths on 2 and 3. Set the time signature to 3/4 in step 2.',
+           levels:[["R...............","R.......5......."],["R.......5.......","R.......5...A..."],["R...5...8...5...","R...3...5...A..."]],
+           levels3:[["R..........."],["R...5...5...","R...5...8..."],["R...5...8...","R...3...5.A."]]},
+  melodic:{name:'Melodic', desc:'Arpeggios and 10ths that use the upper strings.',
+           levels:[["R.......3.......","R.......5...8..."],["R...5...8...3...","R...3...5...8...","R.....5.8...H..."],["R.5.8.3.H.8.5.A.","R.3.5.8.H.5.3.A.","R..5..8.3.H.8.5A"]]},
+  kick:   {name:'Follow the drums', desc:'A bass note on every kick drum hit found in the recording.', kickOnly:true,
+           levels:[["R...............","R.......5......."],["R.....R.5.......","R.......5...R.A."],["R..R..R.5..5..A.","R.R...R.5.8...A."]]}
 };
+const SWING = [0, 4 / 3, 8 / 3, 10 / 3];
+const stepPos = step => { if (!S.swing) return step; const b = Math.floor(step / 4); return b * 4 + SWING[step % 4]; };
+const countLabel = st => (Math.floor(st / 4) + 1) + ['', 'e', '&', 'a'][st % 4];
+
+// Finds where the kick drum (and anything else low) lands in each bar, per 8-bar section.
+function detectKicks(nBars){
+  const F = S.F, spb = S.bpb * 4, per = [];
+  for (let k = 0; k < nBars; k++){
+    const v = new Float64Array(spb); let mx = 0;
+    if (timeAt(k, 0) < F.dur - 0.5) for (let s = 0; s < spb; s++){
+      const f = Math.round(timeAt(k, s) * F.fps - F.N1 / 2 / F.H1);
+      let m = 0; for (let j = f - 1; j <= f + 1; j++) if (j >= 0 && j < F.lowOn.length) m = Math.max(m, F.lowOn[j]);
+      v[s] = m; mx = Math.max(mx, m);
+    }
+    if (mx > 0) for (let s = 0; s < spb; s++) v[s] /= mx;
+    per.push(v);
+  }
+  const out = [], counts = new Map();
+  for (let a = 0; a < nBars; a += 8){
+    const b = Math.min(nBars, a + 8), avg = new Float64Array(spb);
+    for (let k = a; k < b; k++) for (let s = 0; s < spb; s++) avg[s] += per[k][s] / (b - a);
+    const mean = avg.reduce((x, y) => x + y, 0) / spb;
+    let hits = [];
+    for (let s = 0; s < spb; s++) if (avg[s] >= 0.5 && avg[s] >= 1.6 * mean) hits.push(s);
+    if (hits.length > spb / 2) hits = hits.filter(s => avg[s] >= 0.7);
+    const set = new Set(hits);
+    for (let k = a; k < b; k++) out.push(set);
+    if (hits.length){ const key = hits.join(','); counts.set(key, (counts.get(key) || 0) + (b - a)); }
+  }
+  let common = '', cn = 0; for (const [k, n] of counts) if (n > cn){ cn = n; common = k; }
+  return {perBar: out, summary: common ? common.split(',').map(Number).map(countLabel).join(', ') : ''};
+}
+function detectSwing(){
+  const F = S.F, per = 60 / S.bpm; let e8 = 0, e67 = 0, on = 0;
+  const at = t => { const f = Math.round(t * F.fps - F.N1 / 2 / F.H1); let m = 0; for (let k = f - 1; k <= f + 1; k++) if (k >= 0 && k < F.env.length) m = Math.max(m, F.env[k]); return m; };
+  for (let i = 0; i < S.beats.length - 1; i++){ const t = S.beats[i]; on += at(t); e8 += at(t + per * 0.5); e67 += at(t + per * 2 / 3); }
+  return e67 > 1.3 * e8 && e67 > 0.3 * on;
+}
 const REG = {
   low:{lo:23,hi:47,center:31}, standard:{lo:26,hi:55,center:38}, mid:{lo:33,hi:62,center:45}, high:{lo:43,hi:72,center:55}
 };
@@ -678,7 +788,8 @@ function intervalOf(chord, want){
 }
 
 function generateBass(bars, cfg){
-  const {bpb, style, complexity, register, fills, seed, key} = cfg;
+  const {bpb, style, complexity, register, fills, seed, key, kicks} = cfg;
+  const G = GROOVES[style] || GROOVES.rock;
   const rng = mulberry32(seed * 7919 + 13);
   const pick = arr => arr[Math.floor(rng() * arr.length)];
   const spb = bpb * 4;
@@ -716,28 +827,39 @@ function generateBass(bars, cfg){
   const phraseLen = complexity >= 4 ? 4 : 8;
   const tplCache = new Map();
   const notes = [];
-  const levels = TPL[style] || TPL.rock;
+  const levels = bpb === 3 && G.levels3 ? G.levels3 : G.levels;
 
   for (let bi = 0; bi < bars.length; bi++){
     const bar = bars[bi], r = reg(bi), it = bar.intensity ?? 0.5;
     const d = 0.55 * (complexity - 1) / 4 + 0.45 * it;
-    const level = Math.min(levels.length - 1, d < 0.34 ? 0 : d < 0.67 ? 1 : 2);
+    const level = Math.min(levels.length - 1, Math.max(cfg.lockGroove ? 1 : 0, d < 0.34 ? 0 : d < 0.67 ? 1 : 2));
     const ck = Math.floor(bi / 8) + ':' + level;
     if (!tplCache.has(ck)) tplCache.set(ck, pick(levels[level]));
-    let tpl = tplCache.get(ck).padEnd(16, '.').slice(0, 16);
-    if (bpb === 3) tpl = tpl.slice(0, 8) + tpl.slice(12, 16);
+    let tpl = tplCache.get(ck);
+    if (bpb === 3 && G.levels3) tpl = tpl.padEnd(12, '.').slice(0, 12);
+    else { tpl = tpl.padEnd(16, '.').slice(0, 16); if (bpb === 3) tpl = tpl.slice(0, 8) + tpl.slice(12, 16); }
+    const kset = kicks && kicks[bi];
+    if (G.kickOnly && kset && kset.size){
+      // Build the rhythm straight from the kick drum hits in this bar.
+      const hs = [...kset].filter(st => st < spb).sort((x, y) => x - y), arr = Array(spb).fill('.');
+      hs.forEach((st, i) => { arr[st] = i === 0 ? 'R' : complexity >= 3 && i === hs.length - 1 && st >= spb - 4 ? 'A' : complexity >= 4 && i % 2 ? pick(['5', '8']) : 'R'; });
+      tpl = arr.join('');
+    } else if (kset && kset.size && cfg.kickLock && !G.noKick){
+      // Add a note wherever the recording's kick drum hits and the groove has none.
+      const arr = tpl.split(''); for (const st of kset) if (st < spb && arr[st] === '.') arr[st] = 'R'; tpl = arr.join('');
+    }
     const isLast = bi === bars.length - 1;
     if (isLast) tpl = 'R' + '.'.repeat(spb - 1);
     else if (fills && complexity > 1 && (bi + 1) % phraseLen === 0){
       const fb = complexity >= 4 && bpb === 4 ? 2 : 1;
-      const cell = style === 'walking' ? 'S...' : (level >= 1 && complexity >= 3) || style === 'metal' ? 'SSSS' : 'S.S.';
+      const cell = style === 'walking' || style === 'waltz' || style === 'bossa' ? 'S...' : (level >= 1 && complexity >= 3) || style === 'metal' ? 'SSSS' : 'S.S.';
       tpl = tpl.slice(0, spb - fb * 4) + cell.repeat(fb);
     }
     const chars = tpl.split('');
     for (const c of bar.chords){
       const si = segAt[bi][c.start];
       if (c.none) for (let s = c.start; s < segs[si].end; s++) chars[s] = '_';
-      else chars[c.start] = 'R';
+      else if (!(G.noForce && c.start === 0 && bi > 0)) chars[c.start] = 'R';
     }
     const ons = [];
     let run = null;
@@ -760,6 +882,9 @@ function generateBass(bars, cfg){
         case '8': midi = anchor + 12 <= r.hi ? anchor + 12 : anchor - 12 >= r.lo ? anchor - 12 : anchor; break;
         case '3': { const t = intervalOf(chord, 3); midi = style === 'melodic' && rootRef + t + 12 <= Math.min(ABS_HI, r.hi + 7) ? rootRef + t + 12 : tone(t); break; }
         case '7': midi = tone(intervalOf(chord, 7)); break;
+        case '6': midi = tone(9); break;
+        case 'b': midi = tone(10); break;
+        case 'N': midi = nt ? nt.a : anchor; break;
         case 'H': { const t = pick([intervalOf(chord, 3), intervalOf(chord, 5), 12]); midi = rootRef + 12 + t <= Math.min(ABS_HI, r.hi + 7) ? rootRef + 12 + t : tone(t); break; }
         case 'C': {
           const pcs = chord.iv.map(i => mod12(chord.root + i)).filter(p => p !== chord.bass);
@@ -894,7 +1019,7 @@ function renderTab(meta){
   const header = [
     'THE REVELATOR BASS CREATION TOOL',
     `Song: ${meta.song}`,
-    `Key: ${keyName(meta.key)}   Tempo: ${meta.bpm.toFixed(1)} BPM   Time: ${bpb}/4   Style: ${STYLE_NAMES[meta.style]}   Variation: ${meta.seed}`,
+    `Key: ${keyName(meta.key)}   Tempo: ${meta.bpm.toFixed(1)} BPM   Time: ${bpb}/4   Groove: ${GROOVES[meta.style].name}${meta.swing ? ' (swing: play eighth notes as triplets)' : ''}   Variation: ${meta.seed}`,
     'Tuning (low to high): B E A D G C   6-string bass, 24 frets',
     'Numbers = fret, x = dead note. Counts above each bar; note lengths below',
     '(w whole, h half, q quarter, e eighth, s 16th, . dotted, ~ held a bit longer).',
@@ -929,8 +1054,8 @@ function buildMidi(){
   const name = Array.from(new TextEncoder().encode('Revelator Bass'));
   const bass = [{t: 0, o: 0, d: [0xff, 0x03, name.length, ...name]}, {t: 0, o: 1, d: [0xc0, 33]}];
   for (const n of S.notes){
-    const t = pre + n.bar * bpb * TPQ + n.step * q;
-    const len = Math.max(20, n.dur * q - 12);
+    const t = pre + n.bar * bpb * TPQ + Math.round(stepPos(n.step) * q);
+    const len = Math.max(20, Math.round((stepPos(n.step + n.dur) - stepPos(n.step)) * q) - 12);
     bass.push({t, o: 2, d: [0x90, n.midi, n.dead ? 45 : 100]});
     bass.push({t: t + (n.dead ? 40 : len), o: 1, d: [0x80, n.midi, 0]});
   }
@@ -975,7 +1100,7 @@ const safeName = s => (s || 'song').replace(/\.[a-z0-9]{2,4}$/i, '').replace(/[^
 const P = {ctx: null, src: null, songGain: null, bassBus: null, events: [], idx: 0, timer: null, raf: 0, ctxStart: 0, songStart: 0, playing: false, endAt: 0, noise: null};
 function midiHz(m){ return 440 * Math.pow(2, (m - 69) / 12); }
 function buildEvents(){
-  return S.notes.map(n => ({t: timeAt(n.bar, n.step), end: timeAt(n.bar, n.step + n.dur), midi: n.midi, dead: n.dead})).sort((a, b) => a.t - b.t);
+  return S.notes.map(n => ({t: timeAt(n.bar, stepPos(n.step)), end: timeAt(n.bar, stepPos(n.step + n.dur)), midi: n.midi, dead: n.dead})).sort((a, b) => a.t - b.t);
 }
 function voice(ctx, dest, t, dur, midi, dead){
   if (dead){
@@ -1124,6 +1249,7 @@ function analyzeBeats(bpm, keepPhase){
   S.beatBs = bf.bs; S.beatLow = bf.low;
   S.labels = labelChords(bf, S.key);
   if (!keepPhase) S.phase = choosePhase(S.labels, S.beatLow, S.bpb);
+  S.songSwing = detectSwing();
   redetectChart();
 }
 function redetectChart(){
@@ -1138,21 +1264,31 @@ function applyChart(silent){
   const ints = barIntensities(bars.length);
   bars.forEach((b, i) => b.intensity = ints[i]);
   S.bars = bars;
+  S.kicks = detectKicks(bars.length);
   updateFacts();
   regenerate();
 }
 function regenerate(){
   if (!S.bars.length) return;
   const choice = $('styleSel').value;
-  let style = choice;
-  if (choice === 'auto'){ const a = autoStyle(); style = a.style; $('styleNote').textContent = `Auto picked ${STYLE_NAMES[style]} (${a.why}).`; }
-  else $('styleNote').textContent = `${STYLE_NAMES[style]} style. Busier settings and louder parts of the song get more notes.`;
+  let style = choice, lead;
+  if (choice === 'auto'){ const a = autoStyle(); style = a.style; lead = `Auto picked ${GROOVES[style].name} (${a.why}). Choose a groove above to lock the bass into a specific rhythm.`; }
+  else lead = `${GROOVES[style].name}: ${GROOVES[style].desc}`;
+  const G = GROOVES[style], feel = $('feelSel').value;
+  S.swing = feel === 'swing' || (feel === 'auto' && (!!G.swing || ((choice === 'auto' || choice === 'kick') && !!S.songSwing)));
+  const kickLock = $('kickChk').checked;
+  const ksum = S.kicks && S.kicks.summary;
+  let kickTxt = '';
+  if (G.kickOnly) kickTxt = ksum ? ` Kick found on ${ksum}.` : ' No clear kick pattern was found, so a pop rhythm is used where the drums are unclear.';
+  else if (kickLock && !G.noKick && ksum) kickTxt = ` Kick found on ${ksum}; the bass adds notes on those hits.`;
+  else if (kickLock && G.noKick) kickTxt = ' This groove keeps its own rhythm, so kick locking is skipped.';
+  $('styleNote').textContent = lead + (S.swing ? ' Swing feel on.' : '') + kickTxt;
   S.autoStyle = style;
-  const cfg = {bpb: S.bpb, style, complexity: +$('busy').value, register: $('regSel').value, fills: $('fills').checked, seed: S.seed, key: S.key};
+  const cfg = {bpb: S.bpb, style, complexity: +$('busy').value, register: $('regSel').value, fills: $('fills').checked, seed: S.seed, key: S.key, kicks: S.kicks && S.kicks.perBar, kickLock, lockGroove: choice !== 'auto'};
   const notes = generateBass(S.bars, cfg);
   assignFingering(notes);
   S.notes = notes;
-  S.tab = renderTab({bars: S.bars, notes, bpb: S.bpb, key: S.key, bpm: S.bpm, style, seed: S.seed, song: S.isDemo ? 'Built-in demo track' : S.fileName});
+  S.tab = renderTab({bars: S.bars, notes, bpb: S.bpb, key: S.key, bpm: S.bpm, style, swing: S.swing, seed: S.seed, song: S.isDemo ? 'Built-in demo track' : S.fileName});
   showTab(S.tab);
   $('varNum').textContent = S.seed;
   if (P.playing){ const st = P.songStart + (P.ctx.currentTime - P.ctxStart); P.events = buildEvents(); P.idx = 0; while (P.idx < P.events.length && P.events[P.idx].t < st + 0.05) P.idx++; lastSys = -1; }
@@ -1224,7 +1360,7 @@ $('keySel').addEventListener('change', () => { const [t, m] = $('keySel').value.
 $('tsSel').addEventListener('change', () => { S.bpb = +$('tsSel').value; if (!S.F) return; stop(); S.phase = choosePhase(S.labels, S.beatLow, S.bpb); redetectChart(); toast('Bars regrouped in ' + S.bpb + '/4.'); });
 $('shiftBtn').addEventListener('click', () => { if (needSong()) return; stop(); S.phase = (S.phase + 1) % S.bpb; redetectChart(); toast('Bar 1 now starts at ' + fmtTime(timeAt(0, 0)) + '.'); });
 $('applyChords').addEventListener('click', () => { if (needSong()) return; stop(); applyChart(false); toast('Chord chart applied.'); });
-['styleSel','regSel','fills'].forEach(id => $(id).addEventListener('change', regenerate));
+['styleSel','regSel','fills','feelSel','kickChk'].forEach(id => $(id).addEventListener('change', regenerate));
 $('busy').addEventListener('input', () => { $('busyVal').textContent = $('busy').value; regenerate(); });
 $('newVarBtn').addEventListener('click', () => { S.seed++; regenerate(); toast('Variation ' + S.seed + ' written.'); });
 $('resetVarBtn').addEventListener('click', () => { S.seed = 1; regenerate(); });
