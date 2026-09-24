@@ -108,7 +108,9 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .legend code{font-family:var(--mono);color:var(--ink)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100% - 32px)}
 .toast.show{opacity:1}
-footer{font-size:13px;color:var(--muted)}
+footer{font-size:13px;color:var(--muted);display:grid;gap:6px}
+footer p{margin:0}
+footer .copy{font-weight:600;color:var(--ink)}
 @media (max-width:560px){
   .grid2{grid-template-columns:1fr}
   .panel{padding:14px}
@@ -150,8 +152,8 @@ footer{font-size:13px;color:var(--muted)}
       <h2><small>1</small>Song</h2>
       <label class="drop" id="drop" for="file">
         <strong><span class="mouse-only">Choose a song or drop it here</span><span class="touch-only">Tap to choose a song</span></strong>
-        <span class="hint">MP3, WAV, M4A/AAC, OGG or FLAC. The file stays on your computer.</span>
-        <input type="file" id="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac">
+        <span class="hint">MP3, AAC/M4A (including iTunes Store purchases), WAV, AIFF, FLAC, OGG or Opus. The file stays on your device.</span>
+        <input type="file" id="file" accept="audio/*,video/mp4,.mp3,.wav,.m4a,.aac,.aif,.aiff,.caf,.ogg,.oga,.opus,.flac,.webm,.mp4,.m4p">
       </label>
       <div class="row"><button class="small" id="demoBtn" type="button">Load the example track</button></div>
       <div class="song" id="songInfo"></div>
@@ -294,7 +296,7 @@ footer{font-size:13px;color:var(--muted)}
     <div class="tabbox" id="tabBox"></div>
   </section>
 
-  <footer>Automatic chord and beat detection works best on songs with a steady beat and clear harmony. If a chord or the tempo looks off, correct it in step 2 and the bass line is rewritten to match.</footer>
+  <footer><p>Automatic chord and beat detection works best on songs with a steady beat and clear harmony. If a chord or the tempo looks off, correct it in step 2 and the bass line is rewritten to match.</p><p class="copy">Copyright © 2026 Brig Serman</p></footer>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -1402,6 +1404,10 @@ async function runAnalysis(buf, name, isDemo){
 }
 async function loadFile(file){
   if (!file) return;
+  if (/\.m4p$/i.test(file.name)){
+    showErr('This is a copy-protected Apple Music download (.m4p), which web browsers cannot play or analyze. Use a song you bought from the iTunes Store (those are .m4a files with no copy protection), or an MP3, WAV or CD rip.');
+    return;
+  }
   stop(); showErr(''); setBusy(true);
   progress(0.02, 'Decoding ' + file.name);
   try {
@@ -1411,7 +1417,7 @@ async function loadFile(file){
     await runAnalysis(buf, file.name, false);
   } catch (e){
     console.error(e); doneProgress(); setBusy(false);
-    showErr('This file could not be opened as audio. Try an MP3, WAV, M4A/AAC, OGG or FLAC file.');
+    showErr('This file could not be opened as audio. If it came from a streaming service it may be copy-protected; use a purchased download or a CD rip in MP3, AAC/M4A, WAV, AIFF or FLAC format.');
   }
 }
 async function loadDemo(){
