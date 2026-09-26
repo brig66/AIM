@@ -246,6 +246,44 @@ footer .copy{font-weight:600;color:var(--ink)}
         </label>
         <label class="row" style="gap:8px;font-size:14px;align-self:end;padding-bottom:8px;flex-wrap:nowrap" for="kickChk"><input type="checkbox" id="kickChk" checked> Lock to the kick drum</label>
       </div>
+      <label class="f" for="lineSel">Bass line type
+        <select id="lineSel">
+          <option value="groove">Follow the groove above</option>
+          <option value="walking">Walking bass (quarter notes)</option>
+          <option value="twofeel">Jazz two-feel (half notes)</option>
+        </select>
+      </label>
+      <div class="grid2">
+        <label class="f" for="modeSel">Scale / mode guide
+          <select id="modeSel">
+            <option value="auto">Auto: the song's key</option>
+            <optgroup label="Modes">
+              <option value="ionian">Major (Ionian)</option>
+              <option value="dorian">Dorian</option>
+              <option value="phrygian">Phrygian</option>
+              <option value="lydian">Lydian</option>
+              <option value="mixo">Mixolydian</option>
+              <option value="aeolian">Natural minor (Aeolian)</option>
+              <option value="locrian">Locrian</option>
+            </optgroup>
+            <optgroup label="Pentatonic and blues">
+              <option value="majpent">Major pentatonic</option>
+              <option value="minpent">Minor pentatonic</option>
+              <option value="blues">Blues scale</option>
+            </optgroup>
+            <optgroup label="Other">
+              <option value="harmmin">Harmonic minor</option>
+              <option value="melmin">Melodic minor</option>
+            </optgroup>
+          </select>
+        </label>
+        <label class="f" for="modeBase">Mode built on
+          <select id="modeBase">
+            <option value="key">The song's key</option>
+            <option value="chord">Each chord's root</option>
+          </select>
+        </label>
+      </div>
       <label class="f" for="regSel">Register
         <select id="regSel">
           <option value="full">Full range: follows the song's energy</option>
@@ -765,7 +803,9 @@ const GROOVES = {
            levels:[["R...5...R...5..."],["R...3...5...8...","R...3...5...A..."],["R.R.3.3.5.5.8.A.","R.3.5.8.5.3.R.A."]]},
   shuffle:{name:'Blues shuffle', desc:'Boogie line (root, 3, 5, 6, b7) with a swung triplet feel.', swing:true,
            levels:[["R.......5.......","R...R...5...5..."],["R...3...5...6...","R...5...6...b..."],["R.3.5.6.b.6.5.3.","R.R.3.3.5.5.6.6."]]},
-  walking:{name:'Jazz walking bass', desc:'Quarter notes: root, chord tone, passing tone, approach to the next chord.', swing:true,
+  twofeel:{name:'Jazz two-feel', desc:'Half notes on beats 1 and 3, with approach notes into each chord change. Common in jazz ballads and the first chorus of standards.', swing:true, noKick:true,
+           levels:[["R.......5.......","R.......C......."],["R.......A.......","R.......5......."],["R.......5.....A.","R.......C...P.A."]]},
+  walking:{name:'Jazz walking bass', desc:'A note on every beat: root on 1, chord and scale tones walking toward the next chord, and an approach note on the last beat.', swing:true, noKick:true,
            levels:[["R.......5......."],["R...C...P...A..."],["R...C...P...A...","R...5...C...A...","R...C..CP...A..."]]},
   country:{name:'Country', desc:'Two-beat root and fifth, with walk-ups into chord changes.',
            levels:[["R.......5......."],["R.......5.....A.","R.......5...R..."],["R.......5...P.A.","R...5...R...P.A."]]},
@@ -825,10 +865,26 @@ function nearestPc(pc, ref, lo, hi){
   return best;
 }
 const fitAbs = p => { while (p < ABS_LO) p += 12; while (p > ABS_HI) p -= 12; return p; };
+const MODES = {
+  ionian: ['Major (Ionian)', [0,2,4,5,7,9,11]], dorian: ['Dorian', [0,2,3,5,7,9,10]], phrygian: ['Phrygian', [0,1,3,5,7,8,10]],
+  lydian: ['Lydian', [0,2,4,6,7,9,11]], mixo: ['Mixolydian', [0,2,4,5,7,9,10]], aeolian: ['Natural minor (Aeolian)', [0,2,3,5,7,8,10]],
+  locrian: ['Locrian', [0,1,3,5,6,8,10]], majpent: ['major pentatonic', [0,2,4,7,9]], minpent: ['minor pentatonic', [0,3,5,7,10]],
+  blues: ['blues scale', [0,3,5,6,7,10]], harmmin: ['harmonic minor', [0,2,3,5,7,8,11]], melmin: ['melodic minor', [0,2,3,5,7,9,11]]
+};
+function modeLabel(){
+  const m = MODES[S.mode];
+  if (!m) return `the song's key (${keyName(S.key)})`;
+  return S.modeBase === 'chord' ? `${m[0]} on each chord's root` : `${PC[S.key.tonic]} ${m[0]}`;
+}
+// Notes the bass may use between chord tones: the chosen scale or mode, plus the chord's own tones.
 function chordScale(chord, key){
-  let set = new Set(scalePcs(key));
+  const m = MODES[S.mode];
+  let set;
+  if (m) set = new Set(m[1].map(i => mod12(i + (S.modeBase === 'chord' ? chord.root : key.tonic))));
+  else set = new Set(scalePcs(key));
+  const strict = m && m[1].length < 7;
   const tones = chord.iv.map(i => mod12(chord.root + i));
-  for (const t of tones) if (!set.has(t)){ set.delete(mod12(t - 1)); set.delete(mod12(t + 1)); set.add(t); }
+  for (const t of tones) if (!set.has(t)){ if (!strict){ set.delete(mod12(t - 1)); set.delete(mod12(t + 1)); } set.add(t); }
   set.add(chord.bass);
   return set;
 }
@@ -916,6 +972,10 @@ function generateBass(bars, cfg){
       const si = segAt[bi][c.start];
       if (c.none) for (let s = c.start; s < segs[si].end; s++) chars[s] = '_';
       else if (!(G.noForce && c.start === 0 && bi > 0)) chars[c.start] = 'R';
+    }
+    if (MODES[S.mode] && complexity >= 3 && style !== 'walking' && style !== 'twofeel'){
+      // With a mode chosen, some repeated roots become passing notes from that mode.
+      for (let s = 1; s < spb; s++) if (chars[s] === 'R' && s % 8 !== 0 && !bar.chords.some(c => c.start === s) && rng() < 0.35) chars[s] = 'P';
     }
     const ons = [];
     let run = null;
@@ -1080,6 +1140,7 @@ function renderTab(meta, opts = {}){
     'THE REVELATOR BASS CREATION TOOL',
     `Song: ${meta.song}`,
     `Key: ${keyName(meta.key)}   Tempo: ${meta.bpm.toFixed(1)} BPM   Time: ${bpb}/4   Groove: ${GROOVES[meta.style].name}${meta.swing ? ' (swing: play eighth notes as triplets)' : ''}   Variation: ${meta.seed}`,
+    `Scale guide: ${meta.modeLabel}`,
     `Bass: ${INST.label}, tuned (low to high) ${STRING_NAMES.join(' ')}, 24 frets`,
     'Numbers = fret, x = dead note. Counts above each bar; note lengths below',
     '(w whole, h half, q quarter, e eighth, s 16th, . dotted, ~ held a bit longer).',
@@ -1353,10 +1414,16 @@ function applyChart(silent){
 }
 function regenerate(){
   if (!S.bars.length) return;
-  const choice = $('styleSel').value;
+  S.mode = $('modeSel').value; S.modeBase = $('modeBase').value;
+  $('modeBase').disabled = S.mode === 'auto';
+  const line = $('lineSel').value;
+  $('styleSel').disabled = line !== 'groove';
+  let choice = $('styleSel').value;
+  if (line !== 'groove') choice = line;
   let style = choice, lead;
   if (choice === 'auto'){ const a = autoStyle(); style = a.style; lead = `Auto picked ${GROOVES[style].name} (${a.why}). Choose a groove above to lock the bass into a specific rhythm.`; }
   else lead = `${GROOVES[style].name}: ${GROOVES[style].desc}`;
+  if (line !== 'groove') lead += ' (Bass line type is overriding the groove.)';
   const G = GROOVES[style], feel = $('feelSel').value;
   S.swing = feel === 'swing' || (feel === 'auto' && (!!G.swing || ((choice === 'auto' || choice === 'kick') && !!S.songSwing)));
   const kickLock = $('kickChk').checked;
@@ -1365,13 +1432,13 @@ function regenerate(){
   if (G.kickOnly) kickTxt = ksum ? ` Kick found on ${ksum}.` : ' No clear kick pattern was found, so a pop rhythm is used where the drums are unclear.';
   else if (kickLock && !G.noKick && ksum) kickTxt = ` Kick found on ${ksum}; the bass adds notes on those hits.`;
   else if (kickLock && G.noKick) kickTxt = ' This groove keeps its own rhythm, so kick locking is skipped.';
-  $('styleNote').textContent = lead + (S.swing ? ' Swing feel on.' : '') + kickTxt;
+  $('styleNote').textContent = lead + (S.swing ? ' Swing feel on.' : '') + kickTxt + ` Passing notes and fills follow ${modeLabel()}.`;
   S.autoStyle = style;
   const cfg = {bpb: S.bpb, style, complexity: +$('busy').value, register: $('regSel').value, fills: $('fills').checked, seed: S.seed, key: S.key, kicks: S.kicks && S.kicks.perBar, kickLock, lockGroove: choice !== 'auto'};
   const notes = generateBass(S.bars, cfg);
   assignFingering(notes);
   S.notes = notes;
-  S.tabMeta = {bars: S.bars, notes, bpb: S.bpb, key: S.key, bpm: S.bpm, style, swing: S.swing, seed: S.seed, song: S.isDemo ? 'Built-in demo track' : S.fileName};
+  S.tabMeta = {bars: S.bars, notes, bpb: S.bpb, key: S.key, bpm: S.bpm, style, swing: S.swing, seed: S.seed, modeLabel: modeLabel(), song: S.isDemo ? 'Built-in demo track' : S.fileName};
   S.tab = renderTab(S.tabMeta);
   showScreenTab();
   $('varNum').textContent = S.seed;
@@ -1464,7 +1531,7 @@ $('keySel').addEventListener('change', () => { const [t, m] = $('keySel').value.
 $('tsSel').addEventListener('change', () => { S.bpb = +$('tsSel').value; if (!S.F) return; stop(); S.phase = choosePhase(S.labels, S.beatLow, S.bpb); redetectChart(); toast('Bars regrouped in ' + S.bpb + '/4.'); });
 $('shiftBtn').addEventListener('click', () => { if (needSong()) return; stop(); S.phase = (S.phase + 1) % S.bpb; redetectChart(); toast('Bar 1 now starts at ' + fmtTime(timeAt(0, 0)) + '.'); });
 $('applyChords').addEventListener('click', () => { if (needSong()) return; stop(); applyChart(false); toast('Chord chart applied.'); });
-['styleSel','regSel','fills','feelSel','kickChk'].forEach(id => $(id).addEventListener('change', regenerate));
+['styleSel','regSel','fills','feelSel','kickChk','lineSel','modeSel','modeBase'].forEach(id => $(id).addEventListener('change', regenerate));
 $('busy').addEventListener('input', () => { $('busyVal').textContent = $('busy').value; regenerate(); });
 $('newVarBtn').addEventListener('click', () => { S.seed++; regenerate(); toast('Variation ' + S.seed + ' written.'); });
 $('resetVarBtn').addEventListener('click', () => { S.seed = 1; regenerate(); });
