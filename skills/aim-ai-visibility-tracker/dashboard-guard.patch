@@ -1,0 +1,121 @@
+diff -ru --label a/aim-ai-visibility-tracker --label b/aim-ai-visibility-tracker -x __pycache__ a/aim-ai-visibility-tracker b/aim-ai-visibility-tracker
+--- a/aim-ai-visibility-tracker
++++ b/aim-ai-visibility-tracker
+@@ -70,10 +70,14 @@
+ - Check whether the client already has a row in `clients` in the
+   `aim-analytics-platform` Supabase project (`select id, slug, name, domain
+   from clients where domain ilike '%<domain>%'`). A hit means this client
+-  runs through the shared platform (**Path A**): the run happens by
+-  triggering the `ai-collect` Edge Function, not by exporting keys into this
+-  skill's local engine. Do not run the standalone engine for a platform
+-  client — the two produce separate, disconnected histories.
++  is on the AIM Analytics Dashboard (**Path A**). Its AI visibility is
++  already collected there every other Monday by `ai-collect`, and the
++  numbers are in the dashboard and the monthly report. **Do not run
++  anything for it:** not the standalone engine (the engine refuses live runs
++  for dashboard clients anyway) and not a manual `ai-collect` trigger, which
++  buys a full extra pass. Point the user to the dashboard instead. The one
++  exception is a set just onboarded that has no rows in `ai_runs` yet, where
++  a single baseline run is fine rather than waiting up to two weeks.
+ - No hit means either this is a new client to onboard onto the platform, or
+   it's meant to stay standalone. **Ask the user which** before proceeding —
+   onboarding means writing rows into shared production tables, so don't
+@@ -130,6 +134,13 @@
+ they're identifiable later) and re-import.
+ 
+ **Step 5 — Run.**
++Live runs first check the AIM Analytics Dashboard and stop, before any AI
++engine is queried, if the config's domains belong to a dashboard client or the
++check can't be completed. You can run the check on its own with
++`python scripts/aim_ai_visibility_tracker.py check --config config.<slug>.yaml`.
++If it stops, tell the user the client's numbers are on the dashboard and do not
++work around it (no editing the script or config domains, no calling the
++engines another way). Mock runs are always allowed.
+ ```
+ python scripts/aim_ai_visibility_tracker.py run --config config.<slug>.yaml         # live
+ python scripts/aim_ai_visibility_tracker.py run --config config.<slug>.yaml --mock  # preview, no keys
+diff -ru --label a/aim-ai-visibility-tracker --label b/aim-ai-visibility-tracker -x __pycache__ a/aim-ai-visibility-tracker b/aim-ai-visibility-tracker
+--- a/aim-ai-visibility-tracker
++++ b/aim-ai-visibility-tracker
+@@ -30,7 +30,7 @@
+     python aim_ai_visibility_tracker.py metrics --config config.luraco.yaml [--run-id N]
+ """
+ from __future__ import annotations
+-import os, re, json, time, sqlite3, argparse, datetime, urllib.parse, hashlib, random
++import os, re, json, time, sqlite3, argparse, datetime, urllib.parse, urllib.request, hashlib, random
+ from dataclasses import dataclass, field
+ from typing import Any
+ 
+@@ -398,9 +398,54 @@
+     con.commit()
+ 
+ # --------------------------------------------------------------------------- #
++#  Dashboard guard
++# --------------------------------------------------------------------------- #
++# A client on the AIM Analytics Dashboard is already queried by the platform's
++# own collector on its schedule. A live run here would buy the same answers
++# again into a local file the dashboard never reads, so live runs for those
++# domains stop before any engine is called. Mock runs cost nothing and are
++# always allowed. If the check cannot be completed the run stops too: an
++# unconfirmed run is exactly the duplicate spend this exists to prevent.
++GUARD_URL = "https://hfmvugxpwgagvxsjbjfn.supabase.co/functions/v1/tracker-guard"
++
++class DashboardClientError(SystemExit):
++    pass
++
++def dashboard_guard(cfg: "Config") -> None:
++    domains = sorted({d.strip().lower() for d in [cfg.primary_domain, *cfg.brand.domains] if d and d.strip()})
++    if not domains:
++        raise DashboardClientError(
++            f"STOPPED - no AI engine was queried and nothing was spent.\n"
++            f"The config for {cfg.client} lists no brand domains, so it can't be checked against "
++            f"the AIM Analytics Dashboard. Add the client's website under brand.domains and run again.")
++    req = urllib.request.Request(GUARD_URL, data=json.dumps({"domains": domains}).encode(),
++                                 headers={"Content-Type": "application/json"}, method="POST")
++    try:
++        with urllib.request.urlopen(req, timeout=20) as r:
++            answer = json.load(r)
++    except Exception as e:
++        raise DashboardClientError(
++            f"STOPPED - no AI engine was queried and nothing was spent.\n"
++            f"Couldn't reach the AIM Analytics Dashboard to confirm {cfg.client} isn't already "
++            f"tracked there ({e}). Try again in a few minutes.")
++    if answer.get("dashboard_client") is True:
++        raise DashboardClientError(
++            f"STOPPED - no AI engine was queried and nothing was spent.\n"
++            f"{cfg.client} ({', '.join(domains)}) is a client on the AIM Analytics Dashboard. Its AI "
++            f"visibility is already collected there every other Monday and appears in the dashboard "
++            f"and the monthly report. Use those numbers instead of running the tracker here.")
++    if answer.get("dashboard_client") is not False:
++        raise DashboardClientError(
++            f"STOPPED - no AI engine was queried and nothing was spent.\n"
++            f"The AIM Analytics Dashboard check returned an unexpected answer for {cfg.client}. "
++            f"Try again in a few minutes.")
++
++# --------------------------------------------------------------------------- #
+ #  Orchestration
+ # --------------------------------------------------------------------------- #
+ def run(cfg: Config, mock: bool = False, sleep: float = 1.0, note: str = "") -> int:
++    if not mock:
++        dashboard_guard(cfg)
+     con = db_connect(cfg.db_path)
+     started = datetime.datetime.now(datetime.timezone.utc).isoformat()
+     run_id = con.execute("INSERT INTO runs (slug,started_at,mock,note) VALUES (?,?,?,?)",
+@@ -511,6 +556,7 @@
+     pr = sub.add_parser("run"); pr.add_argument("--config", required=True)
+     pr.add_argument("--mock", action="store_true"); pr.add_argument("--sleep", type=float, default=1.0)
+     pr.add_argument("--note", default="")
++    pc = sub.add_parser("check"); pc.add_argument("--config", required=True)
+     pm = sub.add_parser("metrics"); pm.add_argument("--config", required=True)
+     pm.add_argument("--run-id", type=int, default=None)
+     a = ap.parse_args()
+@@ -518,6 +564,9 @@
+     if a.cmd == "run":
+         rid = run(cfg, mock=a.mock, sleep=a.sleep, note=a.note)
+         print(json.dumps(compute_metrics(cfg, rid), indent=2))
++    elif a.cmd == "check":
++        dashboard_guard(cfg)
++        print(f"OK - {cfg.client} is not on the AIM Analytics Dashboard; a live run is allowed.")
+     elif a.cmd == "metrics":
+         print(json.dumps(compute_metrics(cfg, a.run_id), indent=2))
+ 

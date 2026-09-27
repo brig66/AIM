@@ -203,3 +203,19 @@ near-duplicate or never-mentioning questions across seven sets were paused
 and any of them can be resumed from the dashboard. That left 330 active
 questions across client-linked sets — about 2,600 provider calls per pass,
 roughly 5,500 a month, against about 21,500 a month before.
+
+## Chat tracker skills refuse dashboard clients
+
+`tracker-guard-edge-function.ts` is the deployed `tracker-guard` function. The
+standalone tracker skills (`aim-ai-visibility-tracker`,
+`aim-visibility-tracker-run`) call it before any live run with the config's
+domains, and stop without querying an engine when it answers
+`{"dashboard_client": true}` — those clients are already collected by
+`ai-collect`, and a chat run would pay for the same answers again into a local
+file the dashboard never reads. The skills also stop when the check can't be
+completed. Mock runs are unaffected.
+
+It matches active clients' `clients.domain` plus the `primary_domain` and
+`brand.domains` of their active prompt sets, and returns only a boolean
+because it takes no credential. The skill changes are in
+`skills/*/dashboard-guard.patch`; the uploadable packages are in `skills/dist/`.
