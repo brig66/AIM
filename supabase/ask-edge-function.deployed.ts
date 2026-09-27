@@ -595,17 +595,13 @@ Deno.serve(async (req: Request) => {
   }
   if (body.from && body.to) ctx += `\nThe selected date range is ${body.from} to ${body.to}.`;
 
-  // Prompt caching: the system prompt is split into two blocks. Block 1 holds
-  // everything that is identical across calls of the same mode (role, schema,
-  // working rules, answer rules) and carries the cache breakpoint, so the tool
-  // definition + block 1 are written to cache once and read back at 0.1x on
-  // every later step of the tool loop and on other requests within the TTL.
-  // Block 2 holds what changes per request (date, client, range) and sits
-  // after the breakpoint so it cannot invalidate the cached prefix.
-  const staticSystem =
+  const system =
 `You are the analyst for AIM's client analytics platform. You answer questions by querying
 the database with the run_sql tool, then explaining what the numbers mean for a marketing
 agency and its clients.
+
+Today is ${new Date().toISOString().slice(0, 10)}.
+${ctx}
 
 These are the only readable views:
 
@@ -643,22 +639,7 @@ ${TONE_RULES}` :
 - Where the answer suggests an action, say what you would do and why. Be concrete.
 - If the question cannot be answered from this data, say so and say what would be needed.`}`;
 
-  const volatileSystem = `Today is ${new Date().toISOString().slice(0, 10)}.${ctx}`;
-
-  const system = [
-    { type: "text", text: staticSystem, cache_control: { type: "ephemeral" } },
-    { type: "text", text: volatileSystem },
-  ];
-
   const messages: any[] = [{ role: "user", content: question }];
-  // Summed over every step of the tool loop and returned on each success, so
-  // cache behaviour can be verified: cache_read_input_tokens > 0 from step 2.
-  const usage = {
-    input_tokens: 0,
-    output_tokens: 0,
-    cache_creation_input_tokens: 0,
-    cache_read_input_tokens: 0,
-  };
   const sqlUsed: { query: string; why?: string; rows?: number; error?: string }[] = [];
   const deadline = Date.now() + WALL_MS;
   let toneRetried = false;
@@ -679,9 +660,6 @@ ${TONE_RULES}` :
         body: JSON.stringify({
           model: MODEL, max_tokens: isReport ? 3000 : isPanel ? 1500 : 2000,
           system, tools: [TOOL], messages,
-          // Top-level automatic caching: moves a breakpoint to the end of the
-          // growing conversation each step, so prior turns are read from cache.
-          cache_control: { type: "ephemeral" },
         }),
       });
 
@@ -690,11 +668,6 @@ ${TONE_RULES}` :
         return json({ error: `anthropic ${res.status}`, detail: t.slice(0, 400), model: MODEL }, 502);
       }
       const out = await res.json();
-      const u = out.usage ?? {};
-      usage.input_tokens += u.input_tokens ?? 0;
-      usage.output_tokens += u.output_tokens ?? 0;
-      usage.cache_creation_input_tokens += u.cache_creation_input_tokens ?? 0;
-      usage.cache_read_input_tokens += u.cache_read_input_tokens ?? 0;
       messages.push({ role: "assistant", content: out.content });
 
       const calls = (out.content ?? []).filter((c: any) => c.type === "tool_use");
@@ -757,7 +730,6 @@ ${TONE_RULES}` :
             tone_rewritten: toneRetried,
             benchmark_rewritten: benchRetried,
             had_benchmarks: !noBenchmarks(bench),
-            usage,
           });
         }
 
@@ -815,9 +787,9 @@ ${TONE_RULES}` :
           return json({ report, sql: sqlUsed, model: MODEL, steps: step + 1,
                         saved, save_error: saveError,
                         tone_rewritten: toneRetried,
-                        tone_flag: banned ? banned[0] : null, usage });
+                        tone_flag: banned ? banned[0] : null });
         }
-        return json({ answer: text, sql: sqlUsed, model: MODEL, steps: step + 1, usage });
+        return json({ answer: text, sql: sqlUsed, model: MODEL, steps: step + 1 });
       }
 
       const results: any[] = [];
@@ -837,7 +809,7 @@ ${TONE_RULES}` :
       messages.push({ role: "user", content: results });
     }
     return json({ answer: "I ran out of steps before reaching an answer. Try narrowing the question.",
-                  sql: sqlUsed, model: MODEL, usage }, 200);
+                  sql: sqlUsed, model: MODEL }, 200);
   } catch (e) {
     return json({ error: String((e as Error).message ?? e) }, 500);
   }
