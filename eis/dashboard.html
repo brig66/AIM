@@ -1,0 +1,720 @@
+<title>AIM Executive Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{
+  --indigo:#352597;--magenta:#c0228a;--orange:#e7730d;
+  --cream:#FFFAFB;--surface:#fff;--ink:#241d3d;--secondary:#4d4763;--muted:#6b647f;
+  --line:#e8e2ee;--soft:#f7f3fa;--band:#352597;--bandink:#fff;
+  --good:#2e8b57;--warn:#a85f00;--bad:#b3261e;
+  --good-bg:#e6f3ec;--warn-bg:#fdf1e0;--bad-bg:#fbe9e7;--info-bg:#eeebfb;
+  --c-contract:#352597;--c-deal:#c0228a;--c-cost:#e7730d;--c-grid:#ece6f2;
+  --shadow:0 1px 2px rgba(28,24,48,.05),0 6px 18px rgba(28,24,48,.05);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --indigo:#8478e6;--magenta:#e05bac;--orange:#f0924a;--cream:#12101c;--surface:#1c1830;
+  --ink:#fff;--secondary:#c9c3d8;--muted:#9a93ad;--line:#2f2a44;--soft:#241f38;--band:#231a63;--bandink:#fff;
+  --good:#5cc08a;--warn:#f0b050;--bad:#f08070;--good-bg:#17301f;--warn-bg:#33260f;--bad-bg:#3a1a18;--info-bg:#25204a;
+  --c-contract:#8478e6;--c-deal:#e05bac;--c-cost:#f0924a;--c-grid:#2a2540;
+  --shadow:0 1px 2px rgba(0,0,0,.35),0 6px 18px rgba(0,0,0,.25);}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --indigo:#8478e6;--magenta:#e05bac;--orange:#f0924a;--cream:#12101c;--surface:#1c1830;
+  --ink:#fff;--secondary:#c9c3d8;--muted:#9a93ad;--line:#2f2a44;--soft:#241f38;--band:#231a63;--bandink:#fff;
+  --good:#5cc08a;--warn:#f0b050;--bad:#f08070;--good-bg:#17301f;--warn-bg:#33260f;--bad-bg:#3a1a18;--info-bg:#25204a;
+  --c-contract:#8478e6;--c-deal:#e05bac;--c-cost:#f0924a;--c-grid:#2a2540;
+  --shadow:0 1px 2px rgba(0,0,0,.35),0 6px 18px rgba(0,0,0,.25);}
+*{box-sizing:border-box}
+body{background:var(--cream);color:var(--ink);font:14px/1.55 Inter,system-ui,-apple-system,Segoe UI,sans-serif;margin:0;padding-inline:16px;padding-block:0 60px}
+.wrap{max-width:1180px;margin:0 auto}
+.band{background:var(--band);color:var(--bandink);margin-inline:-16px;padding:22px 16px 0}
+.bandtop{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:10px;font:500 11px/1 "IBM Plex Mono",monospace;letter-spacing:.12em;text-transform:uppercase;opacity:.9}
+.brand i{width:20px;height:20px;border-radius:6px;background:linear-gradient(135deg,#c0228a,#e7730d);display:inline-block}
+h1{font:700 clamp(24px,3.6vw,32px)/1.15 Fraunces,Georgia,serif;margin:8px 0 0}
+.fresh{font:500 11.5px "IBM Plex Mono",monospace;opacity:.85;text-align:right}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;margin-top:18px;scrollbar-width:thin}
+nav.tabs button{background:transparent;border:0;color:var(--bandink);opacity:.78;font:500 13.5px Inter,sans-serif;padding:10px 14px;border-radius:8px 8px 0 0;cursor:pointer;white-space:nowrap}
+nav.tabs button:hover{opacity:1}
+nav.tabs button[aria-selected="true"]{background:var(--cream);color:var(--ink);opacity:1}
+nav.tabs button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--magenta);outline-offset:2px}
+main{padding-top:22px}
+h2{font:700 21px/1.2 Fraunces,Georgia,serif;margin:28px 0 4px;text-wrap:balance}
+h2:first-child{margin-top:0}
+.sub{color:var(--muted);margin:0 0 14px;max-width:80ch}
+h3{font:600 14.5px/1.3 Inter,sans-serif;margin:0 0 8px}
+.kpis{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi .l{font:500 10.5px "IBM Plex Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font:700 24px/1.2 Fraunces,Georgia,serif;margin-top:4px;font-variant-numeric:tabular-nums}
+.kpi .n{font-size:12px;color:var(--secondary);margin-top:2px}
+.grid2{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+.alerts{display:grid;gap:8px}
+.alert{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.sev{font:500 10.5px/1 "IBM Plex Mono",monospace;padding:5px 7px;border-radius:999px;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;margin-top:1px}
+.sev.critical{background:var(--bad-bg);color:var(--bad)}
+.sev.warn{background:var(--warn-bg);color:var(--warn)}
+.sev.info{background:var(--info-bg);color:var(--indigo)}
+.alert .area{font-weight:600}
+.alert .t{color:var(--secondary)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font:500 10.5px "IBM Plex Mono",monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--soft);white-space:nowrap;position:sticky;top:0}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right}
+.num{font-variant-numeric:tabular-nums}
+td.num{white-space:nowrap}
+tfoot td{font-weight:600;background:var(--soft)}
+.pill{display:inline-block;font:500 11px/1 "IBM Plex Mono",monospace;padding:5px 8px;border-radius:999px;white-space:nowrap}
+.p-first{background:var(--info-bg);color:var(--indigo)}
+.p-renewed{background:var(--good-bg);color:var(--good)}
+.p-mtm{background:var(--warn-bg);color:var(--warn)}
+.p-initial{background:var(--soft);color:var(--secondary);border:1px solid var(--line)}
+.p-none{background:var(--soft);color:var(--muted);border:1px dashed var(--line)}
+.p-bad{background:var(--bad-bg);color:var(--bad)}
+.p-good{background:var(--good-bg);color:var(--good)}
+.p-warn{background:var(--warn-bg);color:var(--warn)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.neg{color:var(--bad)}
+.pos{color:var(--good)}
+.btn{font:600 13px Inter,sans-serif;border-radius:8px;padding:8px 14px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn.primary{background:var(--indigo);border-color:var(--indigo);color:#fff}
+:root[data-theme="dark"] .btn.primary{color:#12101c}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn.primary{color:#12101c}}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.link{border:0;background:none;color:var(--indigo);padding:4px 6px;text-decoration:underline;font-weight:500}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px}
+.toolbar .grow{flex:1}
+input[type=text],input[type=number],input[type=date],input[type=month],select,textarea{font:13px Inter,sans-serif;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:6px 8px;max-width:100%}
+input.cell{width:92px;text-align:right;font-variant-numeric:tabular-nums;padding:5px 6px}
+input.mini{width:90px}
+label.f{display:grid;gap:4px;font-size:12px;color:var(--muted);font-weight:500}
+label.f input,label.f select,label.f textarea{font-size:14px;width:100%}
+.form{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.form .wide{grid-column:1/-1}
+.drawer{position:fixed;inset:0;background:rgba(20,16,40,.45);display:flex;justify-content:flex-end;z-index:20}
+.drawer .sheet{background:var(--cream);width:min(560px,100%);height:100%;overflow:auto;padding:22px 20px calc(24px + env(safe-area-inset-bottom,0px));border-left:1px solid var(--line)}
+.drawer .sheet h2{margin-top:0}
+.drawer .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+.note{background:var(--info-bg);border-radius:10px;padding:10px 14px;color:var(--secondary);font-size:13px;margin:0 0 14px}
+.note.warn{background:var(--warn-bg)}
+.chart svg{width:100%;height:auto;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--secondary);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--cream);padding:10px 16px;border-radius:999px;font-weight:500;z-index:30}
+.empty{padding:22px;text-align:center;color:var(--muted)}
+.bar{height:8px;border-radius:999px;background:var(--soft);overflow:hidden;min-width:80px}
+.bar span{display:block;height:100%;background:var(--indigo)}
+.bar span.over{background:var(--bad)}
+.scen{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));margin-bottom:12px}
+.chk{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+.chk input{width:16px;height:16px;accent-color:var(--magenta)}
+tr.modeled td{background:color-mix(in srgb,var(--magenta) 7%,transparent)}
+footer{margin-top:40px;color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<header class="band">
+  <div class="wrap">
+    <div class="bandtop">
+      <div>
+        <div class="brand"><i aria-hidden="true"></i>Advanced Integrated Marketing</div>
+        <h1>Executive Dashboard</h1>
+      </div>
+      <div class="fresh" id="fresh">Loading data…</div>
+    </div>
+    <nav class="tabs" role="tablist" id="tabs"></nav>
+  </div>
+</header>
+<main class="wrap" id="main"><div class="empty">Loading…</div></main>
+<footer class="wrap">Private to AIM. Sources: QuickBooks Online, HubSpot, AIM analytics platform, vendor receipts. Numbers refresh every morning. Contracts, budgets and deal scenarios are entered here.</footer>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+(function(){
+'use strict';
+/* ---------------------------------------------------------------- state */
+const TABS=[['today','Today'],['clients','Clients & Contracts'],['pipeline','Pipeline & Modeling'],['finance','Finance'],['budget','Budget'],['support','Support'],['health','Client Health'],['ai','AI & Software'],['platform','Platform']];
+const S={tab:'today',snap:{},contracts:[],budgets:{},models:{},settings:{},db:null,canEdit:false,loaded:{snap:false,contracts:false},budgetYear:null,budgetDraft:null,clientFilter:'all',dealFilter:'open'};
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+try{const t=localStorage.getItem('aim-eis-tab');if(t&&TABS.some(x=>x[0]===t))S.tab=t;}catch(e){}
+if(location.hash){const h=location.hash.slice(1);if(TABS.some(x=>x[0]===h))S.tab=h;}
+
+/* -------------------------------------------------------------- helpers */
+const $=s=>document.querySelector(s);
+const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const isNum=v=>typeof v==='number'&&isFinite(v);
+const money=(v,opt)=>{if(!isNum(v))return '—';const n=Math.round(v);const s=Math.abs(n).toLocaleString('en-US');return (n<0?'−$':'$')+s;};
+const kmoney=v=>{if(!isNum(v))return '—';const a=Math.abs(v);const sign=v<0?'−':'';if(a>=1e6)return sign+'$'+(a/1e6).toFixed(1)+'M';if(a>=1e4)return sign+'$'+Math.round(a/1e3)+'K';if(a>=1e3)return sign+'$'+(a/1e3).toFixed(1)+'K';return sign+'$'+Math.round(a);};
+const pct=(v,d=0)=>isNum(v)?(v*100).toFixed(d)+'%':'—';
+const hrs=h=>{if(!isNum(h))return '—';if(h<48)return (h<10?h.toFixed(1):Math.round(h))+' hrs';return (h/24).toFixed(1)+' days';};
+const todayISO=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+const ym=d=>d.slice(0,7);
+const addMonths=(key,n)=>{let [y,m]=key.split('-').map(Number);m+=n;while(m>12){m-=12;y++;}while(m<1){m+=12;y--;}return y+'-'+String(m).padStart(2,'0');};
+const mLabel=key=>{const [y,m]=key.split('-').map(Number);return MONTHS[m-1]+" '"+String(y).slice(2);};
+const parseD=s=>{if(!s)return null;const d=new Date(s+'T12:00:00');return isNaN(d)?null:d;};
+const days=(a,b)=>Math.round((parseD(b)-parseD(a))/864e5);
+const addMonthsDate=(iso,n)=>{const d=parseD(iso);if(!d)return null;const t=new Date(d);t.setMonth(t.getMonth()+n);t.setDate(t.getDate()-1);return t.toISOString().slice(0,10);};
+const fmtDate=iso=>{const d=parseD(iso);return d?d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';};
+const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>{t.hidden=true;},2600);}
+const F=()=>S.snap.finance||null, T=()=>S.snap.tickets||null, D=()=>S.snap.deals||null, H=()=>S.snap.clients||null, O=()=>S.snap.ops||null, M=()=>S.snap.meta||null;
+
+/* ------------------------------------------------------ contract logic */
+function contractEnd(c){if(c.end)return c.end;if(c.start&&c.term_months)return addMonthsDate(c.start,Number(c.term_months));return null;}
+function contractStatus(c){
+  const today=todayISO();
+  if(c.active===false)return {k:'none',label:'Inactive'};
+  if(c.billing==='mtm')return {k:'mtm',label:'Month-to-month'};
+  if(!c.start)return {k:'none',label:'Needs dates'};
+  const since=c.client_since||c.start;
+  if(days(since,c.start)>31)return {k:'renewed',label:'Renewed'};
+  if(days(since,today)<=366)return {k:'first',label:'First year'};
+  return {k:'initial',label:'Initial term, year 2+'};
+}
+function contractFlags(c){
+  const out=[];if(c.active===false)return out;
+  const today=todayISO();const end=contractEnd(c);
+  if(!isNum(c.monthly))out.push({k:'warn',t:'No monthly value'});
+  if(c.billing!=='mtm'&&end){const d=days(today,end);
+    if(d<0)out.push({k:'bad',t:'Ended '+fmtDate(end)});
+    else if(d<=60)out.push({k:'warn',t:'Ends in '+d+' days'});}
+  return out;
+}
+function salesFor(c){const f=F();if(!f||!f.sales_by_customer)return null;const key=norm(c.qb_name||c.name);return f.sales_by_customer.find(r=>norm(r.customer)===key)||null;}
+function asOfMonth(){const f=F();return ym((f&&f.as_of)||todayISO());}
+function lastFullMonth(){return addMonths(asOfMonth(),-1);}
+function activeContracts(){return S.contracts.filter(c=>c.active!==false);}
+function contractedMRR(){return activeContracts().reduce((s,c)=>s+(isNum(c.monthly)?c.monthly:0),0);}
+
+/* ---------------------------------------------------------- projection */
+function directCostPct(){
+  if(isNum(S.settings.direct_cost_pct))return S.settings.direct_cost_pct;
+  const f=F();if(f&&f.pl_ytd&&f.pl_ytd.income)return f.pl_ytd.cogs/f.pl_ytd.income;return 0.2;
+}
+function opexBaseline(monthKey){
+  const y=monthKey.slice(0,4);const b=S.budgets[y];const mi=Number(monthKey.slice(5))-1;
+  if(b&&b.categories){let t=0,any=false;for(const k in b.categories){const v=b.categories[k]&&b.categories[k][mi];if(isNum(v)){t+=v;any=true;}}if(any)return {v:t,src:'budget'};}
+  const f=F();if(!f||!f.pl_months)return {v:0,src:'none'};
+  const cur=asOfMonth();const full=f.pl_months.filter(m=>m.month<cur).slice(-3);
+  if(!full.length)return {v:0,src:'none'};
+  return {v:full.reduce((s,m)=>s+(m.expenses||0),0)/full.length,src:'run-rate'};
+}
+function dealDefaults(d){
+  const close=d.close_date&&d.close_date>=todayISO()?d.close_date:todayISO();
+  return {include:false,kind:'monthly',value:isNum(d.amount)?d.amount:0,term:12,start:addMonths(ym(close),1)};
+}
+function dealModel(d){return Object.assign(dealDefaults(d),S.models[d.id]||{});}
+function projection(n){
+  n=n||12;const start=ym(todayISO());const months=[];for(let i=0;i<n;i++)months.push(addMonths(start,i));
+  const renew=!!S.settings.assume_renewals;const pctC=directCostPct();
+  const contracted=months.map(m=>{let t=0;for(const c of activeContracts()){if(!isNum(c.monthly))continue;
+    if(c.start&&ym(c.start)>m)continue;
+    if(c.billing!=='mtm'){const e=contractEnd(c);if(e&&ym(e)<m&&!renew)continue;}
+    t+=c.monthly;}return t;});
+  const deals=D()?D().deals.filter(d=>d.open):[];
+  const modeled=months.map(()=>0);
+  for(const d of deals){const md=dealModel(d);if(!md.include||!isNum(Number(md.value)))continue;const v=Number(md.value);
+    months.forEach((m,i)=>{if(md.kind==='onetime'){if(m===md.start)modeled[i]+=v;}
+      else{const endM=addMonths(md.start,Math.max(1,Number(md.term)||12)-1);if(m>=md.start&&m<=endM)modeled[i]+=v;}});}
+  const opex=months.map(m=>opexBaseline(m));
+  const rows=months.map((m,i)=>{const rev=contracted[i]+modeled[i];const cogs=rev*pctC;const ox=opex[i].v;
+    return {m,contracted:contracted[i],modeled:modeled[i],rev,cogs,opex:ox,opexSrc:opex[i].src,profit:rev-cogs-ox,baseProfit:contracted[i]*(1-pctC)-ox};});
+  return rows;
+}
+function weightedPipeline(){
+  const d=D();if(!d)return null;const st={};(d.stages||[]).forEach(s=>st[s.id]=s);
+  let w=0,has=false;for(const x of d.deals.filter(x=>x.open)){const p=st[x.stage_id]&&st[x.stage_id].probability;if(isNum(p)&&isNum(x.amount)){w+=x.amount*(p>1?p/100:p);has=true;}}
+  return has?w:null;
+}
+
+/* ------------------------------------------------------------ alerts */
+function allAlerts(){
+  const out=[];const m=M();
+  if(m&&Array.isArray(m.alerts))m.alerts.forEach(a=>out.push(a));
+  for(const c of activeContracts()){for(const f of contractFlags(c)){if(f.t==='No monthly value')continue;out.push({severity:f.k==='bad'?'critical':'warn',area:'Contract',text:(c.name||'Client')+': '+f.t+(c.billing!=='mtm'?' — renew or switch to month-to-month.':'')});}}
+  const missing=activeContracts().filter(c=>!isNum(c.monthly)).length;
+  if(missing)out.push({severity:'info',area:'Setup',text:missing+' client'+(missing>1?'s have':' has')+' no expected monthly revenue yet. Add it under Clients & Contracts.'});
+  const lf=lastFullMonth();
+  for(const c of activeContracts()){if(!isNum(c.monthly)||c.monthly<=0)continue;const s=salesFor(c);if(!s)continue;const a=s.months&&s.months[lf];
+    if(isNum(a)&&a<c.monthly*0.9)out.push({severity:'warn',area:'Billing',text:(c.name)+' was billed '+money(a)+' in '+mLabel(lf)+' against '+money(c.monthly)+' expected.'});}
+  const rank={critical:0,warn:1,info:2};out.sort((a,b)=>(rank[a.severity]??3)-(rank[b.severity]??3));
+  return out;
+}
+
+/* ------------------------------------------------------------- charts */
+function niceMax(v){if(v<=0)return 1;const p=Math.pow(10,Math.floor(Math.log10(v)));const n=v/p;const s=n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10;return s*p;}
+function barChart(o){
+  const W=760,Hh=o.height||240,padL=56,padR=12,padT=12,padB=28;const n=o.labels.length;
+  const stackTot=o.labels.map((_,i)=>o.series.reduce((s,se)=>s+Math.max(0,se.values[i]||0),0));
+  let max=Math.max(...stackTot,...(o.line?o.line.values:[0]),0);
+  let min=Math.min(0,...(o.line2?o.line2.values:[0]));
+  const step=niceMax(((max-min)||1)/4);max=Math.ceil(max*1.02/step)*step||step;min=min<0?Math.floor(min*1.02/step)*step:0;
+  const y=v=>padT+(Hh-padT-padB)*(1-(v-min)/(max-min));
+  const bw=(W-padL-padR)/n;const bar=Math.min(38,bw*0.62);
+  let g='';
+  for(let v=min;v<=max+step/2;v+=step){const yy=y(v);g+=`<line x1="${padL}" x2="${W-padR}" y1="${yy}" y2="${yy}" stroke="var(--c-grid)" stroke-width="1"/><text x="${padL-8}" y="${yy+4}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${esc(kmoney(v))}</text>`;}
+  if(min<0)g+=`<line x1="${padL}" x2="${W-padR}" y1="${y(0)}" y2="${y(0)}" stroke="var(--muted)" stroke-width="1"/>`;
+  o.labels.forEach((lab,i)=>{const cx=padL+bw*i+bw/2;let base=0;
+    o.series.forEach(se=>{const v=Math.max(0,se.values[i]||0);if(v>0){const y1=y(base+v),y0=y(base);g+=`<rect x="${cx-bar/2}" y="${y1}" width="${bar}" height="${Math.max(0,y0-y1)}" fill="${se.color}" rx="2"><title>${esc(se.name)} ${esc(lab)}: ${esc(money(v))}</title></rect>`;}base+=v;});
+    g+=`<text x="${cx}" y="${Hh-8}" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono,monospace">${esc(lab)}</text>`;});
+  const path=(vals)=>vals.map((v,i)=>(i?'L':'M')+(padL+bw*i+bw/2).toFixed(1)+' '+y(v).toFixed(1)).join(' ');
+  if(o.line){g+=`<path d="${path(o.line.values)}" fill="none" stroke="${o.line.color}" stroke-width="2.2" stroke-linejoin="round"/>`;o.line.values.forEach((v,i)=>{g+=`<circle cx="${padL+bw*i+bw/2}" cy="${y(v)}" r="3" fill="${o.line.color}"><title>${esc(o.line.name)} ${esc(o.labels[i])}: ${esc(money(v))}</title></circle>`;});}
+  if(o.line2){g+=`<path d="${path(o.line2.values)}" fill="none" stroke="${o.line2.color}" stroke-width="2" stroke-dasharray="5 4"/>`;o.line2.values.forEach((v,i)=>{g+=`<circle cx="${padL+bw*i+bw/2}" cy="${y(v)}" r="2.6" fill="${o.line2.color}"><title>${esc(o.line2.name)} ${esc(o.labels[i])}: ${esc(money(v))}</title></circle>`;});}
+  const leg=[...o.series.map(s=>[s.name,s.color,'sq']),...(o.line?[[o.line.name,o.line.color,'ln']]:[]),...(o.line2?[[o.line2.name,o.line2.color,'ln']]:[])];
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="${esc(o.title||'chart')}">${g}</svg><div class="legend">${leg.map(l=>`<span><i style="background:${l[1]};${l[2]==='ln'?'height:3px;border-radius:2px;vertical-align:3px':''}"></i>${esc(l[0])}</span>`).join('')}</div></div>`;
+}
+
+/* ------------------------------------------------------------- render */
+function renderTabs(){
+  $('#tabs').innerHTML=TABS.map(([k,l])=>`<button role="tab" data-tab="${k}" aria-selected="${S.tab===k}">${esc(l)}</button>`).join('');
+}
+function renderFresh(){
+  const m=M();const el=$('#fresh');
+  if(!S.loaded.snap){el.textContent=S.db===false?'Data store unavailable in this view':'Loading data…';return;}
+  const g=m&&m.generated_at?new Date(m.generated_at):null;
+  el.innerHTML=g?`Updated ${esc(g.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}))}<br>${S.canEdit?'You can edit':'View only'}`:'No data yet';
+}
+function render(){
+  renderTabs();renderFresh();
+  const main=$('#main');
+  if(S.db===false){main.innerHTML=`<div class="panel empty">This dashboard needs its data store, which isn't available in this view. Open it from claude.ai while signed in.</div>`;return;}
+  if(!S.loaded.snap){main.innerHTML='<div class="empty">Loading…</div>';return;}
+  const fn={today:vToday,clients:vClients,pipeline:vPipeline,finance:vFinance,budget:vBudget,support:vSupport,health:vHealth,ai:vAI,platform:vPlatform}[S.tab];
+  main.innerHTML=fn();
+  if(S.tab==='pipeline')renderProjection();
+}
+
+/* Today */
+function vToday(){
+  const f=F(),t=T(),d=D(),h=H(),o=O();
+  const mrr=contractedMRR();const entered=activeContracts().filter(c=>isNum(c.monthly)).length;
+  const ar=f&&f.ar;const overdue=ar?(Array.isArray(ar.items)&&ar.items.length?ar.items.filter(i=>i.amount>0&&i.bucket!=='current').reduce((s,i)=>s+i.amount,0):Math.max(0,(ar.d1_30||0)+(ar.d31_60||0)+(ar.d61_90||0)+(ar.d91_plus||0))):null;
+  const risk=h?h.clients.filter(c=>c.risk==='high').length:null;const watch=h?h.clients.filter(c=>c.risk==='watch').length:null;
+  const ai=o&&o.ai_spend?o.ai_spend.vendors.filter(v=>v.category==='AI').reduce((s,v)=>s+(v.mtd||0),0):null;
+  const proj=projection(4);const next=proj[1],q=proj.slice(1,4);
+  const qRev=q.reduce((s,r)=>s+r.contracted,0),qProfit=q.reduce((s,r)=>s+r.baseProfit,0);
+  const alerts=allAlerts();
+  const summary=M()&&M().summary;
+  return `
+  ${summary?`<p class="note">${esc(summary)}</p>`:''}
+  <div class="kpis">
+    ${kpi('Cash in bank',money(f&&f.cash.bank_total),f?`${money(f.cash.undeposited_funds)} undeposited`:'')}
+    ${kpi('Contracted monthly revenue',money(mrr),`${entered} of ${activeContracts().length} clients entered`)}
+    ${kpi('Receivables past due',money(overdue),ar?`Total A/R ${money(ar.total)}${ar.total<0?' (unapplied credits)':''}`:'')}
+    ${kpi('Open support tickets',t?t.open:'—',t?`${t.unowned_open} unowned · oldest ${t.oldest_open_days} days`:'')}
+    ${kpi('Open pipeline',d?kmoney(d.stats.open_excl_nurture_amount):'—',d?`${d.stats.open_excl_nurture_count} deals, excluding nurture`:'')}
+    ${kpi('Clients at risk',risk==null?'—':risk,watch==null?'':`${watch} more on watch`)}
+    ${kpi('AI spend this month',money(ai),o?'From vendor receipts':'')}
+  </div>
+  <h2>Needs attention</h2>
+  <p class="sub">Only items outside the normal range. Everything else is on the tabs above.</p>
+  <div class="alerts">${alerts.length?alerts.slice(0,14).map(a=>`<div class="alert"><span class="sev ${esc(a.severity)}">${esc(a.severity==='critical'?'Act now':a.severity==='warn'?'Watch':'Note')}</span><div><span class="area">${esc(a.area)}.</span> <span class="t">${esc(a.text)}</span></div></div>`).join(''):'<div class="panel empty">Nothing out of range today.</div>'}${alerts.length>14?`<p class="small muted">${alerts.length-14} more on the tabs above.</p>`:''}</div>
+  <h2>Forecast</h2>
+  ${entered<activeContracts().length?`<p class="note warn">The forecast only counts clients with an expected monthly value. ${entered} of ${activeContracts().length} active clients have one so far, so revenue and profit read low until the rest are entered on the Clients &amp; Contracts tab.</p>`:''}
+  <p class="sub">From contracts entered on the Clients tab. Expenses use ${opexBaseline(next.m).src==='budget'?'your budget':'the average of the last three full months (the budget replaces this once entered)'}. Direct costs are estimated at ${pct(directCostPct())} of revenue.</p>
+  <div class="kpis">
+    ${kpi('Next month revenue',money(next.contracted),mLabel(next.m))}
+    ${kpi('Next month profit',money(next.baseProfit),'Before modeled deals')}
+    ${kpi('Next quarter revenue',money(qRev),mLabel(q[0].m)+' – '+mLabel(q[2].m))}
+    ${kpi('Next quarter profit',money(qProfit),'Before modeled deals')}
+    ${kpi('Weighted pipeline',money(weightedPipeline()),'Deal amounts × stage probability')}
+  </div>`;
+}
+function kpi(l,v,n){return `<div class="kpi"><div class="l">${esc(l)}</div><div class="v">${esc(v)}</div>${n?`<div class="n">${esc(n)}</div>`:''}</div>`;}
+
+/* Clients */
+function vClients(){
+  const lf=lastFullMonth();const cur=asOfMonth();
+  let rows=S.contracts.slice().sort((a,b)=>(b.monthly||0)-(a.monthly||0)||String(a.name).localeCompare(String(b.name)));
+  const fl=S.clientFilter;
+  if(fl!=='all')rows=rows.filter(c=>fl==='inactive'?c.active===false:(c.active!==false&&(fl==='attention'?contractFlags(c).length>0:contractStatus(c).k===fl)));
+  const counts={first:0,renewed:0,mtm:0,initial:0,none:0};activeContracts().forEach(c=>counts[contractStatus(c).k]++);
+  const f=F();
+  return `
+  <h2>Clients &amp; Contracts</h2>
+  <p class="sub">Enter each client's expected monthly revenue and contract dates. Status is worked out from the dates: <b>First year</b> is a client's first contract within 12 months of starting, <b>Renewed</b> is a contract that started after an earlier one (client-since date earlier than the contract start), and <b>Month-to-month</b> is set by billing type.</p>
+  ${f&&f.unassigned_sales_ytd?`<p class="note warn">QuickBooks has ${money(f.unassigned_sales_ytd)} of 2026 revenue not tied to a client, so "Billed" figures run low until the bookkeeper finishes tagging revenue to clients.</p>`:''}
+  <div class="kpis" style="margin-bottom:14px">
+    ${kpi('Contracted monthly',money(contractedMRR()),activeContracts().length+' active clients')}
+    ${kpi('First year',counts.first,'')}${kpi('Renewed',counts.renewed,'')}${kpi('Month-to-month',counts.mtm,'')}${kpi('Year 2+ / needs dates',counts.initial+' / '+counts.none,'')}
+  </div>
+  <div class="toolbar">
+    <label class="small muted" for="cfilter">Show</label>
+    <select id="cfilter">${[['all','All clients'],['attention','Needs attention'],['first','First year'],['renewed','Renewed'],['mtm','Month-to-month'],['initial','Initial term, year 2+'],['none','Needs dates'],['inactive','Inactive']].map(([k,l])=>`<option value="${k}" ${fl===k?'selected':''}>${l}</option>`).join('')}</select>
+    <span class="grow"></span>
+    ${S.canEdit?`<button class="btn primary" data-act="add-client">Add client</button>`:'<span class="small muted">View only. Ask the owner for Editor access to make changes.</span>'}
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Client</th><th>Status</th><th class="r">Expected / mo</th><th>Term</th><th>Start</th><th>End</th><th class="r">Billed ${esc(mLabel(lf))}</th><th class="r">3-mo avg billed</th><th>Flags</th>${S.canEdit?'<th></th>':''}</tr></thead>
+    <tbody>${rows.length?rows.map(c=>{const st=contractStatus(c);const s=salesFor(c);const last=s&&s.months?s.months[lf]:null;
+      const av=s&&s.months?avg([addMonths(lf,-2),addMonths(lf,-1),lf].map(k=>s.months[k]).filter(isNum)):null;
+      const fl=contractFlags(c);const under=isNum(c.monthly)&&isNum(last)&&last<c.monthly*0.9;
+      return `<tr><td><b>${esc(c.name)}</b>${c.qb_name&&norm(c.qb_name)!==norm(c.name)?`<div class="small muted">QuickBooks: ${esc(c.qb_name)}</div>`:''}${c.notes?`<div class="small muted">${esc(c.notes)}</div>`:''}</td>
+      <td><span class="pill p-${st.k}">${esc(st.label)}</span></td>
+      <td class="r num">${isNum(c.monthly)?money(c.monthly):'<span class="muted">—</span>'}</td>
+      <td class="num">${c.billing==='mtm'?'Monthly':(c.term_months?esc(c.term_months)+' mo':'—')}</td>
+      <td class="num">${fmtDate(c.start)}</td><td class="num">${c.billing==='mtm'?'—':fmtDate(contractEnd(c))}</td>
+      <td class="r num ${under?'neg':''}">${money(last)}</td><td class="r num">${money(av)}</td>
+      <td><div class="chips">${fl.map(x=>`<span class="pill p-${x.k==='bad'?'bad':'warn'}">${esc(x.t)}</span>`).join('')}</div></td>
+      ${S.canEdit?`<td><button class="btn link" data-act="edit-client" data-id="${esc(c.id)}">Edit</button></td>`:''}</tr>`;}).join(''):`<tr><td colspan="10" class="empty">No clients in this view.</td></tr>`}</tbody>
+  </table></div>`;
+}
+function avg(a){return a.length?a.reduce((s,v)=>s+v,0)/a.length:null;}
+function clientForm(c){
+  c=c||{active:true,billing:'contract'};
+  const qbNames=F()&&F().sales_by_customer?F().sales_by_customer.map(r=>r.customer):[];
+  const s=salesFor(c);
+  return `<div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Client contract"><div class="sheet">
+    <h2>${c.id?'Edit client':'Add client'}</h2>
+    <p class="sub">Dates drive the status. If you enter a start date and a term, the end date fills in for you.</p>
+    <form id="cform" class="form">
+      <label class="f wide">Client name<input type="text" id="c-name" required value="${esc(c.name||'')}"></label>
+      <label class="f">Expected monthly revenue ($)<input type="number" id="c-monthly" min="0" step="1" value="${isNum(c.monthly)?c.monthly:''}"></label>
+      <label class="f">Billing<select id="c-billing"><option value="contract" ${c.billing!=='mtm'?'selected':''}>Contract term</option><option value="mtm" ${c.billing==='mtm'?'selected':''}>Month-to-month</option></select></label>
+      <label class="f">Contract term (months)<input type="number" id="c-term" min="1" step="1" value="${esc(c.term_months||'')}"></label>
+      <label class="f">Start date<input type="date" id="c-start" value="${esc(c.start||'')}"></label>
+      <label class="f">End date<input type="date" id="c-end" value="${esc(c.end||'')}"></label>
+      <label class="f">Client since (first contract)<input type="date" id="c-since" value="${esc(c.client_since||'')}"></label>
+      <label class="f wide">QuickBooks customer name (for actual billing)<input type="text" id="c-qb" list="qbnames" value="${esc(c.qb_name||'')}"><datalist id="qbnames">${qbNames.map(n=>`<option value="${esc(n)}">`).join('')}</datalist></label>
+      <label class="f wide">Notes<textarea id="c-notes" rows="2">${esc(c.notes||'')}</textarea></label>
+      <label class="chk wide"><input type="checkbox" id="c-active" ${c.active!==false?'checked':''}> Active client</label>
+      ${s?`<p class="small muted wide">Billed in QuickBooks this year: ${money(s.ytd)}. Last 3 months: ${[-2,-1,0].map(i=>{const k=addMonths(lastFullMonth(),i);return mLabel(k)+' '+money(s.months[k]);}).join(' · ')}</p>`:''}
+    </form>
+    <div class="actions">
+      ${c.id?`<button class="btn" data-act="deactivate" data-id="${esc(c.id)}" style="margin-right:auto">${c.active===false?'Reactivate':'Mark inactive'}</button>`:''}
+      <button class="btn" data-act="close-drawer">Cancel</button>
+      <button class="btn primary" data-act="save-client" data-id="${esc(c.id||'')}">Save</button>
+    </div>
+  </div></div>`;
+}
+
+/* Pipeline */
+function vPipeline(){
+  const d=D();if(!d)return '<div class="panel empty">No HubSpot deals loaded yet.</div>';
+  const st={};(d.stages||[]).forEach(s=>st[s.id]=s);
+  let deals=d.deals.slice();
+  if(S.dealFilter==='open')deals=deals.filter(x=>x.open&&!/nurture/i.test(x.stage||''));
+  else if(S.dealFilter==='nurture')deals=deals.filter(x=>x.open&&/nurture/i.test(x.stage||''));
+  else if(S.dealFilter==='modeled')deals=deals.filter(x=>x.open&&dealModel(x).include);
+  else if(S.dealFilter==='closed')deals=deals.filter(x=>!x.open);
+  deals.sort((a,b)=>(st[b.stage_id]?.order??0)-(st[a.stage_id]?.order??0)||(b.amount||0)-(a.amount||0));
+  const s=d.stats||{};
+  return `
+  <h2>Pipeline &amp; Modeling</h2>
+  <p class="sub">Every HubSpot deal with its expected value. Tick <b>Model</b> on any open deal to see what closing it does to the next 12 months. Set its monthly value, start month and term; one-time projects count once. ${S.canEdit?'Your scenario is saved for everyone who opens this dashboard.':'Only Editors can change the scenario.'}</p>
+  <div class="kpis" style="margin-bottom:14px">
+    ${kpi('Open pipeline',kmoney(s.open_excl_nurture_amount),(s.open_excl_nurture_count??'—')+' deals, excluding nurture')}
+    ${kpi('Nurture',kmoney((s.open_amount||0)-(s.open_excl_nurture_amount||0)),((s.open_count||0)-(s.open_excl_nurture_count||0))+' deals')}
+    ${kpi('Won, last 90 days',kmoney(s.won_90d_amount),(s.won_90d??'—')+' deals')}
+    ${kpi('Win rate, 90 days',pct(s.win_rate_90d),(s.lost_90d??'—')+' lost')}
+    ${kpi('Typical sales cycle',isNum(s.median_cycle_days_won)?Math.round(s.median_cycle_days_won)+' days':'—','Median, won deals')}
+  </div>
+  <div class="panel" id="proj"></div>
+  <div class="toolbar" style="margin-top:16px">
+    <label class="small muted" for="dfilter">Show</label>
+    <select id="dfilter">${[['open','Open deals'],['nurture','Nurture'],['modeled','Modeled only'],['closed','Won and lost this year'],['all','All']].map(([k,l])=>`<option value="${k}" ${S.dealFilter===k?'selected':''}>${l}</option>`).join('')}</select>
+    <span class="grow"></span>
+    ${S.canEdit?'<button class="btn" data-act="clear-models">Clear scenario</button>':''}
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Model</th><th>Deal</th><th>Stage</th><th class="r">HubSpot amount</th><th>Close date</th><th>Counts as</th><th class="r">Value</th><th>Start</th><th>Term (mo)</th></tr></thead>
+    <tbody>${deals.length?deals.map(x=>{const md=dealModel(x);const dis=(!x.open||!S.canEdit)?'disabled':'';
+      return `<tr class="${md.include&&x.open?'modeled':''}" data-deal="${esc(x.id)}">
+      <td><label class="chk"><input type="checkbox" data-f="include" ${md.include&&x.open?'checked':''} ${dis} aria-label="Model ${esc(x.name)}"></label></td>
+      <td><a href="${esc(x.url||'#')}" target="_blank" rel="noopener">${esc(x.name)}</a>${x.company?`<div class="small muted">${esc(x.company)}</div>`:''}</td>
+      <td>${x.won?'<span class="pill p-good">Won</span>':x.open?esc(x.stage):'<span class="pill p-none">'+esc(x.stage)+'</span>'}${st[x.stage_id]&&isNum(st[x.stage_id].probability)?`<div class="small muted">${pct(st[x.stage_id].probability>1?st[x.stage_id].probability/100:st[x.stage_id].probability)} likely</div>`:''}</td>
+      <td class="r num">${isNum(x.amount)?money(x.amount):'<span class="muted">none</span>'}</td>
+      <td class="num">${fmtDate(x.close_date)}</td>
+      <td><select data-f="kind" ${dis}><option value="monthly" ${md.kind!=='onetime'?'selected':''}>Monthly</option><option value="onetime" ${md.kind==='onetime'?'selected':''}>One-time</option></select></td>
+      <td class="r"><input class="cell" type="number" min="0" step="1" data-f="value" value="${esc(md.value)}" ${dis}></td>
+      <td><input type="month" data-f="start" value="${esc(md.start)}" ${dis}></td>
+      <td><input class="cell" style="width:64px" type="number" min="1" step="1" data-f="term" value="${esc(md.term)}" ${dis||md.kind==='onetime'?'disabled':''}></td></tr>`;}).join(''):'<tr><td colspan="9" class="empty">No deals in this view.</td></tr>'}</tbody>
+  </table></div>`;
+}
+function renderProjection(){
+  const el=$('#proj');if(!el)return;
+  const rows=projection(12);const pctC=directCostPct();
+  const modeledCount=D()?D().deals.filter(x=>x.open&&dealModel(x).include).length:0;
+  const base12=rows.reduce((s,r)=>s+r.contracted,0),mod12=rows.reduce((s,r)=>s+r.modeled,0);
+  const prof=rows.reduce((s,r)=>s+r.profit,0),bprof=rows.reduce((s,r)=>s+r.baseProfit,0);
+  const addMrr=rows.length?Math.max(...rows.map(r=>r.modeled)):0;
+  const ent=activeContracts().filter(c=>isNum(c.monthly)).length,act=activeContracts().length;
+  el.innerHTML=`<h3>Next 12 months</h3>${ent<act?`<p class="note warn">Only ${ent} of ${act} active clients have an expected monthly value, so contracted revenue and profit read low until the rest are entered.</p>`:''}
+  <div class="scen">
+    ${kpi('Contracted revenue',money(base12),'From client contracts')}
+    ${kpi('Modeled deals add',money(mod12),modeledCount+' deal'+(modeledCount===1?'':'s')+' modeled, up to '+money(addMrr)+'/mo')}
+    ${kpi('Profit, contracts only',money(bprof),'After direct costs and expenses')}
+    ${kpi('Profit with modeled deals',money(prof),(prof-bprof>=0?'+':'')+money(prof-bprof)+' change')}
+  </div>
+  ${barChart({title:'Revenue projection',labels:rows.map(r=>mLabel(r.m)),series:[{name:'Contracted',values:rows.map(r=>r.contracted),color:'var(--c-contract)'},{name:'Modeled deals',values:rows.map(r=>r.modeled),color:'var(--c-deal)'}],line:{name:'Total costs',values:rows.map(r=>r.cogs+r.opex),color:'var(--c-cost)'},height:250})}
+  <div class="toolbar" style="margin-top:10px">
+    <label class="chk small"><input type="checkbox" id="renew" ${S.settings.assume_renewals?'checked':''} ${S.canEdit?'':'disabled'}> Assume contracts renew at the same rate</label>
+    <label class="small muted" for="dcp">Direct costs, % of revenue</label><input id="dcp" class="cell" style="width:70px" type="number" min="0" max="100" step="1" value="${Math.round(pctC*100)}" ${S.canEdit?'':'disabled'}>
+    <span class="small muted">Expenses: ${rows[0].opexSrc==='budget'?'budget':'last 3 months average until the budget is entered'}.</span>
+  </div>`;
+}
+
+/* Finance */
+function vFinance(){
+  const f=F();if(!f)return '<div class="panel empty">No QuickBooks data loaded yet.</div>';
+  const months=f.pl_months||[];const ytd=f.pl_ytd||{};
+  const ar=f.ar||{};const cur=asOfMonth();const y=cur.slice(0,4);const b=S.budgets[y];const mi=Number(cur.slice(5))-1;
+  const curM=months.find(m=>m.month===cur)||{};
+  const cats=Object.keys(ytd.categories||{}).sort((a,z)=>(ytd.categories[z]||0)-(ytd.categories[a]||0));
+  const bsum=(name,upto)=>{if(!b||!b.categories||!b.categories[name])return null;let t=0,any=false;for(let i=0;i<=upto;i++){const v=b.categories[name][i];if(isNum(v)){t+=v;any=true;}}return any?t:null;};
+  const bm=(name)=>b&&b.categories&&b.categories[name]&&isNum(b.categories[name][mi])?b.categories[name][mi]:null;
+  return `
+  <h2>Finance</h2>
+  <p class="sub">From QuickBooks as of ${fmtDate(f.as_of)}. ${cur.slice(5)!=='01'?mLabel(cur)+' is month to date.':''}</p>
+  <div class="kpis">
+    ${kpi('Cash in bank',money(f.cash.bank_total),f.cash.accounts.filter(a=>!/card|amex/i.test(a.name)).map(a=>a.name.replace(/\s*\(OUNT\)/,'').replace(/ACCOUNT/i,'').trim()+' '+kmoney(a.balance)).join(' · '))}
+    ${kpi('Undeposited funds',money(f.cash.undeposited_funds),'Payments received, not yet deposited')}
+    ${kpi('Credit card balance',money(f.cash.credit_card_balance),'')}
+    ${kpi('Revenue year to date',money(ytd.income),'Gross margin '+pct(ytd.income?ytd.gross_profit/ytd.income:null))}
+    ${kpi('Net income year to date',money(ytd.net_income),'')}
+    ${kpi('Payroll share of revenue',pct(ytd.income?sumCats(ytd.categories,/payroll|benefit/i)/ytd.income:null),'Year to date')}
+  </div>
+  <h2>Revenue, costs and profit by month</h2>
+  <div class="panel">${barChart({title:'Monthly P&L',labels:months.map(m=>mLabel(m.month)),series:[{name:'Revenue',values:months.map(m=>m.income),color:'var(--c-contract)'}],line:{name:'Direct costs + expenses',values:months.map(m=>(m.cogs||0)+(m.expenses||0)),color:'var(--c-cost)'},line2:{name:'Net income',values:months.map(m=>m.net_income),color:'var(--c-deal)'},height:240})}</div>
+  <h2>Expenses vs. budget</h2>
+  <p class="sub">${b?'Budget entered for '+y+'.':'No '+y+' budget entered yet. Once your bookkeeper enters it on the Budget tab, the budget columns fill in.'}</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Category</th><th class="r">${esc(mLabel(cur))} actual</th><th class="r">${esc(mLabel(cur))} budget</th><th class="r">YTD actual</th><th class="r">YTD budget</th><th class="r">Variance</th><th>Used</th></tr></thead>
+    <tbody>
+      <tr><td><b>Revenue</b></td><td class="r num">${money(curM.income)}</td><td class="r num">${money(b&&b.revenue?b.revenue[mi]:null)}</td><td class="r num">${money(ytd.income)}</td><td class="r num">${money(b&&b.revenue?b.revenue.slice(0,mi+1).reduce((s,v)=>s+(isNum(v)?v:0),0):null)}</td><td></td><td></td></tr>
+      <tr><td>Direct costs (COGS)</td><td class="r num">${money(curM.cogs)}</td><td class="r num">${money(bm('Cost of goods sold'))}</td><td class="r num">${money(ytd.cogs)}</td><td class="r num">${money(bsum('Cost of goods sold',mi))}</td><td class="r num">${varCell(ytd.cogs,bsum('Cost of goods sold',mi))}</td><td>${useBar(ytd.cogs,bsum('Cost of goods sold',mi))}</td></tr>
+      ${cats.map(c=>{const a=(ytd.categories||{})[c];const bb=bsum(c,mi);return `<tr><td>${esc(c)}</td><td class="r num">${money((curM.categories||{})[c])}</td><td class="r num">${money(bm(c))}</td><td class="r num">${money(a)}</td><td class="r num">${money(bb)}</td><td class="r num">${varCell(a,bb)}</td><td>${useBar(a,bb)}</td></tr>`;}).join('')}
+    </tbody>
+    <tfoot><tr><td>Total expenses</td><td class="r num">${money(curM.expenses)}</td><td></td><td class="r num">${money(ytd.expenses)}</td><td></td><td></td><td></td></tr></tfoot>
+  </table></div>
+  <div class="grid2" style="margin-top:14px">
+    <div class="panel"><h3>Receivables by age</h3>
+      <table><tbody>${[['Current',ar.current],['1–30 days',ar.d1_30],['31–60 days',ar.d31_60],['61–90 days',ar.d61_90],['91+ days',ar.d91_plus]].map(r=>`<tr><td>${r[0]}</td><td class="r num">${money(r[1])}</td></tr>`).join('')}</tbody><tfoot><tr><td>Total</td><td class="r num">${money(ar.total)}</td></tr></tfoot></table>
+      ${ar.note?`<p class="small muted">${esc(ar.note)}</p>`:''}
+      ${(ar.items||[]).length?`<table style="margin-top:8px"><tbody>${ar.items.map(i=>`<tr><td>${esc(i.customer)}</td><td>${esc(i.bucket)}</td><td class="r num ${i.amount<0?'neg':''}">${money(i.amount)}</td></tr>`).join('')}</tbody></table>`:''}
+    </div>
+    <div class="panel"><h3>Bookkeeping to clean up</h3><ul class="small" style="margin:0;padding-left:18px">${(f.data_quality||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>
+  </div>`;
+}
+function sumCats(c,re){let t=0;for(const k in c||{})if(re.test(k))t+=c[k]||0;return t;}
+function varCell(a,b){if(!isNum(a)||!isNum(b))return '';const d=b-a;return `<span class="${d<0?'neg':'pos'}">${d<0?'Over ':'Under '}${money(Math.abs(d))}</span>`;}
+function useBar(a,b){if(!isNum(a)||!isNum(b)||b<=0)return '';const p=a/b;return `<div class="bar" title="${pct(p)} of budget"><span class="${p>1?'over':''}" style="width:${Math.min(100,p*100).toFixed(0)}%"></span></div>`;}
+
+/* Budget */
+function budgetCats(){const f=F();const s=new Set(['Cost of goods sold',...Object.keys((f&&f.pl_ytd&&f.pl_ytd.categories)||{})]);const y=S.budgetYear;const b=S.budgetDraft||S.budgets[y];if(b&&b.categories)Object.keys(b.categories).forEach(k=>s.add(k));return [...s];}
+function vBudget(){
+  const y=S.budgetYear||todayISO().slice(0,4);S.budgetYear=y;
+  const b=S.budgetDraft||S.budgets[y]||{revenue:Array(12).fill(null),categories:{}};
+  const cats=budgetCats();const ed=S.canEdit;
+  const row=(label,arr,key)=>{const tot=(arr||[]).reduce((s,v)=>s+(isNum(v)?v:0),0);return `<tr><td>${esc(label)}</td>${MONTHS.map((_,i)=>`<td class="r">${ed?`<input class="cell" type="number" step="1" data-b="${esc(key)}" data-i="${i}" value="${isNum(arr&&arr[i])?arr[i]:''}" aria-label="${esc(label)} ${MONTHS[i]}">`:`<span class="num">${money(arr&&arr[i])}</span>`}</td>`).join('')}<td class="r num"><b>${money(tot)}</b></td></tr>`;};
+  const years=[String(Number(todayISO().slice(0,4))),String(Number(todayISO().slice(0,4))+1)];
+  const st=S.budgets[y];
+  return `
+  <h2>Budget</h2>
+  <p class="sub">Monthly budget by QuickBooks expense category, plus revenue. ${ed?'Type in the cells, or copy a block of numbers from Excel or Google Sheets and paste it into the first cell: it fills across and down. Then Save.':'Only Editors can change the budget.'}</p>
+  <div class="toolbar">
+    <label class="small muted" for="byear">Year</label><select id="byear">${years.map(v=>`<option ${v===y?'selected':''}>${v}</option>`).join('')}</select>
+    <span class="small muted">${st&&st.updated_at?'Last saved '+esc(new Date(st.updated_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})):'Not entered yet'}${S.budgetDraft?' · <b>Unsaved changes</b>':''}</span>
+    <span class="grow"></span>
+    ${ed?`<input type="text" id="newcat" placeholder="Add a category" style="width:170px"><button class="btn" data-act="add-cat">Add</button><button class="btn" data-act="discard-budget" ${S.budgetDraft?'':'disabled'}>Discard</button><button class="btn primary" data-act="save-budget" ${S.budgetDraft?'':'disabled'}>Save budget</button>`:''}
+  </div>
+  <div class="tbl"><table id="btable">
+    <thead><tr><th>Category</th>${MONTHS.map(m=>`<th class="r">${m}</th>`).join('')}<th class="r">Total</th></tr></thead>
+    <tbody>${row('Revenue',b.revenue,'__revenue')}${cats.map(c=>row(c,(b.categories||{})[c],c)).join('')}</tbody>
+  </table></div>`;
+}
+
+/* Support */
+function vSupport(){
+  const t=T();if(!t)return '<div class="panel empty">No HubSpot ticket data loaded yet.</div>';
+  const l=t.last90||{};const bm=t.by_month||[];
+  return `
+  <h2>Support</h2>
+  <p class="sub">HubSpot Support Pipeline, test tickets excluded. "Typical" is the median, so a few very slow tickets don't hide the normal experience; the slow ones are listed separately.</p>
+  <div class="kpis">
+    ${kpi('Open tickets',t.open,t.unowned_open+' with no owner')}
+    ${kpi('Oldest open',isNum(t.oldest_open_days)?t.oldest_open_days+' days':'—','')}
+    ${kpi('Typical first reply',hrs(l.median_first_reply_hours),'Last 90 days')}
+    ${kpi('Typical time to close',hrs(l.median_close_hours),'Last 90 days')}
+    ${kpi('Slowest 10% take',hrs(l.p90_close_hours),'or longer to close')}
+    ${kpi('Closed, 90 days',l.closed??'—','')}
+  </div>
+  <div class="grid2" style="margin-top:14px">
+    <div class="panel"><h3>Tickets per month</h3>${barChart({title:'Tickets',labels:bm.map(m=>mLabel(m.month)),series:[{name:'Created',values:bm.map(m=>m.created),color:'var(--c-contract)'}],line:{name:'Closed',values:bm.map(m=>m.closed),color:'var(--c-cost)'},height:200}).replace(/\$/g,'')}</div>
+    <div class="panel"><h3>Most tickets, last 90 days</h3><table><tbody>${(t.by_company_90d||[]).slice(0,10).map(r=>`<tr><td>${esc(r.company)}</td><td class="r num">${esc(r.tickets)}</td></tr>`).join('')}</tbody></table></div>
+  </div>
+  <h2>Open tickets</h2>
+  <div class="tbl"><table><thead><tr><th>Subject</th><th>Client</th><th>Stage</th><th>Opened</th><th class="r">Age</th><th>Owner</th></tr></thead>
+  <tbody>${(t.open_list||[]).length?t.open_list.map(r=>`<tr><td>${esc(r.subject)}</td><td>${esc(r.company||'—')}</td><td>${esc(r.stage)}</td><td class="num">${fmtDate(r.created)}</td><td class="r num">${esc(r.age_days)} days</td><td>${r.has_owner?'Assigned':'<span class="pill p-bad">No owner</span>'}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">No open tickets.</td></tr>'}</tbody></table></div>
+  <h2>Slow tickets</h2>
+  <p class="sub">Closed in the last 90 days and took more than three times the typical time.</p>
+  <div class="tbl"><table><thead><tr><th>Subject</th><th>Client</th><th>Opened</th><th class="r">Time to close</th></tr></thead>
+  <tbody>${(t.outliers||[]).length?t.outliers.map(r=>`<tr><td>${esc(r.subject)}</td><td>${esc(r.company||'—')}</td><td class="num">${fmtDate(r.created)}</td><td class="r num">${hrs(r.close_hours)}</td></tr>`).join(''):'<tr><td colspan="4" class="empty">None.</td></tr>'}</tbody></table></div>
+  ${(t.data_quality||[]).length?`<p class="small muted" style="margin-top:12px">${t.data_quality.map(esc).join(' ')}</p>`:''}`;
+}
+
+/* Health */
+function vHealth(){
+  const h=H();if(!h)return '<div class="panel empty">No client health data loaded yet.</div>';
+  const order={high:0,watch:1,ok:2};const rows=h.clients.slice().sort((a,b)=>(order[a.risk]??3)-(order[b.risk]??3)||(a.gsc_change_pct??0)-(b.gsc_change_pct??0));
+  const FL={clicks_down:'Google clicks down',rank_down:'First-page keywords down',ai_down:'AI citations down',leads_down:'Leads down'};
+  const chg=v=>isNum(v)?`<span class="${v<0?'neg':v>0?'pos':''}">${v>0?'+':''}${Math.round(v)}%</span>`:'<span class="muted">—</span>';
+  const p=h.portfolio||{};
+  return `
+  <h2>Client Health</h2>
+  <p class="sub">Compares the last 28 to 30 days with the period before. <b>High risk</b> means two or more warning signs; <b>Watch</b> means one. These are the clients to call before they call you.</p>
+  <div class="kpis">
+    ${kpi('High risk',rows.filter(r=>r.risk==='high').length,'')}
+    ${kpi('Watch',rows.filter(r=>r.risk==='watch').length,'')}
+    ${kpi('First-page keywords, all clients',isNum(p.page1_now)?p.page1_now.toLocaleString():'—',isNum(p.page1_28d_ago)?'from '+p.page1_28d_ago.toLocaleString()+' 28 days ago':'')}
+    ${kpi('Google clicks, all clients',isNum(p.gsc_clicks_28d)?p.gsc_clicks_28d.toLocaleString():'—',isNum(p.gsc_clicks_prev28)?'from '+p.gsc_clicks_prev28.toLocaleString()+' prior 28 days':'')}
+  </div>
+  ${(h.notes||[]).length?`<p class="note" style="margin-top:14px">${h.notes.map(esc).join(' ')}</p>`:''}
+  <div class="tbl" style="margin-top:14px"><table><thead><tr><th>Client</th><th>Risk</th><th class="r">Google clicks</th><th class="r">First-page keywords</th><th class="r">AI citation rate</th><th class="r">Valid leads, 30 days</th><th>Warning signs</th></tr></thead>
+  <tbody>${rows.map(r=>`<tr><td><b>${esc(r.name)}</b><div class="small muted">${esc(r.domain||'')}</div></td>
+    <td><span class="pill ${r.risk==='high'?'p-bad':r.risk==='watch'?'p-warn':'p-good'}">${r.risk==='high'?'High':r.risk==='watch'?'Watch':'OK'}</span></td>
+    <td class="r num">${chg(r.gsc_change_pct)}</td><td class="r num">${chg(r.page1_change_pct)}</td><td class="r num">${chg(r.ai_change_pct)}</td>
+    <td class="r num">${esc(r.valid_leads_30d??'—')} <span class="small muted">(was ${esc(r.valid_leads_prev30??'—')})</span></td>
+    <td><div class="chips">${(r.flags||[]).map(f=>`<span class="pill p-warn">${esc(FL[f]||f)}</span>`).join('')}</div></td></tr>`).join('')}</tbody></table></div>`;
+}
+
+/* AI & software */
+function vAI(){
+  const o=O();const a=o&&o.ai_spend;if(!a)return '<div class="panel empty">No spend data loaded yet.</div>';
+  const v=a.vendors.slice().sort((x,y)=>(y.mtd||0)-(x.mtd||0));
+  const tot=k=>v.reduce((s,x)=>s+(isNum(x[k])?x[k]:0),0);
+  const aiM=v.filter(x=>x.category==='AI').reduce((s,x)=>s+(x.mtd||0),0);
+  const f=F();const inc=f&&f.pl_months?(f.pl_months.find(m=>m.month===a.month)||{}).income:null;
+  const calls=a.ai_calls_30d||{};
+  const y=(a.month||'').slice(0,4);const b=S.budgets[y];const mi=Number((a.month||'').slice(5))-1;
+  const bAI=b&&b.categories&&b.categories['AI Tools']&&isNum(b.categories['AI Tools'][mi])?b.categories['AI Tools'][mi]:null;
+  return `
+  <h2>AI &amp; Software Spend</h2>
+  <p class="sub">Read from vendor receipts in Gmail and Outlook for ${esc(mLabel(a.month||todayISO().slice(0,7)))} (month to date) and last month. Once the bookkeeper moves AI costs into their own QuickBooks account, this will read from QuickBooks instead. Semrush is excluded because it has been cancelled.</p>
+  <div class="kpis">
+    ${kpi('AI spend this month',money(aiM),bAI!=null?'Budget '+money(bAI):'Add an "AI Tools" line to the budget to compare')}
+    ${kpi('All tracked tools this month',money(tot('mtd')),'Last month '+money(tot('prior_month')))}
+    ${kpi('AI as share of revenue',pct(inc?aiM/inc:null,1),'This month to date')}
+    ${kpi('AI calls, last 30 days',isNum(calls.total)?calls.total.toLocaleString():'—','From the AI visibility tracker')}
+  </div>
+  <div class="tbl" style="margin-top:14px"><table><thead><tr><th>Vendor</th><th>Type</th><th>Category</th><th class="r">This month</th><th class="r">Last month</th><th class="r">Receipts</th><th>Note</th></tr></thead>
+  <tbody>${v.map(x=>`<tr><td><b>${esc(x.vendor)}</b></td><td><span class="pill ${x.kind==='usage'?'p-warn':'p-initial'}">${x.kind==='usage'?'Usage-based':'Fixed'}</span></td><td>${esc(x.category)}</td><td class="r num">${money(x.mtd)}</td><td class="r num">${money(x.prior_month)}</td><td class="r num">${esc(x.receipts_mtd??'')}</td><td class="small muted">${esc(x.note||'')}</td></tr>`).join('')}</tbody>
+  <tfoot><tr><td colspan="3">Total</td><td class="r num">${money(tot('mtd'))}</td><td class="r num">${money(tot('prior_month'))}</td><td></td><td></td></tr></tfoot></table></div>
+  ${calls.by_model?`<div class="panel" style="margin-top:14px"><h3>AI tracker calls by model, last 30 days</h3><table><tbody>${Object.entries(calls.by_model).sort((p,q)=>q[1]-p[1]).map(([k,n])=>`<tr><td>${esc(k)}</td><td class="r num">${Number(n).toLocaleString()}</td></tr>`).join('')}</tbody></table></div>`:''}
+  ${(a.notes||[]).length?`<p class="small muted" style="margin-top:12px">${a.notes.map(esc).join(' ')}</p>`:''}`;
+}
+
+/* Platform */
+function vPlatform(){
+  const o=O();if(!o)return '<div class="panel empty">No platform data loaded yet.</div>';
+  const lb=o.leads_by_month||[];
+  return `
+  <h2>Platform</h2>
+  <p class="sub">Whether each data feed behind the client dashboard ran, and what needs fixing before a client notices.</p>
+  <div class="alerts">${(o.issues||[]).map(i=>`<div class="alert"><span class="sev ${esc(i.severity)}">${esc(i.severity==='critical'?'Act now':i.severity==='warn'?'Watch':'Note')}</span><div class="t">${esc(i.text)}</div></div>`).join('')}</div>
+  <h2>Data feeds</h2>
+  <div class="tbl"><table><thead><tr><th>Source</th><th class="r">Connected</th><th class="r">Not connected</th><th class="r">Errors</th><th class="r">Stale</th><th>Last success</th></tr></thead>
+  <tbody>${(o.collectors||[]).map(c=>`<tr><td>${esc(c.source)}</td><td class="r num">${esc(c.connected)}</td><td class="r num">${esc(c.not_connected)}</td><td class="r num ${c.error?'neg':''}">${esc(c.error)}</td><td class="r num ${c.stale?'neg':''}">${esc(c.stale)}</td><td class="num">${c.last_success?esc(new Date(c.last_success).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})):'—'}</td></tr>`).join('')}</tbody></table></div>
+  <h2>Form submissions, all clients</h2>
+  <div class="tbl"><table><thead><tr><th>Month</th><th class="r">Valid leads</th><th class="r">Spam</th><th class="r">Not yet sorted</th><th class="r">Suspicious</th><th class="r">Needs attention</th></tr></thead>
+  <tbody>${lb.map(m=>`<tr><td>${esc(mLabel(m.month))}</td><td class="r num">${esc(m.valid_lead)}</td><td class="r num">${esc(m.spam)}</td><td class="r num">${esc(m.needs_review)}</td><td class="r num">${esc(m.suspicious)}</td><td class="r num">${esc(m.needs_attention)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+/* ------------------------------------------------------------ events */
+document.addEventListener('click',async e=>{
+  const tb=e.target.closest('[data-tab]');if(tb){S.tab=tb.dataset.tab;try{localStorage.setItem('aim-eis-tab',S.tab);}catch(_){}render();return;}
+  const b=e.target.closest('[data-act]');if(!b)return;const act=b.dataset.act;
+  if(act==='add-client'){openDrawer(null);}
+  else if(act==='edit-client'){openDrawer(S.contracts.find(c=>c.id===b.dataset.id));}
+  else if(act==='close-drawer'){closeDrawer();}
+  else if(act==='save-client'){await saveClient(b.dataset.id,b);}
+  else if(act==='deactivate'){const c=S.contracts.find(x=>x.id===b.dataset.id);if(c){await writeDoc('contracts/'+c.id,Object.assign(strip(c),{active:c.active===false,updated_at:new Date().toISOString()}),'Saved');closeDrawer();}}
+  else if(act==='add-cat'){const i=$('#newcat');const n=(i.value||'').trim();if(!n)return;draftBudget();if(!S.budgetDraft.categories[n])S.budgetDraft.categories[n]=Array(12).fill(null);render();}
+  else if(act==='discard-budget'){S.budgetDraft=null;render();}
+  else if(act==='save-budget'){await saveBudget(b);}
+  else if(act==='clear-models'){if(!S.canEdit)return;const ids=Object.keys(S.models);for(const id of ids){await writeDoc('deal_models/'+id,Object.assign({},strip(S.models[id]),{include:false,updated_at:new Date().toISOString()}),null);}toast('Scenario cleared');}
+});
+document.addEventListener('change',async e=>{
+  const t=e.target;
+  if(t.id==='cfilter'){S.clientFilter=t.value;render();return;}
+  if(t.id==='dfilter'){S.dealFilter=t.value;render();return;}
+  if(t.id==='byear'){S.budgetYear=t.value;S.budgetDraft=null;render();return;}
+  if(t.id==='renew'){await writeDoc('settings/main',Object.assign({},S.settings,{assume_renewals:t.checked}),null);S.settings.assume_renewals=t.checked;renderProjection();return;}
+  if(t.id==='dcp'){const v=Number(t.value);if(isNum(v)&&v>=0&&v<=100){S.settings.direct_cost_pct=v/100;renderProjection();await writeDoc('settings/main',Object.assign({},S.settings),null);}return;}
+  if(t.id==='c-start'||t.id==='c-term'){const s=$('#c-start').value,n=Number($('#c-term').value),en=$('#c-end');if(s&&n>0&&!en.dataset.touched){en.value=addMonthsDate(s,n)||'';}return;}
+  if(t.id==='c-end'){t.dataset.touched='1';return;}
+  const tr=t.closest('tr[data-deal]');
+  if(tr&&t.dataset.f){if(!S.canEdit)return;const id=tr.dataset.deal;const deal=D().deals.find(x=>x.id===id);const md=dealModel(deal);
+    const f=t.dataset.f;let v=t.type==='checkbox'?t.checked:t.value;if(f==='value'||f==='term')v=Number(v)||0;md[f]=v;
+    S.models[id]=md;tr.classList.toggle('modeled',!!md.include);
+    if(f==='kind'){const term=tr.querySelector('[data-f="term"]');if(term)term.disabled=v==='onetime';}
+    renderProjection();await writeDoc('deal_models/'+id,Object.assign({},strip(md),{updated_at:new Date().toISOString()}),null);return;}
+  if(t.dataset.b!=null){draftBudget();setBudgetCell(t.dataset.b,Number(t.dataset.i),t.value);markBudgetDirty();}
+});
+document.addEventListener('paste',e=>{
+  const t=e.target;if(!t||t.dataset==null||t.dataset.b==null)return;
+  const txt=(e.clipboardData||window.clipboardData).getData('text');if(!txt||(!txt.includes('\t')&&!txt.includes('\n')))return;
+  e.preventDefault();draftBudget();
+  const rows=txt.replace(/\r/g,'').split('\n').filter(r=>r.length);const cats=['__revenue',...budgetCats()];
+  const r0=cats.indexOf(t.dataset.b),c0=Number(t.dataset.i);
+  rows.forEach((line,ri)=>{const key=cats[r0+ri];if(!key)return;line.split('\t').forEach((cell,ci)=>{const col=c0+ci;if(col>11)return;setBudgetCell(key,col,cell);});});
+  render();markBudgetDirty();toast('Pasted '+rows.length+' row'+(rows.length>1?'s':''));
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#drawer'))closeDrawer();});
+function draftBudget(){if(!S.budgetDraft){const cur=S.budgets[S.budgetYear]||{};S.budgetDraft={revenue:(cur.revenue||Array(12).fill(null)).slice(),categories:JSON.parse(JSON.stringify(cur.categories||{}))};}}
+function setBudgetCell(key,i,raw){const v=String(raw).replace(/[$,\s]/g,'');const n=v===''?null:Number(v.replace(/^\((.*)\)$/,'-$1'));const val=isNum(n)?n:null;
+  if(key==='__revenue'){S.budgetDraft.revenue[i]=val;}else{if(!S.budgetDraft.categories[key])S.budgetDraft.categories[key]=Array(12).fill(null);S.budgetDraft.categories[key][i]=val;}}
+function markBudgetDirty(){const s=document.querySelector('[data-act="save-budget"]'),d=document.querySelector('[data-act="discard-budget"]');if(s)s.disabled=false;if(d)d.disabled=false;
+  const tb=$('#btable');if(tb){tb.querySelectorAll('tbody tr').forEach(tr=>{const ins=[...tr.querySelectorAll('input')];if(!ins.length)return;const tot=ins.reduce((s,i)=>s+(Number(String(i.value).replace(/[$,]/g,''))||0),0);tr.lastElementChild.innerHTML='<b>'+money(tot)+'</b>';});}}
+function openDrawer(c){closeDrawer();document.body.insertAdjacentHTML('beforeend',clientForm(c));setTimeout(()=>{const i=$('#c-name');if(i)i.focus();},30);}
+function closeDrawer(){const d=$('#drawer');if(d)d.remove();}
+function strip(o){const c=Object.assign({},o);delete c.id;return c;}
+async function writeDoc(path,data,okMsg){
+  if(!S.db)return false;
+  try{await S.db.doc(path).set(data);if(okMsg)toast(okMsg);return true;}
+  catch(err){const code=err&&err.code;toast(code==='invalid_argument'?'You don\'t have permission to change this.':code==='quota_exceeded'?'Storage is full. Remove unused items first.':'Couldn\'t save. Try again.');
+    if(code==='invalid_argument'){S.canEdit=false;render();}return false;}
+}
+async function saveClient(id,btn){
+  const name=$('#c-name').value.trim();if(!name){$('#c-name').focus();toast('Client name is required');return;}
+  const num=v=>v===''?null:Number(v);
+  const data={name,monthly:num($('#c-monthly').value),billing:$('#c-billing').value,term_months:num($('#c-term').value),start:$('#c-start').value||null,end:$('#c-end').value||null,
+    client_since:$('#c-since').value||null,qb_name:$('#c-qb').value.trim()||null,notes:$('#c-notes').value.trim()||null,active:$('#c-active').checked,updated_at:new Date().toISOString()};
+  if(data.start&&data.end&&data.end<data.start){toast('End date is before the start date');return;}
+  btn.disabled=true;const docId=id||('c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+  const ok=await writeDoc('contracts/'+docId,data,'Saved');btn.disabled=false;if(ok)closeDrawer();
+}
+async function saveBudget(btn){
+  if(!S.budgetDraft)return;btn.disabled=true;
+  const ok=await writeDoc('budget/'+S.budgetYear,Object.assign({},S.budgetDraft,{year:Number(S.budgetYear),updated_at:new Date().toISOString()}),'Budget saved');
+  if(ok)S.budgetDraft=null;else btn.disabled=false;render();
+}
+
+/* ------------------------------------------------------------- boot */
+render();
+(async function boot(){
+  const cl=window.claude;
+  if(!cl||!cl.use){S.db=false;render();return;}
+  const [db,user]=await Promise.all([cl.use('db'),cl.use('user')]);
+  if(!db){S.db=false;render();return;}
+  S.db=db;
+  if(user){try{S.canEdit=!!(await user.canEdit());}catch(_){S.canEdit=false;}}
+  const onErr=()=>{};
+  db.collection('snapshot').onSnapshot(q=>{const s={};q.docs.forEach(d=>{if(d.exists)s[d.id]=d.data();});S.snap=s;S.loaded.snap=true;
+    if(S.tab==='pipeline'&&document.activeElement&&document.activeElement.closest&&document.activeElement.closest('#main')){renderProjection();renderFresh();return;}render();},onErr);
+  db.collection('contracts').onSnapshot(q=>{S.contracts=q.docs.filter(d=>d.exists).map(d=>Object.assign({id:d.id},d.data()));S.loaded.contracts=true;if(!$('#drawer'))softRender();},onErr);
+  db.collection('budget').onSnapshot(q=>{const b={};q.docs.forEach(d=>{if(d.exists)b[d.id]=d.data();});S.budgets=b;if(!S.budgetDraft)softRender();},onErr);
+  db.collection('deal_models').onSnapshot(q=>{const m={};q.docs.forEach(d=>{if(d.exists)m[d.id]=d.data();});S.models=m;if(S.tab==='pipeline'){renderProjection();syncDealRows();}else softRender();},onErr);
+  db.doc('settings/main').onSnapshot(d=>{S.settings=d.exists?Object.assign({},d.data()):{};if(S.tab==='pipeline')renderProjection();else softRender();},onErr);
+})();
+function softRender(){const a=document.activeElement;if(a&&a.closest&&a.closest('#main')&&(a.tagName==='INPUT'||a.tagName==='SELECT'||a.tagName==='TEXTAREA'))return;render();}
+function syncDealRows(){document.querySelectorAll('tr[data-deal]').forEach(tr=>{const d=D().deals.find(x=>x.id===tr.dataset.deal);if(!d)return;const md=dealModel(d);
+  if(tr.contains(document.activeElement))return;tr.classList.toggle('modeled',!!(md.include&&d.open));
+  tr.querySelectorAll('[data-f]').forEach(el=>{const f=el.dataset.f;if(el.type==='checkbox')el.checked=!!(md.include&&d.open);else el.value=md[f];});});}
+})();
+</script>
