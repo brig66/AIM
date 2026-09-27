@@ -172,3 +172,27 @@ server, so the browser never holds that credential.
   keys as well as values — but those rows display badly.
 - **No scheduled run.** New submissions get the rule at ingest and keep it until
   someone presses the button. It should run automatically after each collection.
+
+## AI Visibility Tracker collection cost
+
+`ai-collect-edge-function.ts` is the deployed source of the `ai-collect` edge
+function (version 14). Changes made on 2026-09-27 to cut provider spend by
+roughly 70% without losing the monthly trend:
+
+| Lever | Before | After |
+| --- | --- | --- |
+| Pass schedule | Every Monday (`ai-weekly-enqueue`) | Every other Monday (`ai-biweekly-enqueue`), counted from the 2026-09-21 pass |
+| Samples per discovery question | 3 (`ai_prompt_sets.repeats`) | 2, and the column default is now 2 so new sets match |
+| Samples per branded question | Same as discovery | 1 — a question naming the brand is answered with the brand nearly every time |
+| Claude web searches per question | Unlimited | 2 (`max_uses`) |
+| Result writes | Batches of 8 | One at a time, so a wall-clock kill no longer discards paid answers |
+| Late calls | Started up to 110s in, 120s timeout, killed at ~150s | No new pair after 75s, no new sample after 100s, every call aborted by 140s |
+
+Branded questions still run on every pass rather than monthly, because
+`dash_ai_core` (and so the dashboard and the monthly report) reads the branded
+bucket from the latest run only. Skipping them on some passes would empty that
+section of the report.
+
+A question is branded when `ai_prompts.branded` says so; when that is null, it
+is branded if it names the brand or an alias — the same fallback `dash_ai_core`
+uses.
