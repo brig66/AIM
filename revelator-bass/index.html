@@ -322,6 +322,7 @@ footer .copy{font-weight:600;color:var(--ink)}
       </div>
     </div>
     <div class="tools">
+      <button class="small primary" id="savePdfBtn" type="button">Save tab as PDF</button>
       <button class="small" id="copyBtn" type="button">Copy tab</button>
       <button class="small" id="saveTxtBtn" type="button">Save tab (.txt)</button>
       <button class="small" id="saveMidiBtn" type="button">Save MIDI for your DAW</button>
@@ -1240,6 +1241,208 @@ async function saveFile(name, data, fallbackName, fallbackData){
 }
 const safeName = s => (s || 'song').replace(/\.[a-z0-9]{2,4}$/i, '').replace(/[^\w\- ]+/g, '').trim().slice(0, 60) || 'song';
 
+const APP_NAME = 'The Revelator Bass Creation Tool', APP_TITLE = 'The Revelator';
+// ---------- PDF export (Songsterr-style tab sheet) ----------
+// A small self-contained PDF writer: vector lines and the built-in Helvetica fonts, so it works offline.
+const HELV = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+const WINANSI = {'©': 0xA9, '·': 0xB7, '–': 0x96, '—': 0x97, '’': 0x92, '‘': 0x91, '“': 0x93, '”': 0x94, '…': 0x85, '♭': 0x62, '♯': 0x23};
+const textW = (s, size, bold) => { let w = 0; for (const ch of s){ const c = ch.charCodeAt(0); w += c >= 32 && c <= 126 ? HELV[c - 32] : 556; } return w / 1000 * size * (bold ? 1.06 : 1); };
+function pdfStr(s){
+  let o = '';
+  for (const ch of s){
+    let c = ch.charCodeAt(0);
+    if (c < 32 || c > 126) c = WINANSI[ch] ?? 63;
+    if (c === 40 || c === 41 || c === 92) o += '\\' + String.fromCharCode(c);
+    else if (c > 126) o += '\\' + c.toString(8).padStart(3, '0');
+    else o += String.fromCharCode(c);
+  }
+  return '(' + o + ')';
+}
+class PdfDoc {
+  constructor(){ this.W = 612; this.H = 792; this.pages = []; this.c = null; }
+  page(){ this.c = []; this.pages.push(this.c); }
+  f(n){ return (Math.round(n * 100) / 100).toString(); }
+  Y(y){ return this.f(this.H - y); }
+  line(x1, y1, x2, y2, w = 0.5, gray = 0){ this.c.push(`${gray} G ${this.f(w)} w ${this.f(x1)} ${this.Y(y1)} m ${this.f(x2)} ${this.Y(y2)} l S`); }
+  poly(pts, w = 1, gray = 0){ this.c.push(`${gray} G ${this.f(w)} w 1 J 1 j ` + pts.map((p, i) => `${this.f(p[0])} ${this.Y(p[1])} ${i ? 'l' : 'm'}`).join(' ') + ' S 0 J 0 j'); }
+  rect(x, y, w, h, gray = 0){ this.c.push(`${gray} g ${this.f(x)} ${this.Y(y + h)} ${this.f(w)} ${this.f(h)} re f`); }
+  dot(x, y, r, gray = 0){
+    const k = 0.5523 * r, f = v => this.f(v), Y = v => this.Y(v);
+    this.c.push(`${gray} g ${f(x + r)} ${Y(y)} m ${f(x + r)} ${Y(y - k)} ${f(x + k)} ${Y(y - r)} ${f(x)} ${Y(y - r)} c ${f(x - k)} ${Y(y - r)} ${f(x - r)} ${Y(y - k)} ${f(x - r)} ${Y(y)} c ${f(x - r)} ${Y(y + k)} ${f(x - k)} ${Y(y + r)} ${f(x)} ${Y(y + r)} c ${f(x + k)} ${Y(y + r)} ${f(x + r)} ${Y(y + k)} ${f(x + r)} ${Y(y)} c f`);
+  }
+  text(x, y, s, size, font = 'F1', gray = 0, align = 'left'){
+    if (align !== 'left'){ const w = textW(s, size, font === 'F2'); x -= align === 'center' ? w / 2 : w; }
+    this.c.push(`BT ${gray} g /${font} ${this.f(size)} Tf ${this.f(x)} ${this.Y(y)} Td ${pdfStr(s)} Tj ET`);
+  }
+  bytes(title){
+    const objs = [];
+    const n = this.pages.length;
+    objs[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+    objs[2] = `<< /Type /Pages /Kids [${this.pages.map((_, i) => `${6 + i * 2} 0 R`).join(' ')}] /Count ${n} >>`;
+    objs[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+    objs[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+    objs[5] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>';
+    this.pages.forEach((c, i) => {
+      const body = c.join('\n');
+      objs[6 + i * 2] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${this.W} ${this.H}] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents ${7 + i * 2} 0 R >>`;
+      objs[7 + i * 2] = `<< /Length ${body.length} >>\nstream\n${body}\nendstream`;
+    });
+    const info = objs.length;
+    objs[info] = `<< /Title ${pdfStr(title)} /Author ${pdfStr('Brig Serman')} /Creator ${pdfStr(APP_NAME)} >>`;
+    let out = '%PDF-1.4\n%\xE2\xE3\xCF\xD3\n';
+    const offs = [];
+    for (let i = 1; i < objs.length; i++){ offs[i] = out.length; out += `${i} 0 obj\n${objs[i]}\nendobj\n`; }
+    const xref = out.length;
+    out += `xref\n0 ${objs.length}\n0000000000 65535 f \n` + offs.slice(1).map(o => String(o).padStart(10, '0') + ' 00000 n \n').join('');
+    out += `trailer\n<< /Size ${objs.length} /Root 1 0 R /Info ${info} 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+    const u8 = new Uint8Array(out.length);
+    for (let i = 0; i < out.length; i++) u8[i] = out.charCodeAt(i) & 255;
+    return u8;
+  }
+}
+
+function buildTabPdf(){
+  const pdf = new PdfDoc(), W = pdf.W, H = pdf.H;
+  const ML = 40, MR = 40, MT = 44, MB = 54;
+  const bars = S.bars, bpb = S.bpb, spb = bpb * 4, NS = STRINGS.length, meta = S.tabMeta;
+  const LS = 9, staffH = (NS - 1) * LS, PREFIX = 18;
+  const avail = W - ML - MR - PREFIX;
+  const byBar = bars.map(() => []); for (const n of S.notes) byBar[n.bar].push(n);
+  const song = safeName(S.isDemo ? 'Built-in demo track' : S.fileName) || 'Song';
+  const GRAY = 0.45, LIGHT = 0.62;
+
+  // Minimum width of each bar: enough room between the closest notes and for chord names.
+  const padL = bi => bi === 0 ? 26 : 10, padR = 8;
+  const minW = bars.map((b, bi) => {
+    const st = [...new Set(byBar[bi].map(n => n.step).concat(b.chords.map(c => c.start)))].sort((x, y) => x - y);
+    let gap = spb; for (let i = 1; i < st.length; i++) gap = Math.min(gap, st[i] - st[i - 1]);
+    let unit = Math.max(3.4, 11 / gap);
+    b.chords.forEach((c, ci) => { const span = (ci + 1 < b.chords.length ? b.chords[ci + 1].start : spb) - c.start; unit = Math.max(unit, (textW(c.name, 9, true) + 6) / span); });
+    return padL(bi) + padR + spb * unit;
+  });
+  const lines = []; let cur = [], sum = 0;
+  bars.forEach((b, bi) => { if (cur.length && (sum + minW[bi] > avail || cur.length >= 4)){ lines.push(cur); cur = []; sum = 0; } cur.push(bi); sum += minW[bi]; });
+  if (cur.length) lines.push(cur);
+
+  const sysH = 28 + staffH + 36;
+  let y = 0, pageNo = 0;
+  const newPage = () => {
+    pdf.page(); pageNo++;
+    y = MT;
+    if (pageNo > 1){ pdf.text(ML, y, song, 9, 'F2', GRAY); pdf.text(W - MR, y, `${APP_TITLE} bass tab`, 9, 'F1', GRAY, 'right'); y += 18; }
+  };
+  newPage();
+  // Title block
+  pdf.text(ML, y + 16, song, 22, 'F2'); y += 34;
+  pdf.text(ML, y, `Bass tablature  ·  ${INST.label} bass (${STRING_NAMES.join(' ')})`, 11, 'F1', 0.2); y += 16;
+  const groove = GROOVES[meta.style] ? GROOVES[meta.style].name : '';
+  pdf.text(ML, y, `Key ${keyName(meta.key)}   ·   Tempo ${Math.round(meta.bpm)} BPM   ·   Time ${bpb}/4   ·   Groove: ${groove}   ·   Variation ${meta.seed}`, 9.5, 'F1', GRAY); y += 13;
+  const extra = [meta.modeLabel ? `Scale guide: ${meta.modeLabel}` : '', meta.swing ? 'Swing feel: play eighth notes as triplets' : ''].filter(Boolean).join('   ·   ');
+  if (extra){ pdf.text(ML, y, extra, 9.5, 'F1', GRAY); y += 13; }
+  pdf.text(ML, y, 'How to read it: each line of the staff is a string (lowest string at the bottom); numbers are frets; x is a muted note.', 8.5, 'F3', GRAY); y += 11;
+  pdf.text(ML, y, 'Stems below the staff show rhythm: stem = quarter note, short stem = half note, open circle = whole note,', 8.5, 'F3', GRAY); y += 11;
+  pdf.text(ML, y, 'one beam or flag = eighth note, two = 16th note, dot = dotted. Rests are shown in the gaps.', 8.5, 'F3', GRAY); y += 10;
+  pdf.line(ML, y, W - MR, y, 0.6, 0.75); y += 16;
+
+  lines.forEach((ln, li) => {
+    if (y + sysH > H - MB) newPage();
+    const top = y + 26, bot = top + staffH, rhy = bot + 8;
+    const x0 = ML + PREFIX, sumMin = ln.reduce((a, bi) => a + minW[bi], 0);
+    const isLast = li === lines.length - 1;
+    const scale = isLast && sumMin < avail * 0.75 ? Math.min(1.35, avail / sumMin) : avail / sumMin;
+    const lineW = sumMin * scale;
+    // String names and staff lines
+    for (let s = 0; s < NS; s++){
+      const ly = top + (NS - 1 - s) * LS;
+      pdf.text(ML + PREFIX - 5, ly + 2.6, STRING_NAMES[s], 7, 'F1', GRAY, 'right');
+      pdf.line(x0, ly, x0 + lineW, ly, 0.5, 0.55);
+    }
+    pdf.line(x0, top, x0, bot, 0.8, 0);
+    let bx = x0;
+    ln.forEach(bi => {
+      const w = minW[bi] * scale, bar = bars[bi], ns = byBar[bi];
+      const inner = w - padL(bi) - padR;
+      const X = st => bx + padL(bi) + (st / spb) * inner;
+      if (bi === 0){ pdf.text(bx + 9, top + staffH / 2 - 1, String(bpb), 13, 'F2', 0, 'center'); pdf.text(bx + 9, top + staffH / 2 + 10, '4', 13, 'F2', 0, 'center'); }
+      pdf.text(bx + 2, top - 17, String(bi + 1), 7.5, 'F2', 0.3);
+      if (bx === x0) pdf.text(bx + 2 + textW(String(bi + 1), 7.5, true) + 5, top - 17, fmtTime(timeAt(bi, 0)), 7, 'F3', LIGHT);
+      for (const c of bar.chords) if (!c.none) pdf.text(X(c.start) - 3, top - 6, c.name, 9, 'F2', 0);
+      // Frets on the strings, with a white box behind each number
+      for (const n of ns){
+        const ly = top + (NS - 1 - n.string) * LS, x = X(n.step);
+        const t = n.dead ? 'x' : String(n.fret), tw = textW(t, 8.5, false);
+        pdf.rect(x - tw / 2 - 1.2, ly - 4.6, tw + 2.4, 9.2, 1);
+        pdf.text(x, ly + 3, t, 8.5, 'F1', 0, 'center');
+      }
+      // Rhythm: stems, beams, flags and dots
+      const stemEnd = d => d >= 16 ? null : d >= 8 ? rhy + 12 : rhy + 22;
+      const beamed = new Set(), beamSpans = [];
+      for (let beat = 0; beat < bpb; beat++){
+        const grp = ns.filter(n => Math.floor(n.step / 4) === beat && n.dur <= 3 && n.step + n.dur <= (beat + 1) * 4);
+        if (grp.length >= 2){
+          grp.forEach(n => beamed.add(n)); beamSpans.push([grp[0].step, grp[grp.length - 1].step]);
+          const xa = X(grp[0].step), xb = X(grp[grp.length - 1].step), e = rhy + 22;
+          pdf.rect(xa, e - 2.2, xb - xa, 2.2, 0);
+          grp.forEach((n, i) => {
+            if (n.dur !== 1) return;
+            const x = X(n.step), prev = grp[i - 1], next = grp[i + 1];
+            if (next && next.dur === 1) pdf.rect(x, e - 6, X(next.step) - x, 2.2, 0);
+            else if (!(prev && prev.dur === 1)) { const dir = next ? 1 : -1; pdf.rect(dir > 0 ? x : x - 5, e - 6, 5, 2.2, 0); }
+          });
+        }
+      }
+      for (const n of ns){
+        const x = X(n.step), e = stemEnd(n.dur);
+        if (e == null){ pdf.dot(x, rhy + 4, 2.2, 0); pdf.dot(x, rhy + 4, 1.2, 1); continue; }
+        pdf.line(x, rhy, x, e, 0.9, 0);
+        if (n.dur <= 3 && !beamed.has(n)){
+          pdf.poly([[x, e], [x + 5, e - 6]], 1.3, 0);
+          if (n.dur === 1) pdf.poly([[x, e - 4], [x + 5, e - 10]], 1.3, 0);
+        }
+        if (n.dur === 3 || n.dur === 6 || n.dur === 12) pdf.dot(x + 3.5, e - 3, 1.2, 0);
+      }
+      // Rests in the gaps between notes
+      const used = new Array(spb).fill(false);
+      for (const n of ns) for (let k = n.step; k < Math.min(spb, n.step + Math.max(1, n.dur)); k++) used[k] = true;
+      for (let s = 0; s < spb;){
+        if (used[s]){ s++; continue; }
+        let e2 = s; while (e2 < spb && !used[e2]) e2++;
+        let p = s;
+        while (p < e2){
+          const len = e2 - p;
+          let d = p % 16 === 0 && len >= 16 && spb >= 16 ? 16 : p % 8 === 0 && len >= 8 ? 8 : p % 4 === 0 && len >= 4 ? 4 : p % 2 === 0 && len >= 2 ? 2 : 1;
+          const x = X(p) + 2, r = rhy + 2;
+          if (d <= 2 && beamSpans.some(([a, b]) => p > a && p < b)){ p += d; continue; }
+          if (d === 16) pdf.rect(x - 3.5, r + 5, 7, 2.6, 0);
+          else if (d === 8) pdf.rect(x - 3.5, r + 7.4, 7, 2.6, 0);
+          else if (d === 4) pdf.poly([[x - 1, r + 2], [x + 2, r + 6], [x - 1.5, r + 9.5], [x + 2, r + 13], [x - 1, r + 16]], 1.2, 0);
+          else {
+            // Eighth rest: a flag with a slanted stem; a 16th rest has two flags.
+            pdf.dot(x - 1.6, r + 6.5, 1.25, 0); pdf.poly([[x - 1.6, r + 7.6], [x + 2.4, r + 6]], 0.9, 0); pdf.line(x + 2.4, r + 6, x, r + 15.5, 0.9, 0);
+            if (d === 1){ pdf.dot(x - 2.5, r + 10.2, 1.25, 0); pdf.poly([[x - 2.5, r + 11.3], [x + 1.6, r + 9.7]], 0.9, 0); }
+          }
+          p += d;
+        }
+        s = e2;
+      }
+      bx += w;
+      const end = bi === bars.length - 1;
+      if (end){ pdf.line(bx - 3, top, bx - 3, bot, 0.6, 0); pdf.rect(bx - 1.6, top, 1.6, staffH, 0); }
+      else pdf.line(bx, top, bx, bot, 0.6, 0);
+    });
+    y += sysH;
+  });
+  // Footer on every page
+  const total = pdf.pages.length;
+  pdf.pages.forEach((c, i) => {
+    pdf.c = c;
+    pdf.line(ML, H - 34, W - MR, H - 34, 0.5, 0.8);
+    pdf.text(ML, H - 22, `${APP_NAME}  ·  Copyright © 2026 Brig Serman`, 8, 'F1', GRAY);
+    pdf.text(W - MR, H - 22, `Page ${i + 1} of ${total}`, 8, 'F1', GRAY, 'right');
+  });
+  return pdf.bytes(song + ' - bass tab');
+}
+
 // ---------- playback ----------
 const P = {ctx: null, src: null, songGain: null, bassBus: null, events: [], idx: 0, timer: null, raf: 0, ctxStart: 0, songStart: 0, playing: false, endAt: 0, noise: null};
 function midiHz(m){ return 440 * Math.pow(2, (m - 69) / 12); }
@@ -1556,6 +1759,13 @@ $('saveMidiBtn').addEventListener('click', async () => {
     const zip = makeZip([{name: base + '.mid', data: midi}, {name: base + '.txt', data: new TextEncoder().encode(S.tab.text)}]);
     saveFile(base + '.zip', zip);
   } else saveFile(base + '.mid', midi, base + '.mid', new Blob([midi], {type: 'audio/midi'}));
+});
+$('savePdfBtn').addEventListener('click', () => {
+  if (!S.notes.length) return;
+  let bytes;
+  try { bytes = buildTabPdf(); } catch (e){ console.error(e); toast('The PDF could not be built. Try again after the tab updates.'); return; }
+  const n = 'Revelator bass - ' + safeName(S.isDemo ? 'demo' : S.fileName) + '.pdf';
+  saveFile(n, bytes, n, new Blob([bytes], {type: 'application/pdf'}));
 });
 getDownloads();
 loadDemo();
