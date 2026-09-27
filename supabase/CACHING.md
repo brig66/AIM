@@ -1,6 +1,6 @@
 # Anthropic prompt caching — `ask` edge function
 
-Status: **proposed, not deployed.**
+Status: **deployed as `ask` version 18 on 2026-09-27.** Rollback baseline: `ask-edge-function.deployed.ts` (version 17).
 
 ## Files
 
@@ -31,7 +31,7 @@ Nothing else changes: prompts, wording, models, step limits and guardrails are a
 - Requests in the same mode within the 5-minute TTL share block 1 across clients. An example is monthly-report generating summaries one client after another. The three modes (chat, report, panel) each cache their own block 1.
 - Latency on steps 2 and later should improve somewhat.
 
-## How to verify (after an authorised deploy)
+## How to verify
 
 1. Run any question that takes 2 or more steps.
 2. Check `usage` in the response:
