@@ -196,3 +196,10 @@ section of the report.
 A question is branded when `ai_prompts.branded` says so; when that is null, it
 is branded if it names the brand or an alias — the same fallback `dash_ai_core`
 uses.
+
+Prompt sets were also capped at 15 active questions on 2026-09-27: 85
+near-duplicate or never-mentioning questions across seven sets were paused
+(`ai_prompts.active = false`), not deleted, so their history stays in the trend
+and any of them can be resumed from the dashboard. That left 330 active
+questions across client-linked sets — about 2,600 provider calls per pass,
+roughly 5,500 a month, against about 21,500 a month before.
