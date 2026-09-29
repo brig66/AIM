@@ -408,6 +408,7 @@ footer .copy{font-weight:600;color:var(--ink)}
           <button type="button" class="small on" data-listen="both">Both</button><button type="button" class="small" data-listen="song">Song only</button><button type="button" class="small" data-listen="part">Bass only</button>
         </div>
         <label class="row" for="cutChk" style="gap:6px;font-size:13px;flex-wrap:nowrap"><input type="checkbox" id="cutChk"> Turn down the original bass</label>
+        <label class="row" for="toneSel" style="gap:6px;font-size:13px;font-weight:600;color:var(--muted)">Tone <select id="toneSel"><option value="auto">Auto</option><option value="finger">Fingerstyle</option><option value="pick">Pick</option><option value="slap">Slap</option><option value="vintage">Vintage (flatwounds)</option><option value="fretless">Fretless</option><option value="drive">Overdrive</option></select></label>
       </div>
     </div>
     <div class="tools">
@@ -2115,15 +2116,18 @@ function ksSample(ctx, midi, kind){
   const sr = ctx.sampleRate, key = kind + ':' + midi + ':' + sr;
   if (KS_CACHE.has(key)) return KS_CACHE.get(key);
   const bass = kind.startsWith('bass'), dead = kind.endsWith('Dead');
+  // How the string is struck: smoothing passes (softer = rounder), pluck position, sustain and attack.
+  const V = {bassPick: {sm: 1, pp: 0.1, t60: 0.9, att: 0.001}, bassSlap: {sm: 0, pp: 0.06, t60: 0.75, att: 0.0005},
+    bassFlat: {sm: 4, pp: 0.2, t60: 0.45, att: 0.003}, bassFretless: {sm: 3, pp: 0.25, t60: 1.3, att: 0.008}}[kind] || {sm: bass ? 3 : 1, pp: bass ? 0.18 : 0.12, t60: 1, att: 0.002};
   const f = midiHz(midi), N = Math.max(2, Math.round(sr / f + 0.5)), fAct = sr / (N - 0.5); // the averaging filter shortens the loop by half a sample
   const secs = dead ? 0.12 : bass ? 3.2 : 2.6, len = Math.floor(sr * secs);
   const rnd = mulberry32(midi * 131 + (bass ? 7 : 3));
   // Excitation: noise, rounded off for bass (fingers) and bright for guitar (pick), with a pick-position notch.
   const ex = new Float32Array(N); for (let i = 0; i < N; i++) ex[i] = rnd() * 2 - 1;
-  for (let p = 0; p < (bass ? 3 : 1); p++){ let prev = ex[N - 1]; for (let i = 0; i < N; i++){ const c = ex[i]; ex[i] = 0.5 * (c + prev); prev = c; } }
-  const pp = Math.max(1, Math.round(N * (bass ? 0.18 : 0.12)));
+  for (let p = 0; p < V.sm; p++){ let prev = ex[N - 1]; for (let i = 0; i < N; i++){ const c = ex[i]; ex[i] = 0.5 * (c + prev); prev = c; } }
+  const pp = Math.max(1, Math.round(N * V.pp));
   const loop = new Float32Array(N); for (let i = 0; i < N; i++) loop[i] = ex[i] - ex[(i - pp + N) % N];
-  const T60 = dead ? 0.05 : bass ? Math.max(1.6, 4.5 - (midi - 28) * 0.05) : Math.max(1.2, 3.2 - (midi - 40) * 0.04);
+  const T60 = dead ? 0.05 : V.t60 * (bass ? Math.max(1.6, 4.5 - (midi - 28) * 0.05) : Math.max(1.2, 3.2 - (midi - 40) * 0.04));
   const g = Math.pow(0.001, 1 / (T60 * fAct));
   const out = new Float32Array(len);
   let idx = 0, peak = 1e-9;
@@ -2132,7 +2136,7 @@ function ksSample(ctx, midi, kind){
     out[n] = cur; loop[idx] = g * 0.5 * (cur + nxt); idx = (idx + 1) % N;
     const a = Math.abs(cur); if (a > peak) peak = a;
   }
-  const att = Math.floor(sr * 0.002);
+  const att = Math.floor(sr * V.att);
   for (let n = 0; n < len; n++) out[n] = out[n] / peak * 0.9 * (n < att ? n / att : 1);
   const buf = ctx.createBuffer(1, len, sr); buf.copyToChannel ? buf.copyToChannel(out, 0) : buf.getChannelData(0).set(out);
   const res = {buf, rate: f / fAct};
@@ -2140,15 +2144,38 @@ function ksSample(ctx, midi, kind){
   return res;
 }
 
-// Bass: a finger-plucked string sample with a little low-end warmth.
+// Bass tones: which pluck to use, then the amp and EQ that shape it.
+const BASS_TONES = {
+  finger: {kind: 'bass', lp: 2400, shelf: 4, gain: 0.8},
+  pick: {kind: 'bassPick', lp: 4200, shelf: 2, peak: [900, 2, 1], gain: 0.82},
+  slap: {kind: 'bassSlap', lp: 7000, shelf: 6, peak: [500, -7, 0.8], hi: [2500, 6], gain: 0.62},
+  vintage: {kind: 'bassFlat', lp: 900, shelf: 5, gain: 1.35},
+  fretless: {kind: 'bassFretless', lp: 2000, shelf: 3, peak: [700, 6, 1.4], gain: 0.58, glide: true},
+  drive: {kind: 'bassPick', lp: 2800, shelf: 3, drive: 4, gain: 0.17}
+};
+let BCURVE = null;
+function bassCurve(){
+  if (BCURVE) return BCURVE;
+  const n = 2048; BCURVE = new Float32Array(n);
+  for (let i = 0; i < n; i++){ const x = i / (n - 1) * 2 - 1; BCURVE[i] = Math.tanh(3 * x); }
+  return BCURVE;
+}
 function voice(ctx, dest, t, dur, midi, dead){
-  const {buf, rate} = ksSample(ctx, midi, dead ? 'bassDead' : 'bass');
-  const src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = rate;
+  const sel = $('toneSel').value, T = BASS_TONES[sel === 'auto' ? (S.toneAuto || 'finger') : sel] || BASS_TONES.finger;
+  const {buf, rate} = ksSample(ctx, midi, dead ? 'bassDead' : T.kind);
+  const src = ctx.createBufferSource(); src.buffer = buf;
+  if (T.glide && !dead){ src.playbackRate.setValueAtTime(rate * 0.99, t); src.playbackRate.linearRampToValueAtTime(rate, t + 0.05); }
+  else src.playbackRate.value = rate;
   const end = t + (dead ? 0.07 : Math.max(0.08, dur - 0.02));
-  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = dead ? 700 : 2400; lp.Q.value = 0.5;
-  const lo = ctx.createBiquadFilter(); lo.type = 'lowshelf'; lo.frequency.value = 120; lo.gain.value = 4;
-  const g = ctx.createGain(); g.gain.setValueAtTime(dead ? 0.45 : 0.8, t); g.gain.setTargetAtTime(0.0001, end, 0.035);
-  src.connect(lp); lp.connect(lo); lo.connect(g); g.connect(dest); src.start(t); src.stop(end + 0.3);
+  let node = src;
+  const link = n => { node.connect(n); node = n; };
+  if (T.drive && !dead){ const pre = ctx.createGain(); pre.gain.value = T.drive; link(pre); const sh = ctx.createWaveShaper(); sh.curve = bassCurve(); sh.oversample = '2x'; link(sh); }
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = dead ? 700 : T.lp; lp.Q.value = 0.5; link(lp);
+  const lo = ctx.createBiquadFilter(); lo.type = 'lowshelf'; lo.frequency.value = 120; lo.gain.value = T.shelf; link(lo);
+  if (T.peak && !dead){ const pk = ctx.createBiquadFilter(); pk.type = 'peaking'; [pk.frequency.value, pk.gain.value, pk.Q.value] = T.peak; link(pk); }
+  if (T.hi && !dead){ const hs = ctx.createBiquadFilter(); hs.type = 'highshelf'; [hs.frequency.value, hs.gain.value] = T.hi; link(hs); }
+  const g = ctx.createGain(); g.gain.setValueAtTime(dead ? 0.45 : T.gain, t); g.gain.setTargetAtTime(0.0001, end, 0.035); link(g);
+  g.connect(dest); src.start(t); src.stop(end + 0.3);
 }
 const APP_KIND = 'bass', PART_VOL_ID = 'bassVol', PART_BUS = 'bassBus', PART_K = 0.9;
 // ---------- play-along mix: what to hear, and turning down the original part ----------
@@ -2379,6 +2406,10 @@ function regenerate(){
   else if (kickLock && G.noKick) kickTxt = ' This groove keeps its own rhythm, so kick locking is skipped.';
   $('styleNote').textContent = lead + (S.swing ? ' Swing feel on.' : '') + kickTxt + ` Passing notes and fills follow ${modeLabel()}.`;
   S.autoStyle = style;
+  // Auto tone: follows the chosen player, or the groove when no player is chosen.
+  const TONE_BY_PLAYER = {mccartney: 'pick', entwistle: 'pick', squire: 'pick', geddy: 'pick', kaye: 'pick', lemmy: 'drive', jamerson: 'vintage', dunn: 'vintage', pino: 'vintage', prestia: 'vintage', jaco: 'fretless', flea: 'slap'};
+  S.toneAuto = infl !== 'none' ? (TONE_BY_PLAYER[infl] || 'finger')
+    : ['punk', 'metal'].includes(style) ? 'pick' : ['motown', 'reggae', 'walking', 'twofeel'].includes(style) ? 'vintage' : 'finger';
   const cfg = {bpb: S.bpb, style, complexity: +$('busy').value, register: $('regSel').value, fills: $('fills').checked, seed: S.seed, key: S.key, kicks: S.kicks && S.kicks.perBar, kickLock, lockGroove: choice !== 'auto'};
   const notes = generateBass(S.bars, cfg);
   assignFingering(notes);
