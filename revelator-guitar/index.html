@@ -123,6 +123,13 @@ button:disabled{opacity:.5;cursor:not-allowed}
 @media (max-width:560px){.tunerwrap{grid-template-columns:1fr}}
 .orline{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em}
 .orline::before,.orline::after{content:"";flex:1;border-top:1px solid var(--line)}
+.pmix{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;width:100%}
+.seg{display:inline-flex}
+.seg button{border-radius:0;margin-left:-1px}
+.seg button:first-child{border-radius:7px 0 0 7px;margin-left:0}
+.seg button:last-child{border-radius:0 7px 7px 0}
+.seg button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.pmix select{width:auto;padding:5px 8px;font-size:13px}
 footer{font-size:13px;color:var(--muted);display:grid;gap:6px}
 footer p{margin:0}
 footer .copy{font-weight:600;color:var(--ink)}
@@ -144,6 +151,13 @@ footer .copy{font-weight:600;color:var(--ink)}
   input[type=range]{height:28px}
   .touch-only{display:inline}
   .mouse-only{display:none}
+}
+@media (max-width:560px){
+  .pmix{gap:6px 10px}
+  .pmix .seg{flex:1 1 100%}
+  .pmix .seg button{flex:1 1 0;min-height:34px;padding:4px 6px;font-size:13px}
+  .pmix label{font-size:13px}
+  .pmix select{padding:3px 6px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -384,6 +398,13 @@ footer .copy{font-weight:600;color:var(--ink)}
       <div class="pvols">
         <label class="vol" for="songVol">Song<input type="range" id="songVol" min="0" max="1" step="0.01" value="0.7"></label>
         <label class="vol" for="guitarVol">Guitar<input type="range" id="guitarVol" min="0" max="1" step="0.01" value="0.8"></label>
+      </div>
+      <div class="pmix">
+        <div class="seg" role="group" aria-label="What to hear">
+          <button type="button" class="small on" data-listen="both">Both</button><button type="button" class="small" data-listen="song">Song only</button><button type="button" class="small" data-listen="part">Guitar only</button>
+        </div>
+        <label class="row" for="cutChk" style="gap:6px;font-size:13px;flex-wrap:nowrap"><input type="checkbox" id="cutChk"> Turn down the original guitars</label>
+        <label class="row" for="toneSel" style="gap:6px;font-size:13px;font-weight:600;color:var(--muted)">Tone <select id="toneSel"><option value="auto">Auto</option><option value="clean">Clean</option><option value="crunch">Crunch</option><option value="lead">Lead (high gain)</option></select></label>
       </div>
     </div>
     <div class="tools">
@@ -2239,7 +2260,40 @@ function driveCurve(){
   for (let i = 0; i < n; i++){ const x = i / (n - 1) * 2 - 1; CURVE[i] = Math.tanh(3.4 * x); }
   return CURVE;
 }
-// A simple overdriven electric guitar: two detuned sawtooth waves into a soft clipper and a speaker-like low-pass filter.
+// ---------- realistic plucked-string sound (Karplus-Strong) ----------
+// Each note is a short loop of noise fed back through a gentle filter, the way a plucked string rings and fades.
+const KS_CACHE = new Map();
+function ksSample(ctx, midi, kind){
+  const sr = ctx.sampleRate, key = kind + ':' + midi + ':' + sr;
+  if (KS_CACHE.has(key)) return KS_CACHE.get(key);
+  const bass = kind.startsWith('bass'), dead = kind.endsWith('Dead');
+  const f = midiHz(midi), N = Math.max(2, Math.round(sr / f + 0.5)), fAct = sr / (N - 0.5); // the averaging filter shortens the loop by half a sample
+  const secs = dead ? 0.12 : bass ? 3.2 : 2.6, len = Math.floor(sr * secs);
+  const rnd = mulberry32(midi * 131 + (bass ? 7 : 3));
+  // Excitation: noise, rounded off for bass (fingers) and bright for guitar (pick), with a pick-position notch.
+  const ex = new Float32Array(N); for (let i = 0; i < N; i++) ex[i] = rnd() * 2 - 1;
+  for (let p = 0; p < (bass ? 3 : 1); p++){ let prev = ex[N - 1]; for (let i = 0; i < N; i++){ const c = ex[i]; ex[i] = 0.5 * (c + prev); prev = c; } }
+  const pp = Math.max(1, Math.round(N * (bass ? 0.18 : 0.12)));
+  const loop = new Float32Array(N); for (let i = 0; i < N; i++) loop[i] = ex[i] - ex[(i - pp + N) % N];
+  const T60 = dead ? 0.05 : bass ? Math.max(1.6, 4.5 - (midi - 28) * 0.05) : Math.max(1.2, 3.2 - (midi - 40) * 0.04);
+  const g = Math.pow(0.001, 1 / (T60 * fAct));
+  const out = new Float32Array(len);
+  let idx = 0, peak = 1e-9;
+  for (let n = 0; n < len; n++){
+    const cur = loop[idx], nxt = loop[(idx + 1) % N];
+    out[n] = cur; loop[idx] = g * 0.5 * (cur + nxt); idx = (idx + 1) % N;
+    const a = Math.abs(cur); if (a > peak) peak = a;
+  }
+  const att = Math.floor(sr * 0.002);
+  for (let n = 0; n < len; n++) out[n] = out[n] / peak * 0.9 * (n < att ? n / att : 1);
+  const buf = ctx.createBuffer(1, len, sr); buf.copyToChannel ? buf.copyToChannel(out, 0) : buf.getChannelData(0).set(out);
+  const res = {buf, rate: f / fAct};
+  KS_CACHE.set(key, res);
+  return res;
+}
+
+const TONES = {clean: {drive: 1, post: 0.32, lp: 5200}, crunch: {drive: 2.2, post: 0.2, lp: 4000}, lead: {drive: 5.5, post: 0.15, lp: 3600}};
+// Electric guitar: plucked-string samples through an amp-style drive and speaker filter, with bends, slides and vibrato.
 function voice(ctx, dest, t, dur, e){
   if (e.dead){
     const src = ctx.createBufferSource(); src.buffer = P.noise;
@@ -2247,30 +2301,61 @@ function voice(ctx, dest, t, dur, e){
     const g = ctx.createGain(); g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
     src.connect(bp); bp.connect(g); g.connect(dest); src.start(t); src.stop(t + 0.06); return;
   }
+  const sel = $('toneSel').value, T = TONES[sel === 'auto' ? (S.toneAuto || 'crunch') : sel] || TONES.crunch;
   const len = e.pm ? Math.min(dur, 0.14) : dur;
   const end = t + Math.max(0.06, len - 0.02);
-  const pre = ctx.createGain(); pre.gain.value = 0.55;
-  const sh = ctx.createWaveShaper(); sh.curve = driveCurve();
-  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = e.pm ? 900 : 3400; lp.Q.value = 0.7;
+  const pre = ctx.createGain(); pre.gain.value = T.drive;
+  let node = pre;
+  if (T.drive > 1){ const sh = ctx.createWaveShaper(); sh.curve = driveCurve(); pre.connect(sh); node = sh; }
   const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 90;
-  const g = ctx.createGain(), peak = (e.legato ? 0.12 : 0.17) / Math.sqrt(e.midis.length);
-  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + (e.legato ? 0.015 : 0.004));
-  g.gain.setTargetAtTime(peak * 0.75, t + 0.02, 0.3); g.gain.setTargetAtTime(0.0001, end, 0.04);
-  pre.connect(sh); sh.connect(hp); hp.connect(lp); lp.connect(g); g.connect(dest);
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = e.pm ? 900 : T.lp; lp.Q.value = 0.7;
+  const g = ctx.createGain(), peak = (e.legato ? 0.75 : 1) * T.post / Math.sqrt(e.midis.length);
+  if (e.legato){ g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + 0.015); } else g.gain.setValueAtTime(peak, t);
+  g.gain.setTargetAtTime(0.0001, end, 0.04);
+  node.connect(hp); hp.connect(lp); lp.connect(g); g.connect(dest);
   e.midis.forEach((m, i) => {
-    for (const cents of [-7, 7]){
-      const o = ctx.createOscillator(); o.type = 'sawtooth'; o.detune.value = cents;
-      const f = midiHz(m);
-      if (i === 0 && e.bend){ o.frequency.setValueAtTime(midiHz(m - e.bend), t); o.frequency.linearRampToValueAtTime(f, t + Math.min(0.16, (end - t) * 0.4)); }
-      else if (i === 0 && e.slideFrom != null){ o.frequency.setValueAtTime(midiHz(e.slideFrom), t); o.frequency.exponentialRampToValueAtTime(f, t + 0.07); }
-      else o.frequency.setValueAtTime(f, t);
-      if (i === 0 && e.vib && end - t > 0.3){
-        const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 5.6; lg.gain.value = f * 0.012;
-        lfo.connect(lg); lg.connect(o.frequency); lfo.start(t + 0.18); lfo.stop(end + 0.2);
-      }
-      o.connect(pre); o.start(t); o.stop(end + 0.25);
-    }
+    const {buf, rate} = ksSample(ctx, m, 'gtr');
+    const s = ctx.createBufferSource(); s.buffer = buf;
+    const pr = s.playbackRate;
+    if (i === 0 && e.bend){ pr.setValueAtTime(rate * Math.pow(2, -e.bend / 12), t); pr.linearRampToValueAtTime(rate, t + Math.min(0.16, (end - t) * 0.4)); }
+    else if (i === 0 && e.slideFrom != null){ pr.setValueAtTime(rate * Math.pow(2, (e.slideFrom - m) / 12), t); pr.exponentialRampToValueAtTime(rate, t + 0.07); }
+    else pr.setValueAtTime(rate, t);
+    if (i === 0 && e.vib && end - t > 0.3){ const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = 5.6; lg.gain.value = rate * 0.008; lfo.connect(lg); lg.connect(pr); lfo.start(t + 0.18); lfo.stop(end + 0.2); }
+    s.connect(pre); s.start(t); s.stop(end + 0.3);
   });
+}
+const APP_KIND = 'guitar', PART_VOL_ID = 'guitarVol', PART_BUS = 'bus', PART_K = 1;
+// ---------- play-along mix: what to hear, and turning down the original part ----------
+P.listen = 'both';
+function buildSongChain(ctx){
+  const input = ctx.createGain();
+  if (APP_KIND === 'bass'){
+    // Two steep high-pass filters take the original bass out of the recording.
+    const h1 = ctx.createBiquadFilter(), h2 = ctx.createBiquadFilter();
+    h1.type = h2.type = 'highpass'; h1.frequency.value = h2.frequency.value = 20; h1.Q.value = h2.Q.value = 0.7;
+    input.connect(h1); h1.connect(h2);
+    P.cut = on => { const f = on ? 150 : 20; h1.frequency.setTargetAtTime(f, ctx.currentTime, 0.03); h2.frequency.setTargetAtTime(f, ctx.currentTime, 0.03); };
+    return {input, output: h2};
+  }
+  // Guitars are usually panned to the sides: narrowing the stereo image and dipping the guitar range turns them down.
+  const eq = ctx.createBiquadFilter(); eq.type = 'peaking'; eq.frequency.value = 1300; eq.Q.value = 0.7; eq.gain.value = 0;
+  let setWidth = () => {};
+  if (S.songBuf && S.songBuf.numberOfChannels > 1){
+    const sp = ctx.createChannelSplitter(2), mg = ctx.createChannelMerger(2);
+    const ll = ctx.createGain(), lr = ctx.createGain(), rl = ctx.createGain(), rr = ctx.createGain();
+    input.connect(sp); sp.connect(ll, 0); sp.connect(lr, 0); sp.connect(rl, 1); sp.connect(rr, 1);
+    ll.connect(mg, 0, 0); rl.connect(mg, 0, 0); lr.connect(mg, 0, 1); rr.connect(mg, 0, 1);
+    setWidth = k => { const a = (1 + k) / 2, b = (1 - k) / 2; ll.gain.value = a; rr.gain.value = a; rl.gain.value = b; lr.gain.value = b; };
+    setWidth(1); mg.connect(eq);
+  } else input.connect(eq);
+  P.cut = on => { setWidth(on ? 0.15 : 1); eq.gain.setTargetAtTime(on ? -7 : 0, ctx.currentTime, 0.03); };
+  return {input, output: eq};
+}
+function applyMix(){
+  const song = +$('songVol').value, part = +$(PART_VOL_ID).value * PART_K;
+  if (P.songGain) P.songGain.gain.value = P.listen === 'part' ? 0 : song;
+  if (P[PART_BUS]) P[PART_BUS].gain.value = P.listen === 'song' ? 0 : part;
+  if (P.cut) P.cut($('cutChk').checked);
 }
 function schedule(){
   const now = P.ctx.currentTime, horizon = now + 0.6;
@@ -2291,11 +2376,12 @@ async function play(fromBar = 0){
   }
   try { await P.ctx.resume(); } catch (e){}
   const ctx = P.ctx;
-  P.songGain.gain.value = +$('songVol').value;
   P.bus = ctx.createGain(); P.bus.gain.value = +$('guitarVol').value; P.bus.connect(ctx.destination);
   const t0 = Math.max(0, timeAt(fromBar, 0) - 0.05);
   P.songStart = t0; P.ctxStart = ctx.currentTime + 0.12;
-  P.src = ctx.createBufferSource(); P.src.buffer = S.songBuf; P.src.connect(P.songGain);
+  P.src = ctx.createBufferSource(); P.src.buffer = S.songBuf;
+  const chain = buildSongChain(ctx); P.src.connect(chain.input); chain.output.connect(P.songGain);
+  applyMix();
   if (t0 < S.songBuf.duration) P.src.start(P.ctxStart, t0);
   P.events = buildEvents(); P.idx = 0; while (P.idx < P.events.length && P.events[P.idx].t < t0 - 0.01) P.idx++;
   const lastEnd = P.events.length ? P.events[P.events.length - 1].end : 0;
@@ -2473,6 +2559,10 @@ function regenerate(){
   const soloTxt = part === 'riff' ? '' : ` Solo scale: ${info.name}.`;
   $('styleNote').textContent = (part === 'solo' && !INF ? '' : lead) + (S.swing ? ' Swing feel on.' : '') + kickTxt + soloTxt;
   S.autoStyle = style;
+  // Auto amp tone: clean for jazz and gentle styles, high gain for hard rock and metal players.
+  const inflKey = $('inflSel').value;
+  S.toneAuto = INF ? (['wes', 'knopfler', 'bbking'].includes(inflKey) ? 'clean' : ['evh', 'slash', 'iommi', 'gilmour', 'santana', 'bonamassa', 'may', 'hendrix'].includes(inflKey) ? 'lead' : 'crunch')
+    : style === 'metal' ? 'lead' : ['ballad', 'bossa', 'samba', 'walking', 'country', 'ska', 'reggae', 'motown', 'pop', 'waltz', 'tumbao', 'melodic', 'disco'].includes(style) ? 'clean' : 'crunch';
   const cfg = {bpb: S.bpb, style, complexity: +$('busy').value, fills: $('fills').checked, seed: S.seed, key: S.key,
     kicks: S.kicks && S.kicks.perBar, kickLock, lockGroove: choice !== 'auto', sound: $('soundSel').value === 'mix' && INF && INF.sound ? INF.sound : $('soundSel').value, pos: $('posSel').value === 'low' && INF && INF.pos ? INF.pos : $('posSel').value, flavor, inf: INF, pedal: INF ? INF.pedal : undefined};
   let notes = [];
@@ -2596,8 +2686,8 @@ $('newVarBtn').addEventListener('click', () => { S.seed++; regenerate(); toast('
 $('resetVarBtn').addEventListener('click', () => { S.seed = 1; regenerate(); });
 $('playBtn').addEventListener('click', () => play(0));
 $('stopBtn').addEventListener('click', stop);
-$('songVol').addEventListener('input', () => { if (P.songGain) P.songGain.gain.value = +$('songVol').value; });
-$('guitarVol').addEventListener('input', () => { if (P.bus) P.bus.gain.value = +$('guitarVol').value; });
+$('songVol').addEventListener('input', applyMix);
+$('guitarVol').addEventListener('input', applyMix);
 $('tabBox').addEventListener('click', e => { const p = e.target.closest('pre.sys'); if (p && !S.busy) play(+p.dataset.first); });
 $('copyBtn').addEventListener('click', () => {
   if (!S.tab) return;
@@ -2626,6 +2716,12 @@ $('savePdfBtn').addEventListener('click', () => {
 });
 $('tunerBtn').addEventListener('click', toggleTuner);
 $('refBtns').addEventListener('click', e => { const b = e.target.closest('button[data-m]'); if (b) refTone(+b.dataset.m); });
+document.querySelectorAll('.seg button[data-listen]').forEach(btn => btn.addEventListener('click', () => {
+  P.listen = btn.dataset.listen;
+  document.querySelectorAll('.seg button[data-listen]').forEach(x => x.classList.toggle('on', x === btn));
+  applyMix();
+}));
+$('cutChk').addEventListener('change', applyMix);
 getDownloads();
 loadDemo();
 })();
