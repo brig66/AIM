@@ -11,7 +11,7 @@
 :root{
   --bg:#E8EBEE; --panel:#FBFCFD; --ink:#14181D; --muted:#56606C; --line:#CFD5DC;
   --accent:#A1283C; --accent-ink:#FFFFFF; --brass:#9C7119; --tab-bg:#F3F5F7;
-  --hl:rgba(161,40,60,.10); --warn:#9A4B0B; --string:#8A949F;
+  --hl:rgba(161,40,60,.10); --ok:#1D7A4C; --warn:#9A4B0B; --string:#8A949F;
   --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
   --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
@@ -21,14 +21,14 @@
     color-scheme:dark;
     --bg:#0F1216; --panel:#171B21; --ink:#E3E7EB; --muted:#96A2AF; --line:#2B323B;
     --accent:#E7708A; --accent-ink:#22070D; --brass:#D6A94A; --tab-bg:#12161B;
-    --hl:rgba(231,112,138,.13); --warn:#E39A5B; --string:#5E6975;
+    --hl:rgba(231,112,138,.13); --ok:#4CC38A; --warn:#E39A5B; --string:#5E6975;
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
   --bg:#0F1216; --panel:#171B21; --ink:#E3E7EB; --muted:#96A2AF; --line:#2B323B;
   --accent:#E7708A; --accent-ink:#22070D; --brass:#D6A94A; --tab-bg:#12161B;
-  --hl:rgba(231,112,138,.13); --warn:#E39A5B; --string:#5E6975;
+  --hl:rgba(231,112,138,.13); --ok:#4CC38A; --warn:#E39A5B; --string:#5E6975;
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -108,6 +108,19 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .legend code{font-family:var(--mono);color:var(--ink)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100% - 32px)}
 .toast.show{opacity:1}
+.tuner{gap:12px}
+.tunerwrap{display:grid;grid-template-columns:minmax(150px,220px) 1fr;gap:16px;align-items:center}
+.tdisplay{display:grid;gap:2px}
+.tnote{font-family:var(--display);font-weight:800;font-size:3.2rem;line-height:1;font-variant-numeric:tabular-nums}
+.tdisplay span{font-size:13px;color:var(--muted)}
+.meter{position:relative;height:46px;border:1px solid var(--line);border-radius:8px;background:linear-gradient(90deg,transparent calc(50% - 4%),color-mix(in srgb,var(--ok) 18%,transparent) calc(50% - 4%),color-mix(in srgb,var(--ok) 18%,transparent) calc(50% + 4%),transparent calc(50% + 4%)),var(--bg);overflow:hidden}
+.meter::before{content:"";position:absolute;left:50%;top:0;bottom:0;border-left:1px dashed var(--muted)}
+.meter .ticks{position:absolute;inset:auto 8px 3px;display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--muted)}
+.needle{position:absolute;top:4px;bottom:16px;left:50%;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--warn);transition:left .12s linear}
+.meter.good .needle{background:var(--ok)}
+#refBtns{display:flex;flex-wrap:wrap;gap:6px}
+#refBtns small{font-size:10px;color:var(--muted);margin-left:1px}
+@media (max-width:560px){.tunerwrap{grid-template-columns:1fr}}
 footer{font-size:13px;color:var(--muted);display:grid;gap:6px}
 footer p{margin:0}
 footer .copy{font-weight:600;color:var(--ink)}
@@ -196,6 +209,7 @@ footer .copy{font-weight:600;color:var(--ink)}
           <option value="both">Riff, with a lead solo section</option>
           <option value="riff">Riff for the whole song</option>
           <option value="solo">Lead solo over the whole song</option>
+          <option value="transcribe">Transcribe the melody or lead in the recording (experimental)</option>
         </select>
       </label>
       <div class="grid2" id="soloRange">
@@ -216,6 +230,33 @@ footer .copy{font-weight:600;color:var(--ink)}
           <select id="fretSel"><option value="22">22 frets</option><option value="24">24 frets</option></select>
         </label>
       </div>
+      <div id="genCtl" style="display:grid;gap:14px">
+      <label class="f" for="inflSel">Play it in the style of
+        <select id="inflSel">
+          <option value="none">No one in particular (use the settings below)</option>
+          <option value="townshend">Pete Townshend (The Who)</option>
+          <option value="clapton">Eric Clapton (Cream, solo)</option>
+          <option value="page">Jimmy Page (Led Zeppelin)</option>
+          <option value="hendrix">Jimi Hendrix (The Experience)</option>
+          <option value="beck">Jeff Beck (Yardbirds, solo)</option>
+          <option value="bbking">B.B. King (blues)</option>
+          <option value="albertking">Albert King (blues)</option>
+          <option value="freddie">Freddie King (blues)</option>
+          <option value="buddy">Buddy Guy (Chicago blues)</option>
+          <option value="srv">Stevie Ray Vaughan (Double Trouble)</option>
+          <option value="kws">Kenny Wayne Shepherd (modern Texas blues)</option>
+          <option value="bonamassa">Joe Bonamassa (modern blues-rock)</option>
+          <option value="santana">Carlos Santana (Latin rock)</option>
+          <option value="evh">Eddie Van Halen (Van Halen)</option>
+          <option value="gilmour">David Gilmour (Pink Floyd)</option>
+          <option value="slash">Slash (Guns N)</option>
+          <option value="angus">Angus Young (AC/DC)</option>
+          <option value="richards">Keith Richards (The Rolling Stones)</option>
+          <option value="knopfler">Mark Knopfler (Dire Straits)</option>
+          <option value="may">Brian May (Queen)</option>
+          <option value="iommi">Tony Iommi (Black Sabbath)</option>
+        </select>
+      </label>
       <label class="f" for="styleSel">Groove (the rhythm style of the song)
         <select id="styleSel">
           <option value="auto">Auto: match the song</option>
@@ -298,6 +339,7 @@ footer .copy{font-weight:600;color:var(--ink)}
         <label class="row" style="gap:8px;font-size:14px" for="fills"><input type="checkbox" id="fills" checked> Riff turnarounds at phrase ends</label>
         <span class="hint">Variation <b id="varNum">1</b></span>
       </div>
+      </div>
       <p class="note" id="styleNote">Auto style picks from the tempo, rhythm and chords.</p>
       <div class="row">
         <button class="primary" id="newVarBtn" type="button">Write a new variation</button>
@@ -307,7 +349,18 @@ footer .copy{font-weight:600;color:var(--ink)}
 
   </section>
 
-  <section class="panel tabpanel" aria-label="Bass tablature">
+  <section class="panel tuner" aria-label="Tuner">
+    <h2>Tuner</h2>
+    <div class="tunerwrap">
+      <div class="tdisplay"><div class="tnote" id="tNote">–</div><span id="tString">Play one string at a time</span></div>
+      <div class="meter" id="tMeter"><div class="needle" id="tNeedle"></div><div class="ticks"><span>-50</span><span>-25</span><span>0</span><span>+25</span><span>+50</span></div></div>
+    </div>
+    <p class="hint" id="tFreq" style="margin:0"></p>
+    <div class="row"><button class="primary small" id="tunerBtn" type="button">Start tuner (uses microphone)</button><span class="hint" id="tunerMsg">Tuned to A = 440 Hz.</span></div>
+    <div class="row"><span class="hint">Reference tones (tap to hear each open string):</span><div id="refBtns"></div></div>
+  </section>
+
+  <section class="panel tabpanel" aria-label="Guitar tablature">
     <h2><small>4</small>Tablature</h2>
     <div class="player">
       <div class="pbtns">
@@ -867,8 +920,57 @@ const HEAVY = ['rock', 'metal', 'punk', 'shuffle', 'funk', 'hiphop', 'walking'];
 const SCALES = {
   minpent: ['minor pentatonic', [0, 3, 5, 7, 10]], majpent: ['major pentatonic', [0, 2, 4, 7, 9]],
   blues: ['blues scale', [0, 3, 5, 6, 7, 10]], dorian: ['Dorian', [0, 2, 3, 5, 7, 9, 10]],
-  mixo: ['Mixolydian', [0, 2, 4, 5, 7, 9, 10]], harmmin: ['harmonic minor', [0, 2, 3, 5, 7, 8, 11]]
+  mixo: ['Mixolydian', [0, 2, 4, 5, 7, 9, 10]], harmmin: ['harmonic minor', [0, 2, 3, 5, 7, 8, 11]],
+  bbbox: ['major and minor blues mix', [0, 2, 3, 4, 5, 7, 9]]
 };
+// Guitarists whose style can guide the part. groove/sound/pos shape the riff; scale, dens (busier or sparser),
+// bend (how often notes are bent), legato (hammer-ons and pull-offs), repeat (how often a phrase is answered
+// with the same rhythm) and center (how high on the neck) shape the solo. These are original parts in each style.
+const GINF = {
+  townshend: {name: 'Pete Townshend', era: 'The Who', groove: 'rock', sound: 'power', pedal: 0.3, scale: 'majpent', dens: -0.1, bend: 0.7, legato: 0.6, repeat: 0.6, center: -2,
+    desc: 'big, ringing power-chord riffs with dramatic stops, and short, punchy melodic lead breaks.'},
+  clapton: {name: 'Eric Clapton', era: 'Cream, solo', groove: 'rock', sound: 'mix', scale: 'minpent', dens: 0, bend: 1.3, legato: 0.8, repeat: 0.7, center: 0,
+    desc: 'smooth blues-rock: minor pentatonic phrases with singing bends, sustain and tasteful repetition.'},
+  page: {name: 'Jimmy Page', era: 'Led Zeppelin', groove: 'rock', sound: 'single', pedal: 0.45, scale: 'minpent', dens: 0.15, bend: 1, legato: 1.6, repeat: 0.8, center: 0,
+    desc: 'heavy single-note blues riffs that repeat and hypnotize, and fast pentatonic pull-off runs in the solos.'},
+  hendrix: {name: 'Jimi Hendrix', era: 'The Experience', groove: 'rock', sound: 'mix', scale: 'minpent', dens: 0.15, bend: 1.3, legato: 1.2, repeat: 0.5, center: 1,
+    desc: 'psychedelic blues-rock: minor pentatonic fire, bends everywhere and riffs that mix chords with single notes.'},
+  beck: {name: 'Jeff Beck', era: 'Yardbirds, solo', groove: 'rock', sound: 'single', scale: 'mixo', dens: 0, bend: 1.2, legato: 1, repeat: 0.4, center: 4,
+    desc: 'unpredictable and melodic: wide leaps, slides and Mixolydian color high up the neck.'},
+  bbking: {name: 'B.B. King', era: 'blues', groove: 'shuffle', sound: 'single', scale: 'bbbox', dens: -0.35, bend: 1.4, legato: 0.4, repeat: 0.8, center: 2,
+    desc: 'few notes, every one singing: sweet bends, vibrato on long notes and lots of space between phrases.'},
+  albertking: {name: 'Albert King', era: 'blues', groove: 'shuffle', sound: 'single', scale: 'minpent', dens: -0.3, bend: 2, legato: 0.3, repeat: 0.7, center: 1,
+    desc: 'slow, huge bends on the minor pentatonic with plenty of space; every bend is an event.'},
+  freddie: {name: 'Freddie King', era: 'blues', groove: 'shuffle', sound: 'mix', scale: 'blues', dens: 0.05, bend: 1.2, legato: 0.8, repeat: 0.7, center: -1,
+    desc: 'stinging, aggressive Texas and Chicago blues: punchy riffs, low-position licks and sharp bends.'},
+  buddy: {name: 'Buddy Guy', era: 'Chicago blues', groove: 'shuffle', sound: 'single', scale: 'blues', dens: 0.2, bend: 1.3, legato: 0.8, repeat: 0.3, center: 2,
+    desc: 'wild Chicago blues: sudden flurries of notes, sharp bends and big swings between whisper and scream.'},
+  srv: {name: 'Stevie Ray Vaughan', era: 'Double Trouble', groove: 'shuffle', sound: 'mix', scale: 'blues', dens: 0.3, bend: 1.5, legato: 1, repeat: 0.5, center: 0,
+    desc: 'Texas shuffle on fire: a heavy attack, fast runs and aggressive bends.'},
+  kws: {name: 'Kenny Wayne Shepherd', era: 'modern Texas blues', groove: 'shuffle', sound: 'mix', scale: 'blues', dens: 0.15, bend: 1.5, legato: 1, repeat: 0.6, center: 1,
+    desc: 'Texas blues-rock in the Stevie Ray Vaughan tradition: aggressive attack, shuffles and wide, stinging bends.'},
+  bonamassa: {name: 'Joe Bonamassa', era: 'modern blues-rock', groove: 'rock', sound: 'mix', scale: 'blues', dens: 0.25, bend: 1.2, legato: 1.4, repeat: 0.5, center: 2,
+    desc: 'fast, fiery blues-rock: blues-scale runs, legato bursts and big bends climbing up the neck.'},
+  santana: {name: 'Carlos Santana', era: 'Latin rock', groove: 'samba', sound: 'single', scale: 'dorian', dens: -0.15, bend: 1, legato: 0.9, repeat: 0.7, center: 3,
+    desc: 'Latin rock: long, sustaining Dorian melodies with singing vibrato over Afro-Cuban grooves.'},
+  evh: {name: 'Eddie Van Halen', era: 'Van Halen', groove: 'rock', sound: 'mix', scale: 'blues', dens: 0.35, bend: 0.8, legato: 2.2, repeat: 0.4, center: 5,
+    desc: 'explosive hard rock: fast legato runs and hammer-on flurries in the high register over party-rock riffs.'},
+  gilmour: {name: 'David Gilmour', era: 'Pink Floyd', groove: 'ballad', sound: 'single', scale: 'minpent', dens: -0.4, bend: 1.6, legato: 0.5, repeat: 0.8, center: 3,
+    desc: 'slow, spacious and melodic: carefully chosen notes, big bends and long sustain.'},
+  slash: {name: 'Slash', era: "Guns N' Roses", groove: 'rock', sound: 'mix', scale: 'harmmin', dens: 0.2, bend: 1.2, legato: 1.2, repeat: 0.6, center: 3,
+    desc: 'melodic hard rock: harmonic-minor color, catchy repeated licks and big bends.'},
+  angus: {name: 'Angus Young', era: 'AC/DC', groove: 'rock', sound: 'power', pedal: 0.4, scale: 'minpent', dens: 0.2, bend: 1, legato: 1.2, repeat: 0.8, center: 1,
+    desc: 'straight-ahead rock and roll: power-chord riffs and fast, repetitive minor pentatonic licks.'},
+  richards: {name: 'Keith Richards', era: 'The Rolling Stones', groove: 'rock', sound: 'power', pedal: 0.35, scale: 'majpent', dens: -0.3, bend: 0.8, legato: 0.6, repeat: 0.8, center: -1,
+    desc: 'loose, swaggering chord riffs with plenty of space, and short bluesy fills rather than long solos.'},
+  knopfler: {name: 'Mark Knopfler', era: 'Dire Straits', groove: 'pop', sound: 'single', scale: 'majpent', dens: -0.1, bend: 0.8, legato: 1.3, repeat: 0.6, center: 2,
+    desc: 'clean, fingerpicked melodies: major pentatonic lines with quick hammer-ons and pull-offs and a conversational feel.'},
+  may: {name: 'Brian May', era: 'Queen', groove: 'rock', sound: 'mix', scale: 'key', dens: 0, bend: 1, legato: 0.8, repeat: 0.7, center: 3,
+    desc: 'orchestral, melodic leads built from the song’s own scale, with singable phrases and lyrical bends.'},
+  iommi: {name: 'Tony Iommi', era: 'Black Sabbath', groove: 'metal', sound: 'mix', pos: 'low', pedal: 0.5, scale: 'blues', dens: 0.05, bend: 1, legato: 1, repeat: 0.6, center: 0,
+    desc: 'heavy, doomy riffs down low with the flat-five blues note, and fast pentatonic solos.'}
+};
+
 // Scale for riffs, as intervals above the current chord's root, so the riff moves with the chords.
 function riffScale(chord, style, flavor, key){
   if (flavor === 'key') return [...new Set(scalePcs(key).map(pc => mod12(pc - chord.root)))].sort((a, b) => a - b);
@@ -913,7 +1015,7 @@ function generateRiff(bars, cfg){
   const {segs, segAt} = segmentsOf(bars, spb);
   const band = {low: 0, mid: 5, high: 12}[pos] ?? 0;
   const baseFor = chord => { let p = ABS_LO + band; while (mod12(p) !== chord.root) p++; return p; };
-  const pedal = {metal: 0.55, punk: 0.6, rock: 0.35, hiphop: 0.3}[style] ?? 0.2;
+  const pedal = cfg.pedal ?? {metal: 0.55, punk: 0.6, rock: 0.35, hiphop: 0.3}[style] ?? 0.2;
   const chug = ['metal', 'punk', 'rock', 'hiphop'].includes(style);
   const nextSeg = si => { for (let j = si + 1; j < segs.length; j++) if (!segs[j].chord.none) return segs[j]; return null; };
   const phraseLen = complexity >= 4 ? 4 : 8;
@@ -1014,7 +1116,8 @@ function generateSolo(bars, cfg, from, to){
   const N = to - from + 1;
   const chordAt = (bi, s) => { const cs = bars[bi].chords; let c = cs[0]; for (const x of cs) if (x.start <= s) c = x; return c; };
   // The solo starts in the middle register, climbs to a peak about 80% of the way through, then settles.
-  const center = pr => clamp(pr < 0.8 ? 62 + 14 * (pr / 0.8) : 76 - 6 * ((pr - 0.8) / 0.2), lo + 6, hi - 5);
+  const INF = cfg.inf;
+  const center = pr => clamp((pr < 0.8 ? 62 + 14 * (pr / 0.8) : 76 - 6 * ((pr - 0.8) / 0.2)) + (INF ? INF.center : 0), lo + 6, hi - 5);
   const snapChord = (m, chord) => {
     if (!chord || chord.none) return m;
     const tones = new Set(chord.iv.map(i => mod12(chord.root + i)));
@@ -1032,7 +1135,7 @@ function generateSolo(bars, cfg, from, to){
   for (let u = from; u <= to; u += 2){
     const unitBars = Math.min(2, to - u + 1), unitLen = unitBars * spb;
     const pr = (u - from) / Math.max(1, N), it = bars[u].intensity ?? 0.5;
-    const dens = clamp(0.45 * (complexity - 1) / 4 + 0.3 * it + 0.3 * pr, 0, 1);
+    const dens = clamp(0.45 * (complexity - 1) / 4 + 0.3 * it + 0.3 * pr + (INF ? INF.dens : 0), 0, 1);
     const lvl = dens < 0.35 ? 0 : dens < 0.68 ? 1 : 2, c = center(pr);
     const phrases = unitBars === 2 ? [[pick([0, 0, 2, 4]), spb], [spb + pick([0, 0, 2]), unitLen]] : [[pick([0, 2]), unitLen]];
     phrases.forEach(([start, limit], pi) => {
@@ -1040,7 +1143,7 @@ function generateSolo(bars, cfg, from, to){
       if (maxLen < 2) return;
       const target = clamp(Math.round((0.4 + 0.4 * dens + rng() * 0.15) * (limit - start)), 2, maxLen);
       let rh;
-      const answer = pi === 1 && lastCall && rng() < 0.6 && sum(lastCall.rh) <= maxLen;
+      const answer = pi === 1 && lastCall && rng() < (INF ? INF.repeat : 0.6) && sum(lastCall.rh) <= maxLen;
       if (answer) rh = lastCall.rh.slice();
       else {
         rh = []; let len = 0, guard = 0;
@@ -1075,7 +1178,7 @@ function generateSolo(bars, cfg, from, to){
         deltas.push(delta);
         const dur = Math.max(1, Math.min(dd, spb - st));
         const nt = {bar: bi, step: st, dur, midi: m, part: 'solo'};
-        if (dur >= 4 && pcs.has(mod12(m - 2)) && m - 2 >= lo && rng() < (last ? 0.45 : 0.18)) nt.bend = 2;
+        if (dur >= 4 && pcs.has(mod12(m - 2)) && m - 2 >= lo && rng() < Math.min(0.95, (last ? 0.45 : 0.18) * (INF ? INF.bend : 1))) nt.bend = 2;
         else if (dur >= 4 && last) nt.vib = true;
         notes.push(nt);
         pos += dd;
@@ -1095,7 +1198,7 @@ function addTechniques(notes, cfg){
     const adjacent = (a.bar === b.bar && a.step + a.dur === b.step) || (b.bar === a.bar + 1 && b.step === 0 && a.step + a.dur === spb);
     if (!adjacent) continue;
     const iv = b.midi - a.midi, ai = Math.abs(iv);
-    if (ai >= 1 && ai <= 3 && a.dur <= 2 && rng() < 0.3 + 0.08 * cfg.complexity) b.tech = iv > 0 ? 'h' : 'p';
+    if (ai >= 1 && ai <= 3 && a.dur <= 2 && rng() < Math.min(0.95, (0.3 + 0.08 * cfg.complexity) * (cfg.inf ? cfg.inf.legato : 1))) b.tech = iv > 0 ? 'h' : 'p';
     else if (ai >= 2 && ai <= 5 && rng() < 0.25){ b.tech = iv > 0 ? '/' : '\\'; b.slideFrom = a.midi; }
   }
   for (const n of notes) if (n.part === 'solo' && !n.bend && n.dur >= 6) n.vib = true;
@@ -1216,12 +1319,12 @@ function renderTab(meta, opts = {}){
     cur.push(b); w += b.width + 2;
   }
   flush();
-  const partTxt = meta.part === 'riff' ? 'Riff' : meta.part === 'solo' ? 'Lead solo' : `Riff, with a lead solo in bars ${meta.soloFrom + 1}-${meta.soloTo + 1}`;
+  const partTxt = meta.part === 'transcribe' ? 'Transcribed from the recording (melody or lead; check it by ear)' : meta.part === 'riff' ? 'Riff' : meta.part === 'solo' ? 'Lead solo' : `Riff, with a lead solo in bars ${meta.soloFrom + 1}-${meta.soloTo + 1}`;
   const header = [
     'THE REVELATOR GUITAR CREATION TOOL',
     `Song: ${meta.song}`,
-    `Key: ${keyName(meta.key)}   Tempo: ${meta.bpm.toFixed(1)} BPM   Time: ${bpb}/4   Groove: ${GROOVES[meta.style].name}${meta.swing ? ' (swing: play eighth notes as triplets)' : ''}   Variation: ${meta.seed}`,
-    `Part: ${partTxt}   Solo scale: ${meta.scaleName}`,
+    `Key: ${keyName(meta.key)}   Tempo: ${meta.bpm.toFixed(1)} BPM   Time: ${bpb}/4   ${meta.part === 'transcribe' ? 'Transcribed from the recording' : `${meta.inflName ? 'In the style of ' + meta.inflName + '   ' : ''}Groove: ${GROOVES[meta.style].name}${meta.swing ? ' (swing: play eighth notes as triplets)' : ''}   Variation: ${meta.seed}`}`,
+    `Part: ${partTxt}${meta.part === 'transcribe' ? '' : '   Solo scale: ' + meta.scaleName}`,
     `Guitar: 6-string, ${TUN.label} tuning (low to high ${STRING_NAMES.join(' ')}), ${FRETS} frets`,
     'Numbers = fret. Stacked numbers = power chord. x = muted note, PM === = palm mute,',
     'h = hammer-on, p = pull-off, / \\ = slide up/down, b = bend up a whole step, ~ = vibrato.',
@@ -1428,9 +1531,9 @@ function buildTabPdf(){
   pdf.text(ML, y + 16, song, 22, 'F2'); y += 34;
   pdf.text(ML, y, `Guitar tablature  ·  6-string, ${TUN.label} tuning (${STRING_NAMES.join(' ')}), ${FRETS} frets`, 11, 'F1', 0.2); y += 16;
   const groove = GROOVES[meta.style] ? GROOVES[meta.style].name : '';
-  pdf.text(ML, y, `Key ${keyName(meta.key)}   ·   Tempo ${Math.round(meta.bpm)} BPM   ·   Time ${bpb}/4   ·   Groove: ${groove}   ·   Variation ${meta.seed}`, 9.5, 'F1', GRAY); y += 13;
-  const partTxt = meta.part === 'riff' ? 'Riff' : meta.part === 'solo' ? 'Lead solo' : `Riff, with a lead solo in bars ${meta.soloFrom + 1}-${meta.soloTo + 1}`;
-  const extra = [`Part: ${partTxt}`, meta.part !== 'riff' ? `Solo scale: ${meta.scaleName}` : '', meta.swing ? 'Swing feel: play eighth notes as triplets' : ''].filter(Boolean).join('   ·   ');
+  pdf.text(ML, y, `Key ${keyName(meta.key)}   ·   Tempo ${Math.round(meta.bpm)} BPM   ·   Time ${bpb}/4   ·   ${meta.part === 'transcribe' ? 'Transcribed from the recording' : `${meta.inflName ? 'In the style of ' + meta.inflName + '   ·   ' : ''}Groove: ${groove}   ·   Variation ${meta.seed}`}`, 9.5, 'F1', GRAY); y += 13;
+  const partTxt = meta.part === 'transcribe' ? 'Transcribed from the recording (melody or lead; check it by ear)' : meta.part === 'riff' ? 'Riff' : meta.part === 'solo' ? 'Lead solo' : `Riff, with a lead solo in bars ${meta.soloFrom + 1}-${meta.soloTo + 1}`;
+  const extra = [`Part: ${partTxt}`, meta.part !== 'riff' && meta.part !== 'transcribe' ? `Solo scale: ${meta.scaleName}` : '', meta.swing ? 'Swing feel: play eighth notes as triplets' : ''].filter(Boolean).join('   ·   ');
   if (extra){ pdf.text(ML, y, extra, 9.5, 'F1', GRAY); y += 13; }
   pdf.text(ML, y, 'How to read it: each line of the staff is a string (low E at the bottom); numbers are frets; stacked numbers are power chords; x is muted.', 8.5, 'F3', GRAY); y += 11;
   pdf.text(ML, y, 'Curved arrow with "full" = bend up a whole step. Straight line between notes = slide. Arc with h / p = hammer-on / pull-off.', 8.5, 'F3', GRAY); y += 11;
@@ -1576,6 +1679,175 @@ function buildTabPdf(){
   return pdf.bytes(song + ' - guitar tab');
 }
 
+
+// ---------- melody / lead transcription ----------
+// Follows the most prominent pitch in the guitar range (YIN pitch detection on a band-passed signal),
+// then snaps what it hears onto the song's 16th-note grid.
+async function computePitchTrack(buf){
+  const sr0 = 22050, len = Math.max(2, Math.ceil(buf.duration * sr0));
+  const off = new OAC(1, len, sr0);
+  const src = off.createBufferSource(); src.buffer = buf;
+  const hp = off.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 170;
+  const l1 = off.createBiquadFilter(); l1.type = 'lowpass'; l1.frequency.value = 1300; l1.Q.value = 0.7;
+  const l2 = off.createBiquadFilter(); l2.type = 'lowpass'; l2.frequency.value = 1300; l2.Q.value = 0.7;
+  src.connect(hp); hp.connect(l1); l1.connect(l2); l2.connect(off.destination); src.start(0);
+  const a = (await renderOffline(off)).getChannelData(0);
+  const D = 5, sr = sr0 / D, n = Math.floor(Math.min(a.length, sr0 * 600) / D), x = new Float32Array(n);
+  for (let i = 0; i < n; i++){ let s = 0; for (let k = 0; k < D; k++) s += a[i * D + k]; x[i] = s / D; }
+  const W = 180, tMin = Math.floor(sr / 1100), tMax = Math.ceil(sr / 150), hop = Math.round(sr * 0.012);
+  const nF = Math.max(0, Math.floor((n - W - tMax) / hop));
+  const midi = new Float32Array(nF), conf = new Float32Array(nF), rms = new Float32Array(nF), d = new Float64Array(tMax + 2);
+  for (let f = 0; f < nF; f++){
+    const o = f * hop;
+    let e = 0; for (let j = 0; j < W; j++) e += x[o + j] * x[o + j];
+    rms[f] = Math.sqrt(e / W);
+    if (rms[f] < 1e-5){ conf[f] = 0; continue; }
+    let run = 0; d[0] = 1;
+    for (let tau = 1; tau <= tMax; tau++){ let s = 0; for (let j = 0; j < W; j++){ const q = x[o + j] - x[o + j + tau]; s += q * q; } run += s; d[tau] = run > 0 ? s * tau / run : 1; }
+    let best = -1;
+    for (let tau = tMin; tau < tMax; tau++) if (d[tau] < 0.2){ while (tau + 1 < tMax && d[tau + 1] < d[tau]) tau++; best = tau; break; }
+    if (best < 0){ let mv = Infinity; for (let tau = tMin; tau < tMax; tau++) if (d[tau] < mv){ mv = d[tau]; best = tau; } }
+    const p0 = d[best - 1], p1 = d[best], p2 = d[best + 1], den = p0 - 2 * p1 + p2;
+    const t = den > 0 ? best + 0.5 * (p0 - p2) / den : best;
+    midi[f] = 69 + 12 * Math.log2(sr / t / 440); conf[f] = 1 - Math.min(1, p1);
+    if ((f & 511) === 0){ progress(0.05 + 0.9 * f / Math.max(1, nF), 'Listening to the melody and lead'); await tick(); }
+  }
+  // How far the recording sits from A = 440 Hz, so slightly detuned songs still round to the right notes.
+  const dev = []; for (let f = 0; f < nF; f++) if (conf[f] > 0.85) dev.push(midi[f] - Math.round(midi[f]));
+  dev.sort((p, q) => p - q);
+  return {midi, conf, rms, hop, sr, W, detune: dev.length ? dev[dev.length >> 1] : 0};
+}
+function transcribeNotes(){
+  const PT = S.pitch, F = S.F, bars = S.bars, spb = S.bpb * 4;
+  const sorted = Array.from(PT.rms).sort((p, q) => p - q), gate = (sorted[Math.floor(sorted.length * 0.9)] || 1e-9) * 0.12;
+  const frameAt = t => Math.round((t * PT.sr - PT.W / 2) / PT.hop);
+  const lowAt = t => { const f = Math.round(t * F.fps - F.N1 / 2 / F.H1); let m = 0; for (let k = f - 1; k <= f + 1; k++) if (k >= 0 && k < F.env.length) m = Math.max(m, F.env[k]); return m; };
+  const steps = [];
+  bars.forEach((b, bi) => {
+    for (let s = 0; s < spb; s++){
+      const a = Math.max(0, frameAt(timeAt(bi, s))), z = Math.min(PT.midi.length - 1, frameAt(timeAt(bi, s + 1)));
+      const vals = []; let tot = 0;
+      for (let f = a; f <= z; f++){ tot++; if (PT.conf[f] > 0.8 && PT.rms[f] > gate) vals.push(PT.midi[f] - PT.detune); }
+      let m = null;
+      if (tot && vals.length / tot >= 0.4){ vals.sort((p, q) => p - q); m = Math.round(vals[vals.length >> 1]); }
+      steps.push({bi, s, m, on: lowAt(timeAt(bi, s))});
+    }
+  });
+  // Fix octave slips: a note an octave away from both neighbors, which sit close to each other, moves back into line.
+  for (let i = 1; i < steps.length - 1; i++){
+    const m = steps[i].m; if (m == null) continue;
+    let p = null, q = null;
+    for (let j = i - 1; j >= Math.max(0, i - 8); j--) if (steps[j].m != null && steps[j].m !== m){ p = steps[j].m; break; }
+    for (let j = i + 1; j < Math.min(steps.length, i + 8); j++) if (steps[j].m != null && steps[j].m !== m){ q = steps[j].m; break; }
+    const ref = p ?? q; if (ref == null) continue;
+    for (const sh of [12, -12]) if (Math.abs(m - ref) >= 9 && Math.abs(m + sh - ref) <= 5 && (q == null || Math.abs(m + sh - q) <= 7)) steps[i].m = m + sh;
+  }
+  // Remove one-step blips where the notes on both sides agree.
+  for (let i = 1; i < steps.length - 1; i++){ const p = steps[i - 1].m, q = steps[i + 1].m; if (p != null && p === q && steps[i].m !== p) steps[i].m = p; }
+  const ons = steps.map(x => x.on).sort((p, q) => p - q), onThr = Math.max(1e-9, ons[Math.floor(ons.length * 0.75)] || 0);
+  const notes = []; let cur = null, shifted = 0;
+  const flush = () => { if (cur){ notes.push(cur); cur = null; } };
+  for (const st of steps){
+    if (st.m == null){ flush(); continue; }
+    let midi = st.m;
+    if (midi < ABS_LO){ midi = fitRange(midi); shifted++; } else if (midi > ABS_HI) midi = fitRange(midi);
+    const restrike = st.on > onThr * 1.3;
+    if (cur && cur.bar === st.bi && cur.midi === midi && !(restrike && cur.dur >= 2)){ cur.dur++; continue; }
+    flush(); cur = {bar: st.bi, step: st.s, dur: 1, midi, dead: false, part: 'solo'};
+  }
+  flush();
+  // Drop isolated one-step blips that jump far from the notes around them.
+  const clean = notes.filter((nt, i) => {
+    if (nt.dur > 1) return true;
+    const p = notes[i - 1], q = notes[i + 1];
+    const far = o => !o || Math.abs(o.midi - nt.midi) > 7;
+    return !(far(p) && far(q));
+  });
+  return {notes: clean, shifted};
+}
+async function runTranscription(){
+  if (S.pitchBusy || !S.songBuf) return;
+  S.pitchBusy = true; stop(); setBusy(true);
+  try { S.pitch = await computePitchTrack(S.songBuf); }
+  catch (e){ console.error(e); showErr('The recording could not be transcribed in this browser.'); $('partSel').value = 'both'; }
+  finally { S.pitchBusy = false; doneProgress(); setBusy(false); }
+  regenerate();
+}
+
+// ---------- tuner ----------
+const TN = {ctx: null, stream: null, an: null, buf: null, raf: 0, on: false, hist: [], refCtx: null};
+const NO_MIC = 'The microphone is not available here. The Claude page viewer blocks microphone access, so open the single-file copy (index.html) on your computer in Chrome, Edge, Firefox or Safari to use the tuner. The reference tones below work everywhere.';
+function yinPitch(buf, sr){
+  const D = Math.max(1, Math.round(sr / 6000)), r = sr / D, n = Math.floor(buf.length / D), x = new Float32Array(n);
+  let e = 0;
+  for (let i = 0; i < n; i++){ let s = 0; for (let k = 0; k < D; k++) s += buf[i * D + k]; x[i] = s / D; e += x[i] * x[i]; }
+  if (Math.sqrt(e / n) < 0.004) return null;
+  const tMax = Math.min(Math.ceil(r / 28), Math.floor(n / 2)), W = n - tMax - 1, tMin = Math.floor(r / 1000), d = new Float64Array(tMax + 2);
+  let run = 0; d[0] = 1;
+  for (let tau = 1; tau <= tMax; tau++){ let s = 0; for (let j = 0; j < W; j++){ const q = x[j] - x[j + tau]; s += q * q; } run += s; d[tau] = run > 0 ? s * tau / run : 1; }
+  let best = -1;
+  for (let tau = Math.max(2, tMin); tau < tMax; tau++) if (d[tau] < 0.15){ while (tau + 1 < tMax && d[tau + 1] < d[tau]) tau++; best = tau; break; }
+  if (best < 0) return null;
+  const p0 = d[best - 1], p1 = d[best], p2 = d[best + 1], den = p0 - 2 * p1 + p2;
+  const t = den > 0 ? best + 0.5 * (p0 - p2) / den : best;
+  return {hz: r / t, clarity: 1 - p1};
+}
+const noteName = m => PC[mod12(m)] + (Math.floor(m / 12) - 1);
+function tunerFrame(){
+  if (!TN.on) return;
+  TN.an.getFloatTimeDomainData(TN.buf);
+  const p = yinPitch(TN.buf, TN.ctx.sampleRate);
+  if (p && p.hz > 25 && p.hz < 1100){
+    TN.hist.push(69 + 12 * Math.log2(p.hz / 440)); if (TN.hist.length > 5) TN.hist.shift();
+    const m = [...TN.hist].sort((a, b) => a - b)[TN.hist.length >> 1];
+    let si = 0; STRINGS.forEach((o, i) => { if (Math.abs(m - o) < Math.abs(m - STRINGS[si])) si = i; });
+    const near = Math.abs(m - STRINGS[si]) < 1.5;
+    const target = near ? STRINGS[si] : Math.round(m), cents = Math.round((m - target) * 100);
+    $('tNote').textContent = noteName(target);
+    $('tString').textContent = near ? `${STRING_NAMES[si]} string (${ordinal(STRINGS.length - si)} string)` : 'Not near an open string';
+    $('tFreq').textContent = `${p.hz.toFixed(1)} Hz  ·  ${cents > 0 ? '+' : ''}${cents} cents  ·  ${Math.abs(cents) <= 4 ? 'in tune' : cents < 0 ? 'flat: tune up' : 'sharp: tune down'}`;
+    const nd = $('tNeedle'); nd.style.left = (50 + clamp(cents, -50, 50)) + '%';
+    $('tMeter').classList.toggle('good', Math.abs(cents) <= 4);
+  } else if (!p){ TN.hist = []; }
+  TN.raf = requestAnimationFrame(tunerFrame);
+}
+const ordinal = k => k + (k === 1 ? 'st' : k === 2 ? 'nd' : k === 3 ? 'rd' : 'th');
+async function toggleTuner(){
+  if (TN.on){ stopTuner(); return; }
+  $('tunerMsg').textContent = 'Asking to use the microphone…';
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ $('tunerMsg').textContent = NO_MIC; return; }
+  try { TN.stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false, noiseSuppression: false, autoGainControl: false}}); }
+  catch (e){ $('tunerMsg').textContent = NO_MIC; return; }
+  TN.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  try { await TN.ctx.resume(); } catch (e){}
+  TN.an = TN.ctx.createAnalyser(); TN.an.fftSize = 8192; TN.buf = new Float32Array(TN.an.fftSize);
+  TN.ctx.createMediaStreamSource(TN.stream).connect(TN.an);
+  TN.on = true; TN.hist = [];
+  $('tunerBtn').textContent = 'Stop tuner';
+  $('tunerMsg').textContent = 'Listening. Play one open string at a time and let it ring. Low strings read best close to the microphone or through an amp.';
+  tunerFrame();
+}
+function stopTuner(){
+  TN.on = false; cancelAnimationFrame(TN.raf);
+  if (TN.stream) TN.stream.getTracks().forEach(t => t.stop());
+  if (TN.ctx) try { TN.ctx.close(); } catch (e){}
+  TN.stream = TN.ctx = null;
+  $('tunerBtn').textContent = 'Start tuner (uses microphone)';
+  $('tunerMsg').textContent = 'Tuned to A = 440 Hz.';
+  $('tNote').textContent = '–'; $('tString').textContent = 'Play one string at a time'; $('tFreq').textContent = '';
+  $('tNeedle').style.left = '50%'; $('tMeter').classList.remove('good');
+}
+function refTone(m){
+  if (!TN.refCtx) TN.refCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const ctx = TN.refCtx; try { ctx.resume(); } catch (e){}
+  const t = ctx.currentTime + 0.03, f = midiHz(m);
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.35, t + 0.02); g.gain.setTargetAtTime(0.0001, t + 2.2, 0.15); g.connect(ctx.destination);
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = Math.min(3000, f * 8); lp.connect(g);
+  for (const [type, lvl] of [['sawtooth', 0.35], ['sine', 1]]){ const o = ctx.createOscillator(); o.type = type; o.frequency.value = f; const og = ctx.createGain(); og.gain.value = lvl; o.connect(og); og.connect(lp); o.start(t); o.stop(t + 2.8); }
+}
+function buildRefButtons(){
+  $('refBtns').innerHTML = STRINGS.map((m, i) => `<button class="small" type="button" data-m="${m}" title="Play ${noteName(m)}">${STRING_NAMES[i]}<small>${Math.floor(m / 12) - 1}</small></button>`).join('');
+}
 
 // ---------- playback ----------
 const P = {ctx: null, src: null, songGain: null, bus: null, events: [], idx: 0, timer: null, raf: 0, ctxStart: 0, songStart: 0, playing: false, endAt: 0, noise: null};
@@ -1779,19 +2051,39 @@ function defaultSoloRange(n){
 }
 function regenerate(){
   if (!S.bars.length) return;
-  const choice = $('styleSel').value;
+  const part = $('partSel').value;
+  $('genCtl').hidden = part === 'transcribe';
+  $('newVarBtn').disabled = $('resetVarBtn').disabled = part === 'transcribe' || S.busy;
+  if (part === 'transcribe'){
+    $('soloRange').hidden = true;
+    if (!S.pitch){ runTranscription(); return; }
+    const {notes, shifted} = transcribeNotes();
+    assignFingering(notes);
+    S.notes = notes; S.swing = false;
+    $('styleNote').textContent = !notes.length ? 'Transcription (experimental): no clear single melody was found. This recording may be mostly chords, or the lead may be too quiet in the mix. Switch What to write back to a riff or solo to create a part instead.' : `Transcription (experimental): ${notes.length} notes of the most prominent melody in the guitar range, snapped to the song's beat.` +
+      (shifted ? ` ${shifted} sixteenth-note steps were below your lowest string, so those notes were moved up an octave.` : '') +
+      ' In a full mix this is often the singer rather than the guitar, and chords are not transcribed. Treat it as a starting point and check it by ear.';
+    S.tabMeta = {bars: S.bars, notes, bpb: S.bpb, key: S.key, bpm: S.bpm, style: 'pop', swing: false, seed: S.seed, part, soloFrom: -1, soloTo: -1, scaleName: '', song: S.isDemo ? 'Built-in demo track' : S.fileName};
+    S.tab = renderTab(S.tabMeta);
+    showScreenTab();
+    if (P.playing){ const st = P.songStart + (P.ctx.currentTime - P.ctxStart); P.events = buildEvents(); P.idx = 0; while (P.idx < P.events.length && P.events[P.idx].t < st + 0.05) P.idx++; lastSys = -1; }
+    return;
+  }
+  const INF = GINF[$('inflSel').value] || null;
+  $('styleSel').disabled = !!INF;
+  const choice = INF ? INF.groove : $('styleSel').value;
   let style = choice, lead;
-  if (choice === 'auto'){ const a = autoStyle(); style = a.style; lead = `Auto picked ${GROOVES[style].name} (${a.why}). Choose a groove above to lock the riff into a specific rhythm.`; }
+  if (INF) lead = `In the style of ${INF.name}: ${INF.desc}`;
+  else if (choice === 'auto'){ const a = autoStyle(); style = a.style; lead = `Auto picked ${GROOVES[style].name} (${a.why}). Choose a groove above to lock the riff into a specific rhythm.`; }
   else lead = `${GROOVES[style].name}: ${GROOVES[style].desc}`;
   const G = GROOVES[style], feel = $('feelSel').value;
   S.swing = feel === 'swing' || (feel === 'auto' && (!!G.swing || ((choice === 'auto' || choice === 'kick') && !!S.songSwing)));
   const kickLock = $('kickChk').checked, ksum = S.kicks && S.kicks.summary;
-  const part = $('partSel').value;
   $('soloRange').hidden = part !== 'both';
   const n = S.bars.length;
   if (!$('soloFrom').value || !$('soloTo').value){ const [a, b] = defaultSoloRange(n); $('soloFrom').value = a; $('soloTo').value = b; }
   let from = clamp(parseInt($('soloFrom').value, 10) || 1, 1, n), to = clamp(parseInt($('soloTo').value, 10) || n, from, n);
-  const flavor = $('scaleSel').value;
+  const flavor = $('scaleSel').value === 'auto' && INF && INF.scale ? INF.scale : $('scaleSel').value;
   const info = soloScaleInfo(S.key, flavor, style);
   let kickTxt = '';
   if (part !== 'solo'){
@@ -1802,7 +2094,7 @@ function regenerate(){
   $('styleNote').textContent = (part === 'solo' ? '' : lead) + (S.swing ? ' Swing feel on.' : '') + kickTxt + soloTxt;
   S.autoStyle = style;
   const cfg = {bpb: S.bpb, style, complexity: +$('busy').value, fills: $('fills').checked, seed: S.seed, key: S.key,
-    kicks: S.kicks && S.kicks.perBar, kickLock, lockGroove: choice !== 'auto', sound: $('soundSel').value, pos: $('posSel').value, flavor};
+    kicks: S.kicks && S.kicks.perBar, kickLock, lockGroove: choice !== 'auto', sound: $('soundSel').value === 'mix' && INF && INF.sound ? INF.sound : $('soundSel').value, pos: $('posSel').value === 'low' && INF && INF.pos ? INF.pos : $('posSel').value, flavor, inf: INF, pedal: INF ? INF.pedal : undefined};
   let notes = [];
   if (part !== 'solo') notes = generateRiff(S.bars, cfg).filter(nt => part === 'riff' || nt.bar < from - 1 || nt.bar > to - 1);
   if (part !== 'riff') notes = notes.concat(generateSolo(S.bars, cfg, part === 'solo' ? 0 : from - 1, part === 'solo' ? n - 1 : to - 1));
@@ -1810,7 +2102,7 @@ function regenerate(){
   assignFingering(notes);
   addTechniques(notes, cfg);
   S.notes = notes;
-  S.tabMeta = {bars: S.bars, notes, bpb: S.bpb, key: S.key, bpm: S.bpm, style, swing: S.swing, seed: S.seed, part, soloFrom: from - 1, soloTo: to - 1, scaleName: info.name, song: S.isDemo ? 'Built-in demo track' : S.fileName};
+  S.tabMeta = {bars: S.bars, notes, bpb: S.bpb, key: S.key, bpm: S.bpm, style, swing: S.swing, seed: S.seed, part, soloFrom: from - 1, soloTo: to - 1, scaleName: info.name, inflName: INF ? INF.name : '', song: S.isDemo ? 'Built-in demo track' : S.fileName};
   S.tab = renderTab(S.tabMeta);
   showScreenTab();
   $('varNum').textContent = S.seed;
@@ -1819,7 +2111,7 @@ function regenerate(){
 async function runAnalysis(buf, name, isDemo){
   stop(); showErr(''); setBusy(true);
   try {
-    S.songBuf = buf; S.fileName = name; S.isDemo = isDemo; S.seed = 1;
+    S.songBuf = buf; S.fileName = name; S.isDemo = isDemo; S.seed = 1; S.pitch = null;
     progress(0.04, 'Preparing audio');
     await tick();
     let x = await toMono11k(buf);
@@ -1872,6 +2164,7 @@ function applyTuning(){
   setTuning($('tuneSel').value, +$('fretSel').value);
   $('plateTop').textContent = '6-string · ' + FRETS + ' frets';
   $('plateTuning').textContent = STRING_NAMES.join(' ');
+  buildRefButtons();
 }
 {
   try {
@@ -1904,7 +2197,7 @@ $('keySel').addEventListener('change', () => { const [t, m] = $('keySel').value.
 $('tsSel').addEventListener('change', () => { S.bpb = +$('tsSel').value; if (!S.F) return; stop(); S.phase = choosePhase(S.labels, S.beatLow, S.bpb); redetectChart(); toast('Bars regrouped in ' + S.bpb + '/4.'); });
 $('shiftBtn').addEventListener('click', () => { if (needSong()) return; stop(); S.phase = (S.phase + 1) % S.bpb; redetectChart(); toast('Bar 1 now starts at ' + fmtTime(timeAt(0, 0)) + '.'); });
 $('applyChords').addEventListener('click', () => { if (needSong()) return; stop(); applyChart(false); toast('Chord chart applied.'); });
-['styleSel','fills','feelSel','kickChk','partSel','soundSel','posSel','scaleSel','soloFrom','soloTo'].forEach(id => $(id).addEventListener('change', regenerate));
+['inflSel','styleSel','fills','feelSel','kickChk','partSel','soundSel','posSel','scaleSel','soloFrom','soloTo'].forEach(id => $(id).addEventListener('change', regenerate));
 $('busy').addEventListener('input', () => { $('busyVal').textContent = $('busy').value; regenerate(); });
 $('newVarBtn').addEventListener('click', () => { S.seed++; regenerate(); toast('Variation ' + S.seed + ' written.'); });
 $('resetVarBtn').addEventListener('click', () => { S.seed = 1; regenerate(); });
@@ -1937,6 +2230,8 @@ $('savePdfBtn').addEventListener('click', () => {
   const n = 'Revelator guitar - ' + safeName(S.isDemo ? 'demo' : S.fileName) + '.pdf';
   saveFile(n, bytes, n, new Blob([bytes], {type: 'application/pdf'}));
 });
+$('tunerBtn').addEventListener('click', toggleTuner);
+$('refBtns').addEventListener('click', e => { const b = e.target.closest('button[data-m]'); if (b) refTone(+b.dataset.m); });
 getDownloads();
 loadDemo();
 })();
