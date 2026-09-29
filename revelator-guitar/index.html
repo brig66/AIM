@@ -121,6 +121,8 @@ button:disabled{opacity:.5;cursor:not-allowed}
 #refBtns{display:flex;flex-wrap:wrap;gap:6px}
 #refBtns small{font-size:10px;color:var(--muted);margin-left:1px}
 @media (max-width:560px){.tunerwrap{grid-template-columns:1fr}}
+.orline{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+.orline::before,.orline::after{content:"";flex:1;border-top:1px solid var(--line)}
 footer{font-size:13px;color:var(--muted);display:grid;gap:6px}
 footer p{margin:0}
 footer .copy{font-weight:600;color:var(--ink)}
@@ -169,6 +171,16 @@ footer .copy{font-weight:600;color:var(--ink)}
         <input type="file" id="file" accept="audio/*,video/mp4,.mp3,.wav,.m4a,.aac,.aif,.aiff,.caf,.ogg,.oga,.opus,.flac,.webm,.mp4,.m4p">
       </label>
       <div class="row"><button class="small" id="demoBtn" type="button">Load the example track</button></div>
+      <div class="orline">or, with no recording</div>
+      <label class="drop" id="chartDrop" for="chartFile">
+        <strong><span class="mouse-only">Drop a chord chart here</span><span class="touch-only">Tap to choose a chord chart</span></strong>
+        <span class="hint">A PDF or text chord sheet. The chord names are read into step 2 and a simple backing band is built to play along with.</span>
+        <input type="file" id="chartFile" accept=".pdf,.txt,application/pdf,text/plain">
+      </label>
+      <div class="grid2">
+        <label class="f" for="chartBpm">Tempo for a chart (BPM)<input type="number" id="chartBpm" min="40" max="240" step="1" value="100"></label>
+        <div style="align-self:end"><button class="small" id="typeChordsBtn" type="button">Type the chords instead</button></div>
+      </div>
       <div class="song" id="songInfo"></div>
       <div class="prog" id="prog" hidden><div class="bar"><i id="progBar"></i></div><span id="progLabel">Working…</span></div>
       <p class="err" id="err" hidden></p>
@@ -2060,6 +2072,144 @@ function buildRefButtons(){
   $('refBtns').innerHTML = STRINGS.map((m, i) => `<button class="small" type="button" data-m="${m}" title="Play ${noteName(m)}">${STRING_NAMES[i]}<small>${Math.floor(m / 12) - 1}</small></button>`).join('');
 }
 
+const CHART_WITH_BASS = true;
+// ---------- chord chart input (no recording) ----------
+// Reads chord names from a PDF or text chord sheet, then builds a simple backing band to play along with.
+const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/';
+let pdfjsP = null;
+function loadScript(src){ return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Could not load ' + src)); document.head.appendChild(s); }); }
+function loadPdfJs(){
+  // The worker script is loaded on the page itself, so pdf.js runs without a separate worker file.
+  if (!pdfjsP) pdfjsP = loadScript(PDFJS + 'pdf.min.js').then(() => loadScript(PDFJS + 'pdf.worker.min.js')).then(() => window.pdfjsLib);
+  return pdfjsP.catch(e => { pdfjsP = null; throw e; });
+}
+async function pdfToText(ab){
+  const lib = await loadPdfJs();
+  const doc = await lib.getDocument({data: new Uint8Array(ab)}).promise;
+  const out = [];
+  for (let p = 1; p <= Math.min(doc.numPages, 20); p++){
+    const page = await doc.getPage(p), tc = await page.getTextContent(), rows = [];
+    for (const it of tc.items){
+      if (!it.str || !it.str.trim()) continue;
+      const x = it.transform[4], y = it.transform[5], h = Math.abs(it.transform[3]) || 10;
+      let r = rows.find(r => Math.abs(r.y - y) < h * 0.45);
+      if (!r){ r = {y, items: []}; rows.push(r); }
+      r.items.push({x, s: it.str, w: it.width || 0});
+    }
+    rows.sort((a, b) => b.y - a.y);
+    for (const r of rows){
+      r.items.sort((a, b) => a.x - b.x);
+      let line = '', end = -1e9;
+      for (const it of r.items){ if (line && it.x > end + 1) line += ' '; line += it.s; end = it.x + it.w; }
+      out.push(line);
+    }
+  }
+  return out.join('\n');
+}
+const CHORD_RE = /^[A-G](#|b|♯|♭)?(maj|min|m|M|dim|aug|sus|add|°|ø|\+|-|Δ)?\d*((b|#|♭|♯)\d+|sus\d?|add\d+|maj\d*|no\d)*(\/[A-G](#|b|♯|♭)?)?$/;
+const isChordToken = t => { t = t.replace(/[,;.:]+$/, '').replace(/^\(|\)$/g, ''); return t.length <= 12 && (CHORD_RE.test(t) || /^N\.?C\.?$/i.test(t)); };
+const cleanChord = t => t.replace(/[,;.:]+$/, '').replace(/^\(|\)$/g, '');
+function chartFromText(text){
+  const rows = [], meta = {};
+  for (const raw of text.split(/\r?\n/)){
+    let line = raw.replace(/\t/g, ' ').trim(); if (!line) continue;
+    let m;
+    if (!meta.bpm && ((m = line.match(/\b(\d{2,3})\s*(bpm|beats per minute)\b/i)) || (m = line.match(/\btempo\s*[:=]?\s*(\d{2,3})\b/i)))) meta.bpm = +m[1];
+    if (!meta.key && (m = line.match(/\bkey(?:\s+of)?\s*[:=]?\s*([A-G](?:#|b|♯|♭)?)\s*(m(?:inor)?|maj(?:or)?|min)?\b/i))){
+      meta.key = {tonic: letterPc(m[1][0].toUpperCase(), m[1].slice(1)), mode: m[2] && /^m(in)?/i.test(m[2]) && !/^maj/i.test(m[2]) ? 'minor' : 'major'};
+    }
+    let rep = 1;
+    const rm = line.match(/[(\[]?\s*[x×]\s*(\d)\s*[)\]]?\s*$/i) || line.match(/\b(\d)\s*[x×]\s*$/i);
+    if (rm){ rep = clamp(+rm[1], 1, 8); line = line.slice(0, rm.index).trim(); }
+    line = line.replace(/^\[[^\]]*\]\s*/, '').replace(/^(intro|verse|chorus|pre-?chorus|bridge|outro|solo|interlude|coda|tag|refrain|instrumental|riff|ending|break)\s*\d*\s*[:\-–]?\s*/i, '');
+    if (!line) continue;
+    const toks = line.replace(/\|/g, ' | ').split(/\s+/).filter(t => t && !/^[|/%\-–]+$/.test(t));
+    if (!toks.length) continue;
+    const good = toks.filter(isChordToken);
+    if (good.length / toks.length < 0.75) continue; // a lyric or text line
+    let lineBars;
+    if (line.includes('|')) lineBars = line.split('|').map(c => c.trim()).filter(Boolean).map(c => c === '%' ? '%' : c.split(/\s+/).filter(isChordToken).map(cleanChord).join(' ')).filter(Boolean);
+    else lineBars = good.map(cleanChord);
+    for (let r = 0; r < rep; r++) rows.push(...lineBars);
+  }
+  return {rows: rows.map(r => r.replace(/^N\.?C\.?$/i, 'N')), meta};
+}
+function keyFromChart(bars){
+  const ch = new Array(12).fill(0);
+  for (const b of bars) for (const c of b.chords){ if (c.none) continue; c.iv.forEach((i, k) => { ch[mod12(c.root + i)] += k === 0 ? 2 : 1; }); }
+  return detectKey(ch);
+}
+async function makeBacking(bars, bpm, bpb, withBass){
+  const sr = 22050, spb = 60 / bpm, lead = 0.6, dur = lead + bars.length * bpb * spb + 2.5;
+  if (dur > 660) throw new Error('This chart is longer than 10 minutes at this tempo. Shorten it or raise the tempo.');
+  const ctx = new OAC(1, Math.ceil(dur * sr), sr);
+  const master = ctx.createGain(); master.gain.value = 0.55; master.connect(ctx.destination);
+  const nb = ctx.createBuffer(1, sr, sr), nd = nb.getChannelData(0), rnd = mulberry32(11); for (let i = 0; i < nd.length; i++) nd[i] = rnd() * 2 - 1;
+  const env = (g, t, a, peak, decay) => { g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0008, t + decay); };
+  const kick = t => { const o = ctx.createOscillator(); o.frequency.setValueAtTime(130, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12); const g = ctx.createGain(); env(g, t, 0.002, 0.9, 0.3); o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.32); };
+  const hit = (t, type, f, peak, decay) => { const s = ctx.createBufferSource(); s.buffer = nb; const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.value = f; const g = ctx.createGain(); env(g, t, 0.001, peak, decay); s.connect(fl); fl.connect(g); g.connect(master); s.start(t, rnd() * 0.5); s.stop(t + decay + 0.02); };
+  const pad = (t, midis, len, v) => { for (const m of midis){ const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = midiHz(m); const lp = ctx.createBiquadFilter(); lp.frequency.value = 2400; const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + 0.01); g.gain.setTargetAtTime(v * 0.45, t + 0.02, 0.2); g.gain.setTargetAtTime(0.0001, t + len, 0.04); o.connect(lp); lp.connect(g); g.connect(master); o.start(t); o.stop(t + len + 0.25); } };
+  const bassN = (t, m, len) => { const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = midiHz(m); const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.5, t + 0.01); g.gain.setTargetAtTime(0.3, t + 0.02, 0.2); g.gain.setTargetAtTime(0.0001, t + len, 0.04); o.connect(g); g.connect(master); o.start(t); o.stop(t + len + 0.25); };
+  bars.forEach((bar, bi) => {
+    const t0 = lead + bi * bpb * spb;
+    bar.chords.forEach((c, ci) => {
+      if (c.none) return;
+      const s0 = c.start / 4, s1 = (ci + 1 < bar.chords.length ? bar.chords[ci + 1].start : bpb * 4) / 4;
+      const voicing = c.iv.map(i => nearestPc(mod12(c.root + i), 60, 52, 70));
+      for (let b = s0; b < s1; b++) pad(t0 + b * spb, voicing, spb * 0.85, 0.05);
+      if (withBass) bassN(t0 + s0 * spb, nearestPc(c.bass, 40, 31, 48), (s1 - s0) * spb * 0.95);
+    });
+    for (let b = 0; b < bpb; b++){
+      const t = t0 + b * spb;
+      if (b === 0 || (bpb === 4 && b === 2)) kick(t);
+      if (bpb === 4 ? b % 2 === 1 : b > 0) hit(t, 'bandpass', 1800, bpb === 4 ? 0.5 : 0.3, 0.16);
+      hit(t, 'highpass', 7000, 0.14, 0.05); hit(t + spb / 2, 'highpass', 7000, 0.09, 0.04);
+    }
+  });
+  return {buf: await renderOffline(ctx), lead};
+}
+async function runChart(text, name, bpmIn){
+  stop(); showErr(''); setBusy(true);
+  try {
+    const bpb = S.bpb, {bars} = parseChart(text, bpb);
+    if (!bars.length || bars.every(b => b.chords.every(c => c.none))) throw new Error('No chords were found. Type chord names in step 2, with | between bars, then click Apply chord chart.');
+    const bpm = clamp(Math.round((bpmIn || +$('chartBpm').value || 100) * 10) / 10, 40, 240);
+    progress(0.08, 'Building a backing band for the chart');
+    await tick();
+    const {buf, lead} = await makeBacking(bars, bpm, bpb, CHART_WITH_BASS);
+    S.songBuf = buf; S.fileName = name; S.isDemo = false; S.chartMode = true; S.seed = 1; S.pitch = null;
+    const x = await toMono11k(buf); S.x = x;
+    S.F = await extractFeatures(x, progress);
+    S.bpm = bpm; S.songSwing = false; S.labels = null; S.phase = 0;
+    S.beats = Array.from({length: (bars.length + 2) * bpb}, (_, i) => lead + i * 60 / bpm);
+    S.key = S.chartKey || keyFromChart(bars);
+    $('chartBpm').value = bpm;
+    $('chordText').value = text;
+    songInfo();
+    applyChart(true);
+  } catch (e){ console.error(e); showErr(e && e.message ? e.message : 'The chord chart could not be used.'); }
+  finally { doneProgress(); setBusy(false); regenerate(); }
+}
+async function loadChartFile(file){
+  if (!file) return;
+  showErr('');
+  let text = '';
+  try {
+    if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf'){
+      progress(0.03, 'Reading the chord chart');
+      try { text = await pdfToText(await file.arrayBuffer()); }
+      catch (e){ console.error(e); doneProgress(); showErr('The PDF could not be read. The PDF reader needs an internet connection the first time; if the chart is a scanned picture it has no text to read. You can type the chords in step 2 instead.'); return; }
+    } else text = await file.text();
+  } catch (e){ doneProgress(); showErr('That file could not be opened.'); return; }
+  const {rows, meta} = chartFromText(text);
+  if (!rows.length){ doneProgress(); showErr('No chord names were found in this file. If it is a scanned picture of a chart, type the chords in step 2 and click Apply chord chart.'); return; }
+  S.chartKey = meta.key || null;
+  if (meta.bpm) $('chartBpm').value = meta.bpm;
+  const nm = file.name.replace(/\.(pdf|txt)$/i, '');
+  await runChart(chartToText(rows), nm, meta.bpm || +$('chartBpm').value);
+  toast(`Read ${rows.length} bars from the chart${meta.bpm ? ` at ${meta.bpm} BPM` : ''}${meta.key ? ` in ${keyName(meta.key)}` : ''}.`);
+}
+
 // ---------- playback ----------
 const P = {ctx: null, src: null, songGain: null, bus: null, events: [], idx: 0, timer: null, raf: 0, ctxStart: 0, songStart: 0, playing: false, endAt: 0, noise: null};
 function midiHz(m){ return 440 * Math.pow(2, (m - 69) / 12); }
@@ -2205,7 +2355,7 @@ function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add(
 function progress(p, label){ $('prog').hidden = false; $('progBar').style.width = Math.round(p * 100) + '%'; if (label) $('progLabel').textContent = label + '…'; }
 function doneProgress(){ $('prog').hidden = true; }
 function showErr(msg){ const e = $('err'); e.textContent = msg; e.hidden = !msg; }
-function setBusy(b){ S.busy = b; ['demoBtn','reBeatBtn','shiftBtn','applyChords','newVarBtn','resetVarBtn','playBtn','halfBtn','dblBtn'].forEach(id => $(id).disabled = b); }
+function setBusy(b){ S.busy = b; ['demoBtn','typeChordsBtn','reBeatBtn','shiftBtn','applyChords','newVarBtn','resetVarBtn','playBtn','halfBtn','dblBtn'].forEach(id => $(id).disabled = b); }
 function fillKeySelect(){
   const sel = $('keySel'); let h = '';
   for (let t = 0; t < 12; t++) h += `<option value="${t}-major">${PC[t]} major</option>`;
@@ -2222,7 +2372,9 @@ function updateFacts(){
   $('tsSel').value = String(S.bpb);
 }
 function songInfo(){
-  $('songInfo').innerHTML = S.isDemo
+  $('songInfo').innerHTML = S.chartMode
+    ? `<span class="tag">Chord chart</span><b>${esc(S.fileName)}</b><span class="hint">No recording: playback uses a simple backing band (keys and drums${CHART_WITH_BASS ? ', plus bass' : ''}) at ${S.bpm} BPM. Edit the chords in step 2 and click Apply chord chart.</span>`
+    : S.isDemo
     ? `<span class="tag">Example</span><b>Built-in demo track</b><span class="hint">A synthesized band playing G, Em, C, D at 96 BPM. Choose your own song above to replace it.</span>`
     : `<span class="tag">Your song</span><b>${esc(S.fileName)}</b><span class="hint">${fmtTime(S.F.dur)} long</span>`;
 }
@@ -2248,7 +2400,7 @@ function applyChart(silent){
   const {bars, bad} = parseChart($('chordText').value, S.bpb);
   if (bad.length && !silent) toast('Could not read: ' + bad.slice(0, 4).join(', '));
   if (!bars.length){ showErr('The chord chart is empty. Add at least one chord.'); return; }
-  const ints = barIntensities(bars.length);
+  const ints = S.chartMode ? bars.map(() => 0.6) : barIntensities(bars.length);
   bars.forEach((b, i) => b.intensity = ints[i]);
   S.bars = bars;
   S.kicks = detectKicks(bars.length);
@@ -2265,6 +2417,7 @@ function regenerate(){
   const part = $('partSel').value;
   $('genCtl').hidden = part === 'transcribe';
   $('newVarBtn').disabled = $('resetVarBtn').disabled = part === 'transcribe' || S.busy;
+  if (part === 'transcribe' && S.chartMode){ $('partSel').value = 'both'; toast('Transcription needs a real recording. Load a song file to use it.'); return regenerate(); }
   if (part === 'transcribe'){
     $('soloRange').hidden = true;
     if (!S.pitch){ runTranscription(); return; }
@@ -2322,7 +2475,7 @@ function regenerate(){
 async function runAnalysis(buf, name, isDemo){
   stop(); showErr(''); setBusy(true);
   try {
-    S.songBuf = buf; S.fileName = name; S.isDemo = isDemo; S.seed = 1; S.pitch = null;
+    S.songBuf = buf; S.fileName = name; S.isDemo = isDemo; S.seed = 1; S.pitch = null; S.chartMode = false; S.chartKey = null;
     progress(0.04, 'Preparing audio');
     await tick();
     let x = await toMono11k(buf);
@@ -2347,6 +2500,7 @@ async function runAnalysis(buf, name, isDemo){
 }
 async function loadFile(file){
   if (!file) return;
+  if (/\.(pdf|txt)$/i.test(file.name)) return loadChartFile(file);
   if (/\.m4p$/i.test(file.name)){
     showErr('This is a copy-protected Apple Music download (.m4p), which web browsers cannot play or analyze. Use a song you bought from the iTunes Store (those are .m4a files with no copy protection), or an MP3, WAV or CD rip.');
     return;
@@ -2395,19 +2549,31 @@ const drop = $('drop');
 drop.addEventListener('drop', e => { const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) loadFile(f); });
 $('demoBtn').addEventListener('click', loadDemo);
 const needSong = () => { if (!S.F){ toast('Load a song first.'); return true; } return false; };
-$('halfBtn').addEventListener('click', () => { if (needSong()) return; stop(); analyzeBeats(clamp(S.bpm / 2, 40, 240), false); toast('Tempo halved. Chords and guitar part updated.'); });
-$('dblBtn').addEventListener('click', () => { if (needSong()) return; stop(); analyzeBeats(clamp(S.bpm * 2, 40, 240), false); toast('Tempo doubled. Chords and guitar part updated.'); });
+$('halfBtn').addEventListener('click', () => { if (needSong()) return; if (S.chartMode) return runChart($('chordText').value, S.fileName, S.bpm / 2); stop(); analyzeBeats(clamp(S.bpm / 2, 40, 240), false); toast('Tempo halved. Chords and guitar part updated.'); });
+$('dblBtn').addEventListener('click', () => { if (needSong()) return; if (S.chartMode) return runChart($('chordText').value, S.fileName, S.bpm * 2); stop(); analyzeBeats(clamp(S.bpm * 2, 40, 240), false); toast('Tempo doubled. Chords and guitar part updated.'); });
 $('reBeatBtn').addEventListener('click', () => {
   if (needSong()) return;
   const v = parseFloat($('bpm').value);
   if (!(v >= 40 && v <= 240)){ toast('Enter a tempo between 40 and 240 BPM.'); return; }
+  if (S.chartMode){ runChart($('chordText').value, S.fileName, v); return; }
   stop(); analyzeBeats(v, false); toast('Beat re-checked at ' + v + ' BPM.');
 });
 $('bpm').addEventListener('keydown', e => { if (e.key === 'Enter') $('reBeatBtn').click(); });
 $('keySel').addEventListener('change', () => { const [t, m] = $('keySel').value.split('-'); S.key = {tonic: +t, mode: m}; if (S.F){ updateFacts(); regenerate(); } });
-$('tsSel').addEventListener('change', () => { S.bpb = +$('tsSel').value; if (!S.F) return; stop(); S.phase = choosePhase(S.labels, S.beatLow, S.bpb); redetectChart(); toast('Bars regrouped in ' + S.bpb + '/4.'); });
-$('shiftBtn').addEventListener('click', () => { if (needSong()) return; stop(); S.phase = (S.phase + 1) % S.bpb; redetectChart(); toast('Bar 1 now starts at ' + fmtTime(timeAt(0, 0)) + '.'); });
-$('applyChords').addEventListener('click', () => { if (needSong()) return; stop(); applyChart(false); toast('Chord chart applied.'); });
+$('tsSel').addEventListener('change', () => { S.bpb = +$('tsSel').value; if (!S.F) return; if (S.chartMode) return runChart($('chordText').value, S.fileName, S.bpm); stop(); S.phase = choosePhase(S.labels, S.beatLow, S.bpb); redetectChart(); toast('Bars regrouped in ' + S.bpb + '/4.'); });
+$('shiftBtn').addEventListener('click', () => { if (needSong()) return; if (S.chartMode){ toast('With a chord chart, bar 1 is always the first chord.'); return; } stop(); S.phase = (S.phase + 1) % S.bpb; redetectChart(); toast('Bar 1 now starts at ' + fmtTime(timeAt(0, 0)) + '.'); });
+$('applyChords').addEventListener('click', () => { if (S.chartMode || !S.F) return runChart($('chordText').value, S.fileName || 'Typed chord chart', S.chartMode ? S.bpm : +$('chartBpm').value); stop(); applyChart(false); toast('Chord chart applied.'); });
+$('chartFile').addEventListener('change', e => { loadChartFile(e.target.files[0]); e.target.value = ''; });
+const chartDrop = $('chartDrop');
+['dragenter','dragover'].forEach(ev => chartDrop.addEventListener(ev, e => { e.preventDefault(); chartDrop.classList.add('over'); }));
+['dragleave','drop'].forEach(ev => chartDrop.addEventListener(ev, e => { e.preventDefault(); chartDrop.classList.remove('over'); }));
+chartDrop.addEventListener('drop', e => { const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) loadChartFile(f); });
+$('typeChordsBtn').addEventListener('click', () => {
+  let t = $('chordText').value.trim();
+  if (!S.chartMode) t = 'G | Em | C | D\nG | Em | C | D';
+  S.chartKey = null;
+  runChart(t, 'Typed chord chart', +$('chartBpm').value).then(() => { $('chordText').focus(); $('chordText').select(); toast('Replace these example chords with your own, then click Apply chord chart.'); });
+});
 ['inflSel','styleSel','fills','feelSel','kickChk','partSel','soundSel','posSel','scaleSel','soloFrom','soloTo'].forEach(id => $(id).addEventListener('change', regenerate));
 $('busy').addEventListener('input', () => { $('busyVal').textContent = $('busy').value; regenerate(); });
 $('newVarBtn').addEventListener('click', () => { S.seed++; regenerate(); toast('Variation ' + S.seed + ' written.'); });
