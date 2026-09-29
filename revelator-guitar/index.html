@@ -267,6 +267,7 @@ footer .copy{font-weight:600;color:var(--ink)}
           <option value="knopfler">Mark Knopfler (Dire Straits)</option>
           <option value="may">Brian May (Queen)</option>
           <option value="iommi">Tony Iommi (Black Sabbath)</option>
+          <option value="wes">Wes Montgomery (jazz)</option>
         </select>
       </label>
       <label class="f" for="styleSel">Groove (the rhythm style of the song)
@@ -393,7 +394,7 @@ footer .copy{font-weight:600;color:var(--ink)}
       <button class="small" id="saveMidiBtn" type="button">Save MIDI for your DAW</button>
     </div>
     <div class="legend">
-      <span><code>0–24</code> fret</span><span>stacked numbers = power chord</span><span><code>x</code> muted</span><span><code>PM ===</code> palm mute</span>
+      <span><code>0–24</code> fret</span><span>stacked numbers = power chord or octave</span><span><code>x</code> muted</span><span><code>PM ===</code> palm mute</span>
       <span><code>h</code> hammer-on</span><span><code>p</code> pull-off</span><span><code>/ \</code> slide up / down</span><span><code>b</code> bend up a whole step</span><span><code>~</code> vibrato</span>
       <span>Count above each bar, note length below: <code>w</code> whole, <code>h</code> half, <code>q</code> quarter, <code>e</code> eighth, <code>s</code> 16th, <code>.</code> dotted</span>
       <span>Click any line to play from there</span>
@@ -981,7 +982,9 @@ const GINF = {
   may: {name: 'Brian May', era: 'Queen', groove: 'rock', sound: 'mix', scale: 'key', dens: 0, bend: 1, legato: 0.8, repeat: 0.7, center: 3,
     desc: 'orchestral, melodic leads built from the song’s own scale, with singable phrases and lyrical bends.'},
   iommi: {name: 'Tony Iommi', era: 'Black Sabbath', groove: 'metal', sound: 'mix', pos: 'low', pedal: 0.5, scale: 'blues', dens: 0.05, bend: 1, legato: 1, repeat: 0.6, center: 0,
-    desc: 'heavy, doomy riffs down low with the flat-five blues note, and fast pentatonic solos.'}
+    desc: 'heavy, doomy riffs down low with the flat-five blues note, and fast pentatonic solos.'},
+  wes: {name: 'Wes Montgomery', era: 'jazz', groove: 'walking', sound: 'single', scale: 'key', dens: -0.05, bend: 0.1, legato: 0.5, repeat: 0.7, center: -1, octaves: true,
+    desc: 'warm, thumb-picked jazz: swinging single-note lines that build into his famous octave melodies, with almost no bends.'}
 };
 
 // Scale for riffs, as intervals above the current chord's root, so the riff moves with the chords.
@@ -1193,6 +1196,10 @@ function generateSolo(bars, cfg, from, to){
         const nt = {bar: bi, step: st, dur, midi: m, part: 'solo'};
         if (dur >= 4 && pcs.has(mod12(m - 2)) && m - 2 >= lo && rng() < Math.min(0.95, (last ? 0.45 : 0.18) * (INF ? INF.bend : 1))) nt.bend = 2;
         else if (dur >= 4 && last) nt.vib = true;
+        // Octave melodies (Wes Montgomery): more of them as the solo builds.
+        if (INF && INF.octaves && !nt.bend && rng() < (pr < 0.3 ? 0.15 : pr < 0.6 ? 0.6 : 0.9)){
+          nt.oct = true; if (m - 12 >= ABS_LO + 5) nt.midi = m - 12;
+        }
         notes.push(nt);
         pos += dd;
       });
@@ -1207,7 +1214,7 @@ function addTechniques(notes, cfg){
   const rng = mulberry32(cfg.seed * 31 + 5), spb = cfg.bpb * 4;
   for (let i = 1; i < notes.length; i++){
     const a = notes[i - 1], b = notes[i];
-    if (a.part !== 'solo' || b.part !== 'solo' || a.dead || b.dead || a.bend || b.bend || a.string !== b.string) continue;
+    if (a.part !== 'solo' || b.part !== 'solo' || a.dead || b.dead || a.bend || b.bend || a.oct || b.oct || a.string !== b.string) continue;
     const adjacent = (a.bar === b.bar && a.step + a.dur === b.step) || (b.bar === a.bar + 1 && b.step === 0 && a.step + a.dur === spb);
     if (!adjacent) continue;
     const iv = b.midi - a.midi, ai = Math.abs(iv);
@@ -1223,6 +1230,15 @@ function assignFingering(notes){
   const NS = STRINGS.length;
   const candsFor = nt => {
     const a = [], fm = nt.midi - (nt.bend || 0);
+    if (nt.oct){
+      // Octave shape: the note plus the same note an octave up, two strings higher.
+      for (let s = 0; s <= NS - 3; s++){
+        const f = fm - STRINGS[s], f8 = fm + 12 - STRINGS[s + 2];
+        if (f >= 1 && f <= FRETS && f8 >= 1 && f8 <= FRETS && Math.abs(f8 - f) <= 3) a.push({s, f, x: [{s: s + 2, f: f8}]});
+      }
+      if (a.length) return a;
+      nt.oct = false;
+    }
     if (nt.power){
       for (let s = 0; s <= Math.min(2, NS - 2); s++){
         const f = fm - STRINGS[s], f5 = fm + 7 - STRINGS[s + 1];
@@ -1750,7 +1766,7 @@ function buildTabPdf(){
   const partTxt = meta.part === 'transcribe' ? 'Transcribed from the recording (melody or lead; check it by ear)' : meta.part === 'riff' ? 'Riff' : meta.part === 'solo' ? 'Lead solo' : `Riff, with a lead solo in bars ${meta.soloFrom + 1}-${meta.soloTo + 1}`;
   const extra = [`Part: ${partTxt}`, meta.part !== 'riff' && meta.part !== 'transcribe' ? `Solo scale: ${meta.scaleName}` : '', meta.swing ? 'Swing feel: play eighth notes as triplets' : ''].filter(Boolean).join('   ·   ');
   if (extra){ pdf.text(ML, y, extra, 9.5, 'F1', GRAY); y += 13; }
-  pdf.text(ML, y, 'How to read it: each line of the staff is a string (low E at the bottom); numbers are frets; stacked numbers are power chords; x is muted.', 8.5, 'F3', GRAY); y += 11;
+  pdf.text(ML, y, 'How to read it: each line of the staff is a string (low E at the bottom); numbers are frets; stacked numbers are power chords or octaves; x is muted.', 8.5, 'F3', GRAY); y += 11;
   pdf.text(ML, y, 'Curved arrow with "full" = bend up a whole step. Straight line between notes = slide. Arc with h / p = hammer-on / pull-off.', 8.5, 'F3', GRAY); y += 11;
   pdf.text(ML, y, 'Wavy line = vibrato. P.M. = palm mute.', 8.5, 'F3', GRAY); y += 11;
   if (SHOWN){ pdf.text(ML, y, 'Sheet music: treble clef, written an octave above where the guitar sounds (the standard for guitar). The tab below shows where to play each note.', 8.5, 'F3', GRAY); y += 11; }
@@ -2455,7 +2471,7 @@ function regenerate(){
     else if (kickLock && !G.noKick && ksum) kickTxt = ` Kick found on ${ksum}; the riff adds notes on those hits.`;
   }
   const soloTxt = part === 'riff' ? '' : ` Solo scale: ${info.name}.`;
-  $('styleNote').textContent = (part === 'solo' ? '' : lead) + (S.swing ? ' Swing feel on.' : '') + kickTxt + soloTxt;
+  $('styleNote').textContent = (part === 'solo' && !INF ? '' : lead) + (S.swing ? ' Swing feel on.' : '') + kickTxt + soloTxt;
   S.autoStyle = style;
   const cfg = {bpb: S.bpb, style, complexity: +$('busy').value, fills: $('fills').checked, seed: S.seed, key: S.key,
     kicks: S.kicks && S.kicks.perBar, kickLock, lockGroove: choice !== 'auto', sound: $('soundSel').value === 'mix' && INF && INF.sound ? INF.sound : $('soundSel').value, pos: $('posSel').value === 'low' && INF && INF.pos ? INF.pos : $('posSel').value, flavor, inf: INF, pedal: INF ? INF.pedal : undefined};
