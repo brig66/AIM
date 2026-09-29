@@ -267,6 +267,30 @@ footer .copy{font-weight:600;color:var(--ink)}
         </label>
         <label class="row" style="gap:8px;font-size:14px;align-self:end;padding-bottom:8px;flex-wrap:nowrap" for="kickChk"><input type="checkbox" id="kickChk" checked> Lock to the kick drum</label>
       </div>
+      <label class="f" for="inflSel">Play it in the style of
+        <select id="inflSel">
+          <option value="none">No one in particular (use the groove)</option>
+            <option value="mccartney">Paul McCartney (The Beatles)</option>
+            <option value="entwistle">John Entwistle (The Who)</option>
+            <option value="squire">Chris Squire (Yes)</option>
+            <option value="geddy">Geddy Lee (Rush)</option>
+            <option value="lemmy">Lemmy Kilmister (Motörhead)</option>
+            <option value="jamerson">James Jamerson (Motown)</option>
+            <option value="kaye">Carol Kaye (The Wrecking Crew)</option>
+            <option value="jaco">Jaco Pastorius (Weather Report)</option>
+            <option value="erskine">Damian Erskine (6-string jazz and Latin fusion)</option>
+            <option value="gwizdala">Janek Gwizdala (Mike Stern, Wayne Shorter)</option>
+            <option value="jpj">John Paul Jones (Led Zeppelin)</option>
+            <option value="harris">Steve Harris (Iron Maiden)</option>
+            <option value="flea">Flea (Red Hot Chili Peppers)</option>
+            <option value="bootsy">Bootsy Collins (Parliament-Funkadelic)</option>
+            <option value="edwards">Bernard Edwards (Chic)</option>
+            <option value="prestia">Rocco Prestia (Tower of Power)</option>
+            <option value="dunn">Donald "Duck" Dunn (Booker T. & the M.G.’s)</option>
+            <option value="pino">Pino Palladino (D)</option>
+            <option value="sting">Sting (The Police)</option>
+        </select>
+      </label>
       <label class="f" for="lineSel">Bass line type
         <select id="lineSel">
           <option value="groove">Follow the groove above</option>
@@ -900,6 +924,70 @@ function nearestPc(pc, ref, lo, hi){
   return best;
 }
 const fitAbs = p => { while (p < ABS_LO) p += 12; while (p > ABS_HI) p -= 12; return p; };
+// Bassists whose style can guide the line. Each one is a set of rhythm templates plus a few tendencies:
+// reg = preferred register, busy = busyness adjustment, chrom = extra chromatic approach notes,
+// fillEvery / fillBeats = how often and how long the fills are. These are original lines in each player's style.
+const INFLUENCES = {
+  mccartney: {name: 'Paul McCartney', era: 'The Beatles', reg: 'mid', busy: 0, chrom: 0.3,
+    desc: 'melodic lines that sing on their own: walking between chord tones, passing notes and bouncy eighths in the middle register.',
+    levels: [["R.......5...P.A.","R...3...5...A..."],["R.R.5.3.P...C.A.","R...3.5.8.5.3.A.","R..5R.3.5.P.C.A."],["R.R.3.5.8.5.P.A.","R.3.5.8.H.8.P.A.","R..5R.3.5.8.P.A."]]},
+  entwistle: {name: 'John Entwistle', era: 'The Who', reg: 'mid', busy: 1, chrom: 0.3, fillEvery: 2, fillBeats: 2,
+    desc: 'busy, trebly lead bass: fast 16th-note runs, high flourishes and a fill at the end of almost every phrase.',
+    levels: [["R.R.R.R.R.R.8.5.","R.8.R.8.R.R.5.A."],["R.RR8.R.5.RR8.5A","RR8.R.5.RR8.5.PA"],["RRR8RR5RRRR8R5PA","R.RR8RR5HR8R5RPA"]]},
+  squire: {name: 'Chris Squire', era: 'Yes', reg: 'mid', busy: 0, chrom: 0.2,
+    desc: 'aggressive, melodic counter-lines: octave leaps, fifths and syncopated pushes, played with a pick in the upper register.',
+    levels: [["R.......8...5...","R..8..5.R.....A."],["R..8.5R.3..8.5A.","R.8..5.8R..3.5.A"],["R.8R.58.R3.8H5.A","R.8.5R8.3.8R5.HA"]]},
+  geddy: {name: 'Geddy Lee', era: 'Rush', reg: 'standard', busy: 1, chrom: 0.2, fillEvery: 4,
+    desc: 'driving 16th-note syncopation with octaves and quick fills: busy, but locked to the drummer.',
+    levels: [["R.R.R.R.R.R.8.R.","R...R.8.R...5.A."],["R.RR8.R.5.RR8.5A","R.R8.R5.R.R8.R5A"],["RRR8R.R5RRR8R.5A","R.RR8RR5R.RR8R5A"]]},
+  lemmy: {name: 'Lemmy Kilmister', era: 'Motörhead', reg: 'low', busy: 0, chrom: 0, noFills: true,
+    desc: 'bass played like a rhythm guitar: relentless, loud eighth notes pinned to the root, low and distorted.',
+    levels: [["R.R.R.R.R.R.R.R."],["R.R.R.R.R.R.R.R.","RRR.R.R.RRR.R.R."],["RRRRRRRRRRRRRRRR","R.R.RRR.R.R.RRR."]]},
+  jamerson: {name: 'James Jamerson', era: 'Motown', reg: 'standard', busy: 1, chrom: 0.9,
+    desc: 'syncopated Motown lines: 16th-note pickups, ghost notes, chromatic approach notes and anticipations, rarely repeating a bar exactly.',
+    levels: [["R.....R.5..xR.A.","R..R..5.8...P.A."],["R..xR.P.5.xC.PA.","R.PR..5.8.xR.PA.","R..R.xP.5..C.PA."],["R.xRP.C5.xPR8.PA","RxPR.x5.8xPC.xPA"]]},
+  kaye: {name: 'Carol Kaye', era: 'The Wrecking Crew', reg: 'standard', busy: 0, chrom: 0.4,
+    desc: 'clean, picked studio-pop lines: root, fifth and octave patterns with syncopated eighths and melodic passing notes.',
+    levels: [["R.......5.....A.","R.....R.5......."],["R.8.5..R.P.5.A..","R...5..R8.5.3.A.","R..R..5.8.5.R.A."],["R.8.5.R.P.5.8.A.","R.8R.5.8.P.5R.A."]]},
+  jaco: {name: 'Jaco Pastorius', era: 'Weather Report', reg: 'mid', busy: 1, chrom: 0.7,
+    desc: 'fluid 16th-note funk with ghost notes, chromatic passing tones and melodic leaps.',
+    levels: [["R..x..R.5..x.PA.","R.xR..8.5.x..PA."],["R.xR8x5xRx8xP.xA","RxR.8x5xP.x8xPA."],["RxRx8x5xRxPx8xPA","RxRP8x5xRxPH8xPA"]]},
+  erskine: {name: 'Damian Erskine', era: '6-string jazz and Latin fusion', reg: 'mid', busy: 0, chrom: 0.5,
+    desc: 'supportive 6-string grooves that bubble under the band: syncopated Latin and fusion lines with ghost notes, smooth passing tones and melodic moves up the neck.',
+    levels: [["R.....R.5..x..A.","R..x..5.R.....A."],["R..xR.5.P..xC.A.","R.x.5..RP.x.5.A.","R..R.x5.8..xP.A."],["R.xR5.xP8.xR5.PA","R..xR.5xP.8x5.PA"]]},
+  gwizdala: {name: 'Janek Gwizdala', era: 'Mike Stern, Wayne Shorter', reg: 'mid', busy: 0, chrom: 0.6,
+    desc: 'lyrical, legato modern-jazz lines: flowing 16th-note phrases that mix funk and hip-hop pocket with singing melodic moves and chromatic passing notes.',
+    levels: [["R.......5..R.PA.","R......3.5...PA."],["R.3.5..R.P3.5.PA","R..5.3.RP.5.8.PA","R.3..5R.3.P5.PA."],["R.3.5P.R3.5.8PHA","R35.P3R.5PH8.5PA"]]},
+  jpj: {name: 'John Paul Jones', era: 'Led Zeppelin', reg: 'standard', busy: 0, chrom: 0.6,
+    desc: 'melodic, bluesy rock lines that mix riffs, walking passages and chromatic runs into the next chord.',
+    levels: [["R.......5.....A.","R...R...5...P.A."],["R.R.5.6.b.6.5.A.","R..R3.5.8.b.5.PA"],["R.R3.5R6.b8.5P.A","R.3.5.6.b.8.P.PA"]]},
+  harris: {name: 'Steve Harris', era: 'Iron Maiden', reg: 'low', busy: 0, chrom: 0.1, fillEvery: 8,
+    desc: 'galloping metal: an eighth and two 16ths over and over, played fast and clean in the low register.',
+    levels: [["R.RRR.RRR.RRR.RR"],["R.RRR.RRR.RRR.RR","R.RR5.55R.RR8.88"],["R.RRR.RRR.RR5.55","R.RR8.88R.RR5.PA"]]},
+  flea: {name: 'Flea', era: 'Red Hot Chili Peppers', reg: 'standard', busy: 1, chrom: 0.3,
+    desc: 'slap-style funk: popped octaves, dead notes and punchy rests, aggressive and rhythmic.',
+    levels: [["R_8_R.x8_R_x8.xA","R..x8_.xR..x8_x_"],["R_8_R.x8_R_x8.xA","Rx8xR_x8_Rx8_xA_"],["Rx8xRx8xRx8x5xPA","R_8xRx8_Rx8x5x8A"]]},
+  bootsy: {name: 'Bootsy Collins', era: 'Parliament-Funkadelic', reg: 'standard', busy: 0, chrom: 0.3,
+    desc: 'space funk: a big fat note on the one, lots of room, then a sly syncopated answer later in the bar.',
+    levels: [["R.........x.8...","R.......x...8.A."],["R.....x.8..R..A.","R......x8.R...A."],["R...x.x.8.xR.xA.","R..x..x.8.xR8.A."]]},
+  edwards: {name: 'Bernard Edwards', era: 'Chic', reg: 'standard', busy: 1, chrom: 0.3,
+    desc: 'disco-funk: syncopated octaves and busy 16th pickups that dance around the downbeat.',
+    levels: [["R...8...R...8..."],["R.8.xR8.R.8.xRA.","R8.8.R8.R8.8.RA."],["R.8RxR8.R8.8xRA.","R8x8.R8xR8x8.R8A"]]},
+  prestia: {name: 'Rocco Prestia', era: 'Tower of Power', reg: 'standard', busy: 1, chrom: 0.4,
+    desc: 'finger-funk: a nonstop stream of staccato 16ths mixing ghost notes with chord tones.',
+    levels: [["RxRxRx5xRxRx5xAx"],["RxRxRx5xRxRx5xAx","RxRx8x5xRxPx5xAx"],["RxRPRx5xRx8x5PAx","RxRx8xRx5xPx8xAx"]]},
+  dunn: {name: 'Donald "Duck" Dunn', era: 'Booker T. & the M.G.’s', reg: 'standard', busy: 0, chrom: 0.3,
+    desc: 'Stax soul economy: tight root-and-fifth grooves with a pickup into each bar, never in the way.',
+    levels: [["R.......5.......","R.....R.5......."],["R.....R.5...R.A.","R..R....5...P.A."],["R..R..R.5..5.PA.","R.R...R.5.8.P.A."]]},
+  pino: {name: 'Pino Palladino', era: "D'Angelo, John Mayer Trio", reg: 'standard', busy: -1, chrom: 0.7,
+    desc: 'laid-back neo-soul: sparse notes with chromatic slides into chord tones and plenty of space.',
+    levels: [["R.........R.....","R.......x.....A."],["R......R..5..PA.","R...._.R.P5...A."],["R..x...R.P5.x.PA","R......RxP5.8.PA"]]},
+  sting: {name: 'Sting', era: 'The Police', reg: 'standard', busy: 0, chrom: 0.1,
+    desc: 'reggae-rock economy: sparse, bouncing roots and fifths that leave big gaps for the drums.',
+    levels: [["R.......R.......","R...........R..."],["R..._.R.R..._.R.","R.....R.R...._.."],["R..._.R.5..._.R.","R.R._.R.R..._5R."]]}
+};
+for (const [k, v] of Object.entries(INFLUENCES)) GROOVES['inf_' + k] = {name: 'In the style of ' + v.name, desc: v.desc, levels: v.levels, noKick: true, infl: v};
+
 const MODES = {
   ionian: ['Major (Ionian)', [0,2,4,5,7,9,11]], dorian: ['Dorian', [0,2,3,5,7,9,10]], phrygian: ['Phrygian', [0,1,3,5,7,8,10]],
   lydian: ['Lydian', [0,2,4,6,7,9,11]], mixo: ['Mixolydian', [0,2,4,5,7,9,10]], aeolian: ['Natural minor (Aeolian)', [0,2,3,5,7,8,10]],
@@ -933,7 +1021,9 @@ function intervalOf(chord, want){
 }
 
 function generateBass(bars, cfg){
-  const {bpb, style, complexity, register, fills, seed, key, kicks} = cfg;
+  const {bpb, style, register, seed, key, kicks} = cfg;
+  const INF = (GROOVES[style] || {}).infl;
+  const complexity = clamp(cfg.complexity + (INF ? INF.busy : 0), 1, 5), fills = cfg.fills && !(INF && INF.noFills);
   const G = GROOVES[style] || GROOVES.rock;
   const rng = mulberry32(seed * 7919 + 13);
   const pick = arr => arr[Math.floor(rng() * arr.length)];
@@ -947,14 +1037,15 @@ function generateBass(bars, cfg){
       for (let s = c.start; s < end; s++) segAt[bi][s] = si;
     });
   });
+  const register2 = INF && register === 'full' ? INF.reg : register;
   const reg = bi => {
-    if (register === 'full'){
+    if (register2 === 'full'){
       const it = bars[bi].intensity ?? 0.5;
       const base = Math.max(31, ABS_LO + 3);
       const center = Math.round(base + (1 - it) * 12 + (style === 'melodic' ? 5 : 0) - (style === 'metal' ? 4 : 0));
       return {lo: ABS_LO, hi: ABS_HI, center: clamp(center, ABS_LO, ABS_HI - 12)};
     }
-    const r = REG[register] || REG.standard;
+    const r = REG[register2] || REG.standard;
     const lo = Math.max(r.lo, ABS_LO), hi = Math.min(r.hi, ABS_HI);
     return {lo, hi, center: clamp(r.center + (style === 'melodic' ? 4 : 0), lo + 2, hi - 2)};
   };
@@ -971,7 +1062,7 @@ function generateBass(bars, cfg){
     return anchors[si];
   };
   const nextTarget = si => { for (let j = si + 1; j < segs.length; j++){ const a = anchorFor(j); if (a != null) return {a, chord: segs[j].chord}; } return null; };
-  const phraseLen = complexity >= 4 ? 4 : 8;
+  const phraseLen = INF && INF.fillEvery ? INF.fillEvery : complexity >= 4 ? 4 : 8;
   const tplCache = new Map();
   const notes = [];
   const levels = bpb === 3 && G.levels3 ? G.levels3 : G.levels;
@@ -998,7 +1089,7 @@ function generateBass(bars, cfg){
     const isLast = bi === bars.length - 1;
     if (isLast) tpl = 'R' + '.'.repeat(spb - 1);
     else if (fills && complexity > 1 && (bi + 1) % phraseLen === 0){
-      const fb = complexity >= 4 && bpb === 4 ? 2 : 1;
+      const fb = bpb === 4 && ((INF && INF.fillBeats === 2) || complexity >= 4) ? 2 : 1;
       const cell = style === 'walking' || style === 'waltz' || style === 'bossa' ? 'S...' : (level >= 1 && complexity >= 3) || style === 'metal' ? 'SSSS' : 'S.S.';
       tpl = tpl.slice(0, spb - fb * 4) + cell.repeat(fb);
     }
@@ -1055,7 +1146,7 @@ function generateBass(bars, cfg){
           const T = nt.a, from = prev ?? anchor;
           const side = from > T ? 1 : from < T ? -1 : (rng() < 0.5 ? 1 : -1);
           const nscale = chordScale(nt.chord, key);
-          const opts = [[T + side, complexity >= 3 ? 3 : 1], [scaleStep(T, side, nscale), 3], [side > 0 ? T + 7 : T - 5, 2]];
+          const opts = [[T + side, (complexity >= 3 ? 3 : 1) + (INF ? INF.chrom * 5 : 0)], [scaleStep(T, side, nscale), 3], [side > 0 ? T + 7 : T - 5, 2]];
           if (complexity >= 4) opts.push([T - side, 1]);
           let tot = opts.reduce((a, o) => a + o[1], 0), x = rng() * tot;
           midi = opts[0][0]; for (const o of opts){ x -= o[1]; if (x <= 0){ midi = o[0]; break; } }
@@ -1825,12 +1916,16 @@ function regenerate(){
   $('modeBase').disabled = S.mode === 'auto';
   const line = $('lineSel').value;
   $('styleSel').disabled = line !== 'groove';
+  const infl = $('inflSel').value;
+  $('styleSel').disabled = line !== 'groove' || infl !== 'none';
   let choice = $('styleSel').value;
   if (line !== 'groove') choice = line;
+  else if (infl !== 'none') choice = 'inf_' + infl;
   let style = choice, lead;
   if (choice === 'auto'){ const a = autoStyle(); style = a.style; lead = `Auto picked ${GROOVES[style].name} (${a.why}). Choose a groove above to lock the bass into a specific rhythm.`; }
   else lead = `${GROOVES[style].name}: ${GROOVES[style].desc}`;
   if (line !== 'groove') lead += ' (Bass line type is overriding the groove.)';
+  else if (infl !== 'none') lead = `In the style of ${INFLUENCES[infl].name}: ${INFLUENCES[infl].desc}` + ($('regSel').value === 'full' ? '' : ' Your Register choice is kept; set Register to Full range to use this player\u2019s usual register.');
   const G = GROOVES[style], feel = $('feelSel').value;
   S.swing = feel === 'swing' || (feel === 'auto' && (!!G.swing || ((choice === 'auto' || choice === 'kick') && !!S.songSwing)));
   const kickLock = $('kickChk').checked;
@@ -1939,7 +2034,7 @@ $('keySel').addEventListener('change', () => { const [t, m] = $('keySel').value.
 $('tsSel').addEventListener('change', () => { S.bpb = +$('tsSel').value; if (!S.F) return; stop(); S.phase = choosePhase(S.labels, S.beatLow, S.bpb); redetectChart(); toast('Bars regrouped in ' + S.bpb + '/4.'); });
 $('shiftBtn').addEventListener('click', () => { if (needSong()) return; stop(); S.phase = (S.phase + 1) % S.bpb; redetectChart(); toast('Bar 1 now starts at ' + fmtTime(timeAt(0, 0)) + '.'); });
 $('applyChords').addEventListener('click', () => { if (needSong()) return; stop(); applyChart(false); toast('Chord chart applied.'); });
-['srcSel','styleSel','regSel','fills','feelSel','kickChk','lineSel','modeSel','modeBase'].forEach(id => $(id).addEventListener('change', regenerate));
+['srcSel','inflSel','styleSel','regSel','fills','feelSel','kickChk','lineSel','modeSel','modeBase'].forEach(id => $(id).addEventListener('change', regenerate));
 $('busy').addEventListener('input', () => { $('busyVal').textContent = $('busy').value; regenerate(); });
 $('newVarBtn').addEventListener('click', () => { S.seed++; regenerate(); toast('Variation ' + S.seed + ' written.'); });
 $('resetVarBtn').addEventListener('click', () => { S.seed = 1; regenerate(); });
