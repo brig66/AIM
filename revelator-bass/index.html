@@ -313,8 +313,9 @@ footer .copy{font-weight:600;color:var(--ink)}
             <option value="edwards">Bernard Edwards (Chic)</option>
             <option value="prestia">Rocco Prestia (Tower of Power)</option>
             <option value="dunn">Donald "Duck" Dunn (Booker T. & the M.G.’s)</option>
-            <option value="pino">Pino Palladino (D)</option>
+            <option value="pino">Pino Palladino (D’Angelo, John Mayer Trio)</option>
             <option value="sting">Sting (The Police)</option>
+            <option value="chancellor">Justin Chancellor (Tool)</option>
         </select>
       </label>
       <label class="f" for="lineSel">Bass line type
@@ -1018,7 +1019,10 @@ const INFLUENCES = {
     levels: [["R.........R.....","R.......x.....A."],["R......R..5..PA.","R...._.R.P5...A."],["R..x...R.P5.x.PA","R......RxP5.8.PA"]]},
   sting: {name: 'Sting', era: 'The Police', reg: 'standard', busy: 0, chrom: 0.1,
     desc: 'reggae-rock economy: sparse, bouncing roots and fifths that leave big gaps for the drums.',
-    levels: [["R.......R.......","R...........R..."],["R..._.R.R..._.R.","R.....R.R...._.."],["R..._.R.5..._.R.","R.R._.R.R..._5R."]]}
+    levels: [["R.......R.......","R...........R..."],["R..._.R.R..._.R.","R.....R.R...._.."],["R..._.R.5..._.R.","R.R._.R.R..._5R."]]},
+  chancellor: {name: 'Justin Chancellor', era: 'Tool', reg: 'low', busy: 0, chrom: 0.2, fillEvery: 8, fillBeats: 2,
+    desc: 'hypnotic, picked riffs in the low register: repeating root-note ostinatos grouped in threes against the beat, with octave jumps, dark flat sevenths and a gritty tone.',
+    levels: [["R..R..R..R..R.5.","R.....R..L..5.b."],["RR.RR.8.R.RR.5b.","R.R..RL.R..R5.b8","R..R..8..R..5.b."],["RRL.RR8.RRL.R5b8","R.RR.R8.RR.R5bR8","RR.RL.R8.RR.R5b."]]}
 };
 for (const [k, v] of Object.entries(INFLUENCES)) GROOVES['inf_' + k] = {name: 'In the style of ' + v.name, desc: v.desc, levels: v.levels, noKick: true, infl: v};
 
@@ -2407,7 +2411,7 @@ function regenerate(){
   $('styleNote').textContent = lead + (S.swing ? ' Swing feel on.' : '') + kickTxt + ` Passing notes and fills follow ${modeLabel()}.`;
   S.autoStyle = style;
   // Auto tone: follows the chosen player, or the groove when no player is chosen.
-  const TONE_BY_PLAYER = {mccartney: 'pick', entwistle: 'pick', squire: 'pick', geddy: 'pick', kaye: 'pick', lemmy: 'drive', jamerson: 'vintage', dunn: 'vintage', pino: 'vintage', prestia: 'vintage', jaco: 'fretless', flea: 'slap'};
+  const TONE_BY_PLAYER = {mccartney: 'pick', entwistle: 'pick', squire: 'pick', geddy: 'pick', kaye: 'pick', lemmy: 'drive', jamerson: 'vintage', dunn: 'vintage', pino: 'vintage', prestia: 'vintage', chancellor: 'drive', jaco: 'fretless', flea: 'slap'};
   S.toneAuto = infl !== 'none' ? (TONE_BY_PLAYER[infl] || 'finger')
     : ['punk', 'metal'].includes(style) ? 'pick' : ['motown', 'reggae', 'walking', 'twofeel'].includes(style) ? 'vintage' : 'finger';
   const cfg = {bpb: S.bpb, style, complexity: +$('busy').value, register: $('regSel').value, fills: $('fills').checked, seed: S.seed, key: S.key, kicks: S.kicks && S.kicks.perBar, kickLock, lockGroove: choice !== 'auto'};
