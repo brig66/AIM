@@ -379,7 +379,8 @@ footer .copy{font-weight:600;color:var(--ink)}
       </div>
     </div>
     <div class="tools">
-      <button class="small primary" id="savePdfBtn" type="button">Save tab as PDF</button>
+      <button class="small primary" id="savePdfBtn" type="button">Save as PDF</button>
+      <select id="pdfLayout" aria-label="PDF layout" style="width:auto;padding:6px 8px;font-size:13px"><option value="both">PDF: sheet music + tab</option><option value="tab">PDF: tab only</option></select>
       <button class="small" id="copyBtn" type="button">Copy tab</button>
       <button class="small" id="saveTxtBtn" type="button">Save tab (.txt)</button>
       <button class="small" id="saveMidiBtn" type="button">Save MIDI for your DAW</button>
@@ -1426,12 +1427,214 @@ class PdfDoc {
   }
 }
 
+// ---------- standard notation for the PDF ----------
+// Bass and guitar are both written an octave above where they sound: bass in bass clef, guitar in treble clef.
+PdfDoc.prototype.path = function (cmds, w, fill){
+  // cmds: [['m',x,y],['l',x,y],['c',x1,y1,x2,y2,x,y]] in top-down page coordinates
+  const f = v => this.f(v), Y = v => this.Y(v);
+  const body = cmds.map(c => c[0] === 'c' ? `${f(c[1])} ${Y(c[2])} ${f(c[3])} ${Y(c[4])} ${f(c[5])} ${Y(c[6])} c` : `${f(c[1])} ${Y(c[2])} ${c[0]}`).join(' ');
+  this.c.push(fill ? `0 g ${body} f` : `0 G ${f(w)} w 1 J 1 j ${body} S 0 J 0 j`);
+};
+PdfDoc.prototype.ellipse = function (x, y, rx, ry, ang, gray){
+  const c = Math.cos(ang), s = Math.sin(ang), k = 0.5523;
+  this.c.push(`q ${this.f(c * rx)} ${this.f(s * rx)} ${this.f(-s * ry)} ${this.f(c * ry)} ${this.f(x)} ${this.Y(y)} cm ${gray} g 1 0 m 1 ${k} ${k} 1 0 1 c ${-k} 1 -1 ${k} -1 0 c -1 ${-k} ${-k} -1 0 -1 c ${k} -1 1 ${-k} 1 0 c f Q`);
+};
+const SHARP_ORDER = [3, 0, 4, 1, 5, 2, 6], FLAT_ORDER = [6, 2, 5, 1, 4, 0, 3]; // letters F C G D A E B / B E A D G C F (C=0 … B=6)
+const MAJ_SIG = {0: 0, 7: 1, 2: 2, 9: 3, 4: 4, 11: 5, 6: 6, 1: -5, 8: -4, 3: -3, 10: -2, 5: -1};
+function keySigCount(key){ const t = key.mode === 'minor' ? mod12(key.tonic + 3) : key.tonic; return MAJ_SIG[t]; }
+const LETTER_PC = [0, 2, 4, 5, 7, 9, 11];
+function spellNote(midi, sig, key){
+  // Spell by scale degree: in-key notes use the key's letters; out-of-key notes use the usual blues/jazz
+  // spellings (flat 2, 3, 6, 7 in major; sharp 3, 4, 6, 7 and flat 2 in minor).
+  const pc = mod12(midi);
+  const sharps = {0: [0, 0], 1: [0, 1], 2: [1, 0], 3: [1, 1], 4: [2, 0], 5: [3, 0], 6: [3, 1], 7: [4, 0], 8: [4, 1], 9: [5, 0], 10: [5, 1], 11: [6, 0]};
+  const flats  = {0: [0, 0], 1: [1, -1], 2: [1, 0], 3: [2, -1], 4: [2, 0], 5: [3, 0], 6: [4, -1], 7: [4, 0], 8: [5, -1], 9: [5, 0], 10: [6, -1], 11: [6, 0]};
+  let L;
+  if (key){
+    const tL = (sig < 0 ? flats : sharps)[key.tonic][0], rel = mod12(pc - key.tonic);
+    const deg = key.mode === 'minor'
+      ? {0: 0, 1: 1, 2: 1, 3: 2, 4: 2, 5: 3, 6: 3, 7: 4, 8: 5, 9: 5, 10: 6, 11: 6}[rel]
+      : {0: 0, 1: 1, 2: 1, 3: 2, 4: 2, 5: 3, 6: 3, 7: 4, 8: 5, 9: 5, 10: 6, 11: 6}[rel];
+    L = (tL + deg) % 7;
+  } else L = (sig < 0 ? flats : sharps)[pc][0];
+  let alt = pc - LETTER_PC[L]; if (alt > 6) alt -= 12; if (alt < -6) alt += 12;
+  // Keep it readable: no double sharps or flats, and no F flat, C flat, E sharp or B sharp except a minor key's leading tone.
+  const odd = Math.abs(alt) === 2 || (alt === -1 && (L === 3 || L === 0)) || (alt === 1 && (L === 2 || L === 6));
+  if (odd && !(key && key.mode === 'minor' && mod12(pc - key.tonic) === 11 && Math.abs(alt) === 1)){ [L] = (sig < 0 ? flats : sharps)[pc]; alt = pc - LETTER_PC[L]; if (alt > 6) alt -= 12; if (alt < -6) alt += 12; }
+  const oct = Math.floor((midi - alt) / 12) - 1;
+  return {L, alt, d: oct * 7 + L};
+}
+function keyAlter(sig, L){ if (sig > 0) return SHARP_ORDER.slice(0, sig).includes(L) ? 1 : 0; if (sig < 0) return FLAT_ORDER.slice(0, -sig).includes(L) ? -1 : 0; return 0; }
+const NS_SP = 7; // notation line spacing (points)
+function staffGeom(clef, top){
+  const dBottom = clef === 'bass' ? 18 : 30; // G2 or E4 on the bottom line
+  return {dBottom, dTop: dBottom + 8, dMid: dBottom + 4, yOf: d => top + 4 * NS_SP - (d - dBottom) * NS_SP / 2};
+}
+function drawAccidental(pdf, x, y, alt){
+  if (alt === 1){
+    pdf.line(x - 1.2, y - 5.5, x - 1.2, y + 5, 0.7); pdf.line(x + 1.2, y - 5, x + 1.2, y + 5.5, 0.7);
+    pdf.line(x - 3, y - 1, x + 3, y - 2.6, 1.5); pdf.line(x - 3, y + 2.6, x + 3, y + 1, 1.5);
+  } else if (alt === -1){
+    pdf.line(x - 2, y - 8, x - 2, y + 2.2, 0.8);
+    pdf.path([['m', x - 2, y - 1.2], ['c', x + 1, y - 3.6, x + 3.6, y - 1.6, x - 2, y + 2.2]], 1.1);
+  } else {
+    pdf.line(x - 1.8, y - 6, x - 1.8, y + 2.6, 0.7); pdf.line(x + 1.8, y - 2.6, x + 1.8, y + 6, 0.7);
+    pdf.line(x - 1.8, y - 1, x + 1.8, y - 2.4, 1.4); pdf.line(x - 1.8, y + 2.4, x + 1.8, y + 1, 1.4);
+  }
+}
+function drawClef(pdf, clef, x, top){
+  const g = staffGeom(clef, top);
+  if (clef === 'bass'){
+    const yF = g.yOf(24);
+    pdf.dot(x + 3, yF, 2.4, 0);
+    pdf.path([['m', x + 2, yF - 1.5], ['c', x + 3, yF - 9.5, x + 15, yF - 9.5, x + 15, yF + 1], ['c', x + 15, yF + 10, x + 8, yF + 16, x + 0.5, yF + 20]], 2);
+    pdf.dot(x + 19, yF - 3.5, 1.2, 0); pdf.dot(x + 19, yF + 3.5, 1.2, 0);
+  } else {
+    const yG = g.yOf(32), s = NS_SP, P = (dx, dy) => [x + 7 + dx * s, yG + dy * s];
+    const pts = [['m', ...P(0.55, 0)], ['c', ...P(0.55, -0.8), ...P(-0.45, -0.85), ...P(-0.55, 0.05)],
+      ['c', ...P(-0.7, 1.15), ...P(1.55, 1.25), ...P(1.6, 0)], ['c', ...P(1.65, -1.25), ...P(-0.1, -1.9), ...P(-0.1, -3.1)],
+      ['c', ...P(-0.1, -4.2), ...P(1.05, -4.6), ...P(1.0, -3.7)], ['c', ...P(0.95, -2.9), ...P(0.35, -2.4), ...P(0.3, -1.6)],
+      ['l', ...P(0.85, 2.5)], ['c', ...P(0.95, 3.2), ...P(0.05, 3.5), ...P(-0.25, 2.9)]];
+    pdf.path(pts, 1.5);
+    pdf.dot(...P(-0.05, 2.85), 1.9, 0);
+  }
+}
+function drawKeySig(pdf, clef, sig, x, top){
+  const g = staffGeom(clef, top), shift = clef === 'bass' ? -14 : 0;
+  const tS = [38, 35, 39, 36, 33, 37, 34], tF = [34, 37, 33, 36, 32, 35, 31];
+  for (let i = 0; i < Math.abs(sig); i++) drawAccidental(pdf, x + i * 6.5, g.yOf((sig > 0 ? tS : tF)[i] + shift), sig > 0 ? 1 : -1);
+}
+function drawNotationStaff(pdf, x1, x2, top){ for (let i = 0; i < 5; i++) pdf.line(x1, top + i * NS_SP, x2, top + i * NS_SP, 0.5, 0.35); }
+// Split a duration (in 16ths) into written values, so odd lengths become tied notes.
+function splitDur(step, dur){
+  const out = []; let s = step, left = dur;
+  while (left > 0){
+    let v = [16, 12, 8, 6, 4, 3, 2, 1].find(v => v <= left && (v < 4 || s % 4 === 0 || v === 3) && !(v >= 8 && s % 8 !== 0 && v !== 12));
+    if (!v) v = 1;
+    out.push([s, v]); s += v; left -= v;
+  }
+  return out;
+}
+function drawBarNotation(pdf, o){
+  const {ns, X, top, clef, sig, spb, bx, w} = o, g = staffGeom(clef, top), yMid = g.yOf(g.dMid);
+  const alterNow = {};
+  // 8va for bars whose notes climb far above the staff
+  let maxD = -Infinity;
+  const items = [];
+  for (const n of ns){
+    const ms = (n.midis || [n.midi]).map(m => m + 12);
+    const sp = ms.map(m => spellNote(m, sig, o.key));
+    for (const sd of sp) maxD = Math.max(maxD, sd.d);
+    items.push({n, sp});
+  }
+  const ott = maxD > g.dTop + 6 ? 7 : 0;
+  if (ott){ pdf.text(bx + 4, top - 14, '8va', 7.5, 'F3', 0); for (let dx = bx + 18; dx < bx + w - 6; dx += 5) pdf.line(dx, top - 16.5, dx + 2.5, top - 16.5, 0.6, 0); pdf.line(bx + w - 6, top - 16.5, bx + w - 6, top - 12.5, 0.6, 0); }
+  // Rhythm pieces (ties split odd durations)
+  const heads = [];
+  for (const it of items){
+    const parts = it.n.dead ? [[it.n.step, 1]] : splitDur(it.n.step, Math.max(1, it.n.dur));
+    parts.forEach(([s, v], pi) => heads.push({s, v, it, tieNext: pi < parts.length - 1, firstPart: pi === 0}));
+  }
+  const yOfD = d => g.yOf(d - ott);
+  const stemUpFor = ds => { const avg = ds.reduce((a, b) => a + b, 0) / ds.length; return avg - ott < g.dMid; };
+  // Beam groups: 8ths and 16ths inside one beat
+  const groups = []; let cur = null;
+  heads.forEach(h => {
+    const beat = Math.floor(h.s / 4), beamable = h.v <= 3 && !h.it.n.dead;
+    if (beamable && cur && cur.beat === beat && cur.end === h.s){ cur.hs.push(h); cur.end = h.s + h.v; }
+    else { cur = beamable ? {beat, hs: [h], end: h.s + h.v} : null; if (cur) groups.push(cur); }
+  });
+  const inGroup = new Map(); groups.forEach(gp => { if (gp.hs.length > 1) gp.hs.forEach(h => inGroup.set(h, gp)); });
+  const groupDir = new Map(); groups.forEach(gp => { if (gp.hs.length > 1) groupDir.set(gp, stemUpFor(gp.hs.flatMap(h => h.it.sp.map(s => s.d)))); });
+  const stemInfo = new Map();
+  heads.forEach(h => {
+    const x = X(h.s), ds = h.it.sp.map(s => s.d), gp = inGroup.get(h);
+    const up = gp ? groupDir.get(gp) : stemUpFor(ds);
+    const dir = up ? -1 : 1;
+    const hx = x;
+    // Ledger lines
+    for (const d0 of ds){
+      const d = d0 - ott;
+      for (let dd = g.dBottom - 2; dd >= d; dd -= 2) pdf.line(hx - 5.5, g.yOf(dd), hx + 5.5, g.yOf(dd), 0.6, 0);
+      for (let dd = g.dTop + 2; dd <= d; dd += 2) pdf.line(hx - 5.5, g.yOf(dd), hx + 5.5, g.yOf(dd), 0.6, 0);
+    }
+    // Accidentals (on the first written piece only) and noteheads
+    h.it.sp.forEach(sd => {
+      const y = yOfD(sd.d), keyA = keyAlter(sig, sd.L), k = sd.L + ':' + sd.d, now = alterNow[k] ?? keyA;
+      if (h.firstPart && !h.it.n.dead && sd.alt !== now){ drawAccidental(pdf, hx - 9, y, sd.alt); alterNow[k] = sd.alt; }
+      if (h.it.n.dead){ pdf.line(hx - 3, y - 3, hx + 3, y + 3, 1.1, 0); pdf.line(hx - 3, y + 3, hx + 3, y - 3, 1.1, 0); }
+      else if (h.v >= 8){ pdf.ellipse(hx, y, 3.9, 2.8, -0.35, 0); pdf.ellipse(hx, y, 2.6, 1.3, h.v >= 16 ? 0.9 : -0.6, 1); }
+      else pdf.ellipse(hx, y, 3.7, 2.6, -0.35, 0);
+      if ([3, 6, 12].includes(h.v)){ const onLine = (sd.d - ott - g.dBottom) % 2 === 0; pdf.dot(hx + 6.5, y - (onLine ? NS_SP / 2 : 0), 1.1, 0); }
+    });
+    // Stem
+    if (h.v < 16){
+      const ys = ds.map(d => yOfD(d)), yHead = up ? Math.max(...ys) : Math.min(...ys), yFar = up ? Math.min(...ys) : Math.max(...ys);
+      const sx = up ? hx + 3.4 : hx - 3.4;
+      let yEnd = yFar + dir * 23;
+      if (!up && yEnd < yMid) yEnd = yMid; if (up && yEnd > yMid) yEnd = yMid;
+      stemInfo.set(h, {sx, yHead, yEnd, up});
+    }
+    // Tie to the next piece of the same note
+    if (h.tieNext){
+      const nx = X(h.s + h.v), y = yOfD(ds[0]), yy = y + (up ? 5 : -5);
+      pdf.path([['m', hx + 3, yy], ['c', hx + 6, yy + (up ? 4 : -4), nx - 6, yy + (up ? 4 : -4), nx - 3, yy]], 0.8);
+    }
+  });
+  // Beams: level the group's stems to one height
+  groups.forEach(gp => {
+    if (gp.hs.length < 2) return;
+    const inf = gp.hs.map(h => stemInfo.get(h)), up = inf[0].up;
+    const yb = up ? Math.min(...inf.map(i => i.yEnd)) : Math.max(...inf.map(i => i.yEnd));
+    inf.forEach(i => { i.yEnd = yb; });
+    const xa = inf[0].sx, xb = inf[inf.length - 1].sx, th = 2.6, sgn = up ? 1 : -1;
+    pdf.rect(xa, up ? yb : yb - th, xb - xa, th, 0);
+    gp.hs.forEach((h, i) => {
+      if (h.v !== 1) return;
+      const x = inf[i].sx, nxt = gp.hs[i + 1], prv = gp.hs[i - 1], y2 = up ? yb + 4.6 : yb - 4.6 - th;
+      if (nxt && nxt.v === 1) pdf.rect(x, y2, inf[i + 1].sx - x, th, 0);
+      else if (!(prv && prv.v === 1)) pdf.rect(nxt ? x : x - 5, y2, 5, th, 0);
+    });
+    void sgn;
+  });
+  // Stems, then flags for unbeamed eighths and 16ths
+  heads.forEach(h => {
+    const si = stemInfo.get(h); if (!si) return;
+    pdf.line(si.sx, si.yHead, si.sx, si.yEnd, 0.8, 0);
+    if (h.v <= 3 && !inGroup.has(h) && !h.it.n.dead){
+      const d = si.up ? 1 : -1;
+      pdf.path([['m', si.sx, si.yEnd], ['c', si.sx + 1, si.yEnd + d * 4, si.sx + 6, si.yEnd + d * 6, si.sx + 4, si.yEnd + d * 12]], 1);
+      if (h.v === 1) pdf.path([['m', si.sx, si.yEnd + d * 4.5], ['c', si.sx + 1, si.yEnd + d * 8.5, si.sx + 6, si.yEnd + d * 10.5, si.sx + 4, si.yEnd + d * 16]], 1);
+    }
+  });
+  // Rests in the gaps
+  const used = new Array(spb).fill(false);
+  for (const n of ns) for (let k = n.step; k < Math.min(spb, n.step + Math.max(1, n.dur)); k++) used[k] = true;
+  for (let s = 0; s < spb;){
+    if (used[s]){ s++; continue; }
+    let e = s; while (e < spb && !used[e]) e++;
+    for (const [p, v] of splitDur(s, e - s)){
+      const x = X(p) + 1;
+      if (v >= 16 || (v === spb && ns.length === 0)) pdf.rect(x - 4, g.yOf(g.dBottom + 6), 8, 3, 0);
+      else if (v >= 8) pdf.rect(x - 4, g.yOf(g.dBottom + 4) - 3, 8, 3, 0);
+      else if (v >= 4) pdf.poly([[x - 1, yMid - 9], [x + 2.5, yMid - 4], [x - 1.5, yMid], [x + 2.5, yMid + 4], [x - 0.5, yMid + 7]], 1.4, 0);
+      else {
+        pdf.dot(x - 1.8, yMid - 3.5, 1.4, 0); pdf.poly([[x - 1.8, yMid - 2.4], [x + 2.6, yMid - 4]], 0.9, 0); pdf.line(x + 2.6, yMid - 4, x - 0.5, yMid + 7, 0.9, 0);
+        if (v === 1){ pdf.dot(x - 2.8, yMid + 0.5, 1.4, 0); pdf.poly([[x - 2.8, yMid + 1.6], [x + 1.8, yMid]], 0.9, 0); }
+      }
+      if ([3, 6, 12].includes(v)) pdf.dot(x + 6, yMid - 3.5, 1, 0);
+    }
+    s = e;
+  }
+}
+
 function buildTabPdf(){
   const pdf = new PdfDoc(), W = pdf.W, H = pdf.H;
   const ML = 40, MR = 40, MT = 44, MB = 54;
   const bars = S.bars, bpb = S.bpb, spb = bpb * 4, NS = STRINGS.length, meta = S.tabMeta;
   const LS = 9, staffH = (NS - 1) * LS, PREFIX = 18;
-  const avail = W - ML - MR - PREFIX;
+  const SHOWN = !!S.pdfNotation, CLEF = 'bass', SIG = keySigCount(meta.key), NPRE = SHOWN ? Math.max(0, 36 + Math.abs(SIG) * 6.5 - PREFIX) : 0;
+  const avail = W - ML - MR - PREFIX - NPRE;
   const byBar = bars.map(() => []); for (const n of S.notes) byBar[n.bar].push(n);
   const song = safeName(S.isDemo ? 'Built-in demo track' : S.fileName) || 'Song';
   const GRAY = 0.45, LIGHT = 0.62;
@@ -1449,7 +1652,7 @@ function buildTabPdf(){
   bars.forEach((b, bi) => { if (cur.length && (sum + minW[bi] > avail || cur.length >= 4)){ lines.push(cur); cur = []; sum = 0; } cur.push(bi); sum += minW[bi]; });
   if (cur.length) lines.push(cur);
 
-  const sysH = 28 + staffH + 36;
+  const sysH = 28 + staffH + 36 + (SHOWN ? 80 : 0);
   let y = 0, pageNo = 0;
   const newPage = () => {
     pdf.page(); pageNo++;
@@ -1465,33 +1668,36 @@ function buildTabPdf(){
   const extra = [meta.modeLabel ? `Scale guide: ${meta.modeLabel}` : '', meta.swing ? 'Swing feel: play eighth notes as triplets' : ''].filter(Boolean).join('   ·   ');
   if (extra){ pdf.text(ML, y, extra, 9.5, 'F1', GRAY); y += 13; }
   pdf.text(ML, y, 'How to read it: each line of the staff is a string (lowest string at the bottom); numbers are frets; x is a muted note.', 8.5, 'F3', GRAY); y += 11;
+  if (SHOWN){ pdf.text(ML, y, 'Sheet music: bass clef, written an octave above where the bass sounds (the standard for bass). The tab below shows where to play each note.', 8.5, 'F3', GRAY); y += 11; }
   pdf.text(ML, y, 'Stems below the staff show rhythm: stem = quarter note, short stem = half note, open circle = whole note,', 8.5, 'F3', GRAY); y += 11;
   pdf.text(ML, y, 'one beam or flag = eighth note, two = 16th note, dot = dotted. Rests are shown in the gaps.', 8.5, 'F3', GRAY); y += 10;
   pdf.line(ML, y, W - MR, y, 0.6, 0.75); y += 16;
 
   lines.forEach((ln, li) => {
     if (y + sysH > H - MB) newPage();
-    const top = y + 26, bot = top + staffH, rhy = bot + 8;
-    const x0 = ML + PREFIX, sumMin = ln.reduce((a, bi) => a + minW[bi], 0);
+    const nTop = y + 46, top = SHOWN ? nTop + 28 + 34 : y + 26, LT = SHOWN ? nTop - 18 : top, bot = top + staffH, rhy = bot + 8;
+    const x0 = ML + PREFIX + NPRE, sumMin = ln.reduce((a, bi) => a + minW[bi], 0);
     const isLast = li === lines.length - 1;
     const scale = isLast && sumMin < avail * 0.75 ? Math.min(1.35, avail / sumMin) : avail / sumMin;
     const lineW = sumMin * scale;
     // String names and staff lines
     for (let s = 0; s < NS; s++){
       const ly = top + (NS - 1 - s) * LS;
-      pdf.text(ML + PREFIX - 5, ly + 2.6, STRING_NAMES[s], 7, 'F1', GRAY, 'right');
+      pdf.text(x0 - 5, ly + 2.6, STRING_NAMES[s], 7, 'F1', GRAY, 'right');
       pdf.line(x0, ly, x0 + lineW, ly, 0.5, 0.55);
     }
     pdf.line(x0, top, x0, bot, 0.8, 0);
+    if (SHOWN){ drawNotationStaff(pdf, ML + 2, x0 + lineW, nTop); pdf.line(ML + 2, nTop, ML + 2, nTop + 28, 0.8, 0); drawClef(pdf, CLEF, ML + 5, nTop); drawKeySig(pdf, CLEF, SIG, ML + 32, nTop); }
     let bx = x0;
     ln.forEach(bi => {
       const w = minW[bi] * scale, bar = bars[bi], ns = byBar[bi];
       const inner = w - padL(bi) - padR;
       const X = st => bx + padL(bi) + (st / spb) * inner;
       if (bi === 0){ pdf.text(bx + 9, top + staffH / 2 - 1, String(bpb), 13, 'F2', 0, 'center'); pdf.text(bx + 9, top + staffH / 2 + 10, '4', 13, 'F2', 0, 'center'); }
-      pdf.text(bx + 2, top - 17, String(bi + 1), 7.5, 'F2', 0.3);
-      if (bx === x0) pdf.text(bx + 2 + textW(String(bi + 1), 7.5, true) + 5, top - 17, fmtTime(timeAt(bi, 0)), 7, 'F3', LIGHT);
-      for (const c of bar.chords) if (!c.none) pdf.text(X(c.start) - 3, top - 6, c.name, 9, 'F2', 0);
+      if (bi === 0 && SHOWN){ pdf.text(bx + 9, nTop + 12.6, String(bpb), 13, 'F2', 0, 'center'); pdf.text(bx + 9, nTop + 26.6, '4', 13, 'F2', 0, 'center'); }
+      pdf.text(bx + 2, LT - 17, String(bi + 1), 7.5, 'F2', 0.3);
+      if (bx === x0) pdf.text(bx + 2 + textW(String(bi + 1), 7.5, true) + 5, LT - 17, fmtTime(timeAt(bi, 0)), 7, 'F3', LIGHT);
+      for (const c of bar.chords) if (!c.none) pdf.text(X(c.start) - 3, LT - 6, c.name, 9, 'F2', 0);
       // Frets on the strings, with a white box behind each number
       for (const n of ns){
         const ly = top + (NS - 1 - n.string) * LS, x = X(n.step);
@@ -1549,6 +1755,11 @@ function buildTabPdf(){
           p += d;
         }
         s = e2;
+      }
+      if (SHOWN){
+        drawBarNotation(pdf, {ns, X, top: nTop, clef: CLEF, sig: SIG, key: meta.key, spb, bx, w});
+        if (bi === bars.length - 1){ pdf.line(bx + w - 3, nTop, bx + w - 3, nTop + 28, 0.6, 0); pdf.rect(bx + w - 1.6, nTop, 1.6, 28, 0); }
+        else pdf.line(bx + w, nTop, bx + w, nTop + 28, 0.6, 0);
       }
       bx += w;
       const end = bi === bars.length - 1;
@@ -2063,6 +2274,7 @@ $('saveMidiBtn').addEventListener('click', async () => {
 $('savePdfBtn').addEventListener('click', () => {
   if (!S.notes.length) return;
   let bytes;
+  S.pdfNotation = $('pdfLayout').value === 'both';
   try { bytes = buildTabPdf(); } catch (e){ console.error(e); toast('The PDF could not be built. Try again after the tab updates.'); return; }
   const n = 'Revelator bass - ' + safeName(S.isDemo ? 'demo' : S.fileName) + '.pdf';
   saveFile(n, bytes, n, new Blob([bytes], {type: 'application/pdf'}));
