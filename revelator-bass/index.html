@@ -11,7 +11,7 @@
 :root{
   --bg:#E8EBEE; --panel:#FBFCFD; --ink:#14181D; --muted:#56606C; --line:#CFD5DC;
   --accent:#0B6C8A; --accent-ink:#FFFFFF; --brass:#9C7119; --tab-bg:#F3F5F7;
-  --hl:rgba(11,108,138,.11); --warn:#9A4B0B; --string:#8A949F;
+  --hl:rgba(11,108,138,.11); --ok:#1D7A4C; --warn:#9A4B0B; --string:#8A949F;
   --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
   --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
@@ -21,14 +21,14 @@
     color-scheme:dark;
     --bg:#0F1216; --panel:#171B21; --ink:#E3E7EB; --muted:#96A2AF; --line:#2B323B;
     --accent:#55B8D8; --accent-ink:#061820; --brass:#D6A94A; --tab-bg:#12161B;
-    --hl:rgba(85,184,216,.13); --warn:#E39A5B; --string:#5E6975;
+    --hl:rgba(85,184,216,.13); --ok:#4CC38A; --warn:#E39A5B; --string:#5E6975;
   }
 }
 :root[data-theme="dark"]{
   color-scheme:dark;
   --bg:#0F1216; --panel:#171B21; --ink:#E3E7EB; --muted:#96A2AF; --line:#2B323B;
   --accent:#55B8D8; --accent-ink:#061820; --brass:#D6A94A; --tab-bg:#12161B;
-  --hl:rgba(85,184,216,.13); --warn:#E39A5B; --string:#5E6975;
+  --hl:rgba(85,184,216,.13); --ok:#4CC38A; --warn:#E39A5B; --string:#5E6975;
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -108,6 +108,19 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .legend code{font-family:var(--mono);color:var(--ink)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:8px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100% - 32px)}
 .toast.show{opacity:1}
+.tuner{gap:12px}
+.tunerwrap{display:grid;grid-template-columns:minmax(150px,220px) 1fr;gap:16px;align-items:center}
+.tdisplay{display:grid;gap:2px}
+.tnote{font-family:var(--display);font-weight:800;font-size:3.2rem;line-height:1;font-variant-numeric:tabular-nums}
+.tdisplay span{font-size:13px;color:var(--muted)}
+.meter{position:relative;height:46px;border:1px solid var(--line);border-radius:8px;background:linear-gradient(90deg,transparent calc(50% - 4%),color-mix(in srgb,var(--ok) 18%,transparent) calc(50% - 4%),color-mix(in srgb,var(--ok) 18%,transparent) calc(50% + 4%),transparent calc(50% + 4%)),var(--bg);overflow:hidden}
+.meter::before{content:"";position:absolute;left:50%;top:0;bottom:0;border-left:1px dashed var(--muted)}
+.meter .ticks{position:absolute;inset:auto 8px 3px;display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--muted)}
+.needle{position:absolute;top:4px;bottom:16px;left:50%;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--warn);transition:left .12s linear}
+.meter.good .needle{background:var(--ok)}
+#refBtns{display:flex;flex-wrap:wrap;gap:6px}
+#refBtns small{font-size:10px;color:var(--muted);margin-left:1px}
+@media (max-width:560px){.tunerwrap{grid-template-columns:1fr}}
 footer{font-size:13px;color:var(--muted);display:grid;gap:6px}
 footer p{margin:0}
 footer .copy{font-weight:600;color:var(--ink)}
@@ -196,9 +209,17 @@ footer .copy{font-weight:600;color:var(--ink)}
           <option value="4">4-string (E A D G)</option>
           <option value="5b">5-string, low B (B E A D G)</option>
           <option value="5c">5-string, high C (E A D G C)</option>
+          <option value="5d">5-string, drop D (D A D G C)</option>
           <option value="6">6-string (B E A D G C)</option>
         </select>
       </label>
+      <label class="f" for="srcSel">What to make
+        <select id="srcSel">
+          <option value="create">Create a new bass line</option>
+          <option value="transcribe">Transcribe the bass in the recording</option>
+        </select>
+      </label>
+      <div id="genCtl" style="display:grid;gap:14px">
       <label class="f" for="styleSel">Groove (the rhythm style of the song)
         <select id="styleSel">
           <option value="auto">Auto: match the song</option>
@@ -300,12 +321,24 @@ footer .copy{font-weight:600;color:var(--ink)}
         <label class="row" style="gap:8px;font-size:14px" for="fills"><input type="checkbox" id="fills" checked> Fills at phrase ends</label>
         <span class="hint">Variation <b id="varNum">1</b></span>
       </div>
+      </div>
       <p class="note" id="styleNote">Auto style picks from the tempo, rhythm and chords.</p>
       <div class="row">
         <button class="primary" id="newVarBtn" type="button">Write a new variation</button>
         <button class="small" id="resetVarBtn" type="button">Back to variation 1</button>
       </div>
     </div>
+  </section>
+
+  <section class="panel tuner" aria-label="Tuner">
+    <h2>Tuner</h2>
+    <div class="tunerwrap">
+      <div class="tdisplay"><div class="tnote" id="tNote">–</div><span id="tString">Play one string at a time</span></div>
+      <div class="meter" id="tMeter"><div class="needle" id="tNeedle"></div><div class="ticks"><span>-50</span><span>-25</span><span>0</span><span>+25</span><span>+50</span></div></div>
+    </div>
+    <p class="hint" id="tFreq" style="margin:0"></p>
+    <div class="row"><button class="primary small" id="tunerBtn" type="button">Start tuner (uses microphone)</button><span class="hint" id="tunerMsg">Tuned to A = 440 Hz.</span></div>
+    <div class="row"><span class="hint">Reference tones (tap to hear each open string):</span><div id="refBtns"></div></div>
   </section>
 
   <section class="panel tabpanel" aria-label="Bass tablature">
@@ -349,6 +382,7 @@ const INSTRUMENTS = {
   '4':  {label: '4-string', strings: [28, 33, 38, 43], names: ['E', 'A', 'D', 'G']},
   '5b': {label: '5-string (low B)', strings: [23, 28, 33, 38, 43], names: ['B', 'E', 'A', 'D', 'G']},
   '5c': {label: '5-string (high C)', strings: [28, 33, 38, 43, 48], names: ['E', 'A', 'D', 'G', 'C']},
+  '5d': {label: '5-string (drop D)', strings: [26, 33, 38, 43, 48], names: ['D', 'A', 'D', 'G', 'C']},
   '6':  {label: '6-string', strings: [23, 28, 33, 38, 43, 48], names: ['B', 'E', 'A', 'D', 'G', 'C']}
 };
 const MAX_FRET = 24;
@@ -1140,7 +1174,7 @@ function renderTab(meta, opts = {}){
   const header = [
     'THE REVELATOR BASS CREATION TOOL',
     `Song: ${meta.song}`,
-    `Key: ${keyName(meta.key)}   Tempo: ${meta.bpm.toFixed(1)} BPM   Time: ${bpb}/4   Groove: ${GROOVES[meta.style].name}${meta.swing ? ' (swing: play eighth notes as triplets)' : ''}   Variation: ${meta.seed}`,
+    `Key: ${keyName(meta.key)}   Tempo: ${meta.bpm.toFixed(1)} BPM   Time: ${bpb}/4   ${meta.transcribed ? 'Bass line: transcribed from the recording (check it by ear)' : `Groove: ${GROOVES[meta.style].name}${meta.swing ? ' (swing: play eighth notes as triplets)' : ''}   Variation: ${meta.seed}`}`,
     `Scale guide: ${meta.modeLabel}`,
     `Bass: ${INST.label}, tuned (low to high) ${STRING_NAMES.join(' ')}, 24 frets`,
     'Numbers = fret, x = dead note. Counts above each bar; note lengths below',
@@ -1336,7 +1370,7 @@ function buildTabPdf(){
   pdf.text(ML, y + 16, song, 22, 'F2'); y += 34;
   pdf.text(ML, y, `Bass tablature  ·  ${INST.label} bass (${STRING_NAMES.join(' ')})`, 11, 'F1', 0.2); y += 16;
   const groove = GROOVES[meta.style] ? GROOVES[meta.style].name : '';
-  pdf.text(ML, y, `Key ${keyName(meta.key)}   ·   Tempo ${Math.round(meta.bpm)} BPM   ·   Time ${bpb}/4   ·   Groove: ${groove}   ·   Variation ${meta.seed}`, 9.5, 'F1', GRAY); y += 13;
+  pdf.text(ML, y, `Key ${keyName(meta.key)}   ·   Tempo ${Math.round(meta.bpm)} BPM   ·   Time ${bpb}/4   ·   ${meta.transcribed ? 'Transcribed from the recording' : `Groove: ${groove}   ·   Variation ${meta.seed}`}`, 9.5, 'F1', GRAY); y += 13;
   const extra = [meta.modeLabel ? `Scale guide: ${meta.modeLabel}` : '', meta.swing ? 'Swing feel: play eighth notes as triplets' : ''].filter(Boolean).join('   ·   ');
   if (extra){ pdf.text(ML, y, extra, 9.5, 'F1', GRAY); y += 13; }
   pdf.text(ML, y, 'How to read it: each line of the staff is a string (lowest string at the bottom); numbers are frets; x is a muted note.', 8.5, 'F3', GRAY); y += 11;
@@ -1441,6 +1475,159 @@ function buildTabPdf(){
     pdf.text(W - MR, H - 22, `Page ${i + 1} of ${total}`, 8, 'F1', GRAY, 'right');
   });
   return pdf.bytes(song + ' - bass tab');
+}
+
+// ---------- bass transcription ----------
+// Follows the pitch of the lowest instrument in the recording (YIN pitch detection on a low-passed signal),
+// then snaps what it hears onto the song's 16th-note grid.
+async function computePitchTrack(buf){
+  const sr0 = 22050, len = Math.max(2, Math.ceil(buf.duration * sr0));
+  const off = new OAC(1, len, sr0);
+  const src = off.createBufferSource(); src.buffer = buf;
+  const hp = off.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 25;
+  const l1 = off.createBiquadFilter(); l1.type = 'lowpass'; l1.frequency.value = 300; l1.Q.value = 0.7;
+  const l2 = off.createBiquadFilter(); l2.type = 'lowpass'; l2.frequency.value = 300; l2.Q.value = 0.7;
+  src.connect(hp); hp.connect(l1); l1.connect(l2); l2.connect(off.destination); src.start(0);
+  const a = (await renderOffline(off)).getChannelData(0);
+  const D = 5, sr = sr0 / D, n = Math.floor(Math.min(a.length, sr0 * 600) / D), x = new Float32Array(n);
+  for (let i = 0; i < n; i++){ let s = 0; for (let k = 0; k < D; k++) s += a[i * D + k]; x[i] = s / D; }
+  const W = 180, tMin = Math.floor(sr / 400), tMax = Math.ceil(sr / 27), hop = Math.round(sr * 0.012);
+  const nF = Math.max(0, Math.floor((n - W - tMax) / hop));
+  const midi = new Float32Array(nF), conf = new Float32Array(nF), rms = new Float32Array(nF), d = new Float64Array(tMax + 2);
+  for (let f = 0; f < nF; f++){
+    const o = f * hop;
+    let e = 0; for (let j = 0; j < W; j++) e += x[o + j] * x[o + j];
+    rms[f] = Math.sqrt(e / W);
+    if (rms[f] < 1e-5){ conf[f] = 0; continue; }
+    let run = 0; d[0] = 1;
+    for (let tau = 1; tau <= tMax; tau++){ let s = 0; for (let j = 0; j < W; j++){ const q = x[o + j] - x[o + j + tau]; s += q * q; } run += s; d[tau] = run > 0 ? s * tau / run : 1; }
+    let best = -1;
+    for (let tau = tMin; tau < tMax; tau++) if (d[tau] < 0.2){ while (tau + 1 < tMax && d[tau + 1] < d[tau]) tau++; best = tau; break; }
+    if (best < 0){ let mv = Infinity; for (let tau = tMin; tau < tMax; tau++) if (d[tau] < mv){ mv = d[tau]; best = tau; } }
+    const p0 = d[best - 1], p1 = d[best], p2 = d[best + 1], den = p0 - 2 * p1 + p2;
+    const t = den > 0 ? best + 0.5 * (p0 - p2) / den : best;
+    midi[f] = 69 + 12 * Math.log2(sr / t / 440); conf[f] = 1 - Math.min(1, p1);
+    if ((f & 511) === 0){ progress(0.05 + 0.9 * f / Math.max(1, nF), 'Listening to the bass line'); await tick(); }
+  }
+  // How far the recording sits from A = 440 Hz, so slightly detuned songs still round to the right notes.
+  const dev = []; for (let f = 0; f < nF; f++) if (conf[f] > 0.85) dev.push(midi[f] - Math.round(midi[f]));
+  dev.sort((p, q) => p - q);
+  return {midi, conf, rms, hop, sr, W, detune: dev.length ? dev[dev.length >> 1] : 0};
+}
+function transcribeNotes(){
+  const PT = S.pitch, F = S.F, bars = S.bars, spb = S.bpb * 4;
+  const sorted = Array.from(PT.rms).sort((p, q) => p - q), gate = (sorted[Math.floor(sorted.length * 0.9)] || 1e-9) * 0.12;
+  const frameAt = t => Math.round((t * PT.sr - PT.W / 2) / PT.hop);
+  const lowAt = t => { const f = Math.round(t * F.fps - F.N1 / 2 / F.H1); let m = 0; for (let k = f - 1; k <= f + 1; k++) if (k >= 0 && k < F.lowOn.length) m = Math.max(m, F.lowOn[k]); return m; };
+  const steps = [];
+  bars.forEach((b, bi) => {
+    for (let s = 0; s < spb; s++){
+      const a = Math.max(0, frameAt(timeAt(bi, s))), z = Math.min(PT.midi.length - 1, frameAt(timeAt(bi, s + 1)));
+      const vals = []; let tot = 0;
+      for (let f = a; f <= z; f++){ tot++; if (PT.conf[f] > 0.75 && PT.rms[f] > gate) vals.push(PT.midi[f] - PT.detune); }
+      let m = null;
+      if (tot && vals.length / tot >= 0.5){ vals.sort((p, q) => p - q); m = Math.round(vals[vals.length >> 1]); }
+      steps.push({bi, s, m, on: lowAt(timeAt(bi, s))});
+    }
+  });
+  // Remove one-step blips where the notes on both sides agree.
+  for (let i = 1; i < steps.length - 1; i++){ const p = steps[i - 1].m, q = steps[i + 1].m; if (p != null && p === q && steps[i].m !== p) steps[i].m = p; }
+  const ons = steps.map(x => x.on).sort((p, q) => p - q), onThr = Math.max(1e-9, ons[Math.floor(ons.length * 0.75)] || 0);
+  const notes = []; let cur = null, shifted = 0;
+  const flush = () => { if (cur){ notes.push(cur); cur = null; } };
+  for (const st of steps){
+    if (st.m == null){ flush(); continue; }
+    let midi = st.m;
+    if (midi < ABS_LO){ midi = fitAbs(midi); shifted++; } else if (midi > ABS_HI) midi = fitAbs(midi);
+    const restrike = st.on > onThr * 1.3;
+    if (cur && cur.bar === st.bi && cur.midi === midi && !restrike){ cur.dur++; continue; }
+    flush(); cur = {bar: st.bi, step: st.s, dur: 1, midi, dead: false};
+  }
+  flush();
+  return {notes, shifted};
+}
+async function runTranscription(){
+  if (S.pitchBusy || !S.songBuf) return;
+  S.pitchBusy = true; stop(); setBusy(true);
+  try { S.pitch = await computePitchTrack(S.songBuf); }
+  catch (e){ console.error(e); showErr('The bass line could not be transcribed in this browser.'); $('srcSel').value = 'create'; }
+  finally { S.pitchBusy = false; doneProgress(); setBusy(false); }
+  regenerate();
+}
+
+// ---------- tuner ----------
+const TN = {ctx: null, stream: null, an: null, buf: null, raf: 0, on: false, hist: [], refCtx: null};
+const NO_MIC = 'The microphone is not available here. The Claude page viewer blocks microphone access, so open the single-file copy (index.html) on your computer in Chrome, Edge, Firefox or Safari to use the tuner. The reference tones below work everywhere.';
+function yinPitch(buf, sr){
+  const D = Math.max(1, Math.round(sr / 6000)), r = sr / D, n = Math.floor(buf.length / D), x = new Float32Array(n);
+  let e = 0;
+  for (let i = 0; i < n; i++){ let s = 0; for (let k = 0; k < D; k++) s += buf[i * D + k]; x[i] = s / D; e += x[i] * x[i]; }
+  if (Math.sqrt(e / n) < 0.004) return null;
+  const tMax = Math.min(Math.ceil(r / 28), Math.floor(n / 2)), W = n - tMax - 1, tMin = Math.floor(r / 1000), d = new Float64Array(tMax + 2);
+  let run = 0; d[0] = 1;
+  for (let tau = 1; tau <= tMax; tau++){ let s = 0; for (let j = 0; j < W; j++){ const q = x[j] - x[j + tau]; s += q * q; } run += s; d[tau] = run > 0 ? s * tau / run : 1; }
+  let best = -1;
+  for (let tau = Math.max(2, tMin); tau < tMax; tau++) if (d[tau] < 0.15){ while (tau + 1 < tMax && d[tau + 1] < d[tau]) tau++; best = tau; break; }
+  if (best < 0) return null;
+  const p0 = d[best - 1], p1 = d[best], p2 = d[best + 1], den = p0 - 2 * p1 + p2;
+  const t = den > 0 ? best + 0.5 * (p0 - p2) / den : best;
+  return {hz: r / t, clarity: 1 - p1};
+}
+const noteName = m => PC[mod12(m)] + (Math.floor(m / 12) - 1);
+function tunerFrame(){
+  if (!TN.on) return;
+  TN.an.getFloatTimeDomainData(TN.buf);
+  const p = yinPitch(TN.buf, TN.ctx.sampleRate);
+  if (p && p.hz > 25 && p.hz < 1100){
+    TN.hist.push(69 + 12 * Math.log2(p.hz / 440)); if (TN.hist.length > 5) TN.hist.shift();
+    const m = [...TN.hist].sort((a, b) => a - b)[TN.hist.length >> 1];
+    let si = 0; STRINGS.forEach((o, i) => { if (Math.abs(m - o) < Math.abs(m - STRINGS[si])) si = i; });
+    const near = Math.abs(m - STRINGS[si]) < 1.5;
+    const target = near ? STRINGS[si] : Math.round(m), cents = Math.round((m - target) * 100);
+    $('tNote').textContent = noteName(target);
+    $('tString').textContent = near ? `${STRING_NAMES[si]} string (${ordinal(STRINGS.length - si)} string)` : 'Not near an open string';
+    $('tFreq').textContent = `${p.hz.toFixed(1)} Hz  ·  ${cents > 0 ? '+' : ''}${cents} cents  ·  ${Math.abs(cents) <= 4 ? 'in tune' : cents < 0 ? 'flat: tune up' : 'sharp: tune down'}`;
+    const nd = $('tNeedle'); nd.style.left = (50 + clamp(cents, -50, 50)) + '%';
+    $('tMeter').classList.toggle('good', Math.abs(cents) <= 4);
+  } else if (!p){ TN.hist = []; }
+  TN.raf = requestAnimationFrame(tunerFrame);
+}
+const ordinal = k => k + (k === 1 ? 'st' : k === 2 ? 'nd' : k === 3 ? 'rd' : 'th');
+async function toggleTuner(){
+  if (TN.on){ stopTuner(); return; }
+  $('tunerMsg').textContent = 'Asking to use the microphone…';
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ $('tunerMsg').textContent = NO_MIC; return; }
+  try { TN.stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: false, noiseSuppression: false, autoGainControl: false}}); }
+  catch (e){ $('tunerMsg').textContent = NO_MIC; return; }
+  TN.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  try { await TN.ctx.resume(); } catch (e){}
+  TN.an = TN.ctx.createAnalyser(); TN.an.fftSize = 8192; TN.buf = new Float32Array(TN.an.fftSize);
+  TN.ctx.createMediaStreamSource(TN.stream).connect(TN.an);
+  TN.on = true; TN.hist = [];
+  $('tunerBtn').textContent = 'Stop tuner';
+  $('tunerMsg').textContent = 'Listening. Play one open string at a time and let it ring. Low strings read best close to the microphone or through an amp.';
+  tunerFrame();
+}
+function stopTuner(){
+  TN.on = false; cancelAnimationFrame(TN.raf);
+  if (TN.stream) TN.stream.getTracks().forEach(t => t.stop());
+  if (TN.ctx) try { TN.ctx.close(); } catch (e){}
+  TN.stream = TN.ctx = null;
+  $('tunerBtn').textContent = 'Start tuner (uses microphone)';
+  $('tunerMsg').textContent = 'Tuned to A = 440 Hz.';
+  $('tNote').textContent = '–'; $('tString').textContent = 'Play one string at a time'; $('tFreq').textContent = '';
+  $('tNeedle').style.left = '50%'; $('tMeter').classList.remove('good');
+}
+function refTone(m){
+  if (!TN.refCtx) TN.refCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const ctx = TN.refCtx; try { ctx.resume(); } catch (e){}
+  const t = ctx.currentTime + 0.03, f = midiHz(m);
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.35, t + 0.02); g.gain.setTargetAtTime(0.0001, t + 2.2, 0.15); g.connect(ctx.destination);
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = Math.min(3000, f * 8); lp.connect(g);
+  for (const [type, lvl] of [['sawtooth', 0.35], ['sine', 1]]){ const o = ctx.createOscillator(); o.type = type; o.frequency.value = f; const og = ctx.createGain(); og.gain.value = lvl; o.connect(og); og.connect(lp); o.start(t); o.stop(t + 2.8); }
+}
+function buildRefButtons(){
+  $('refBtns').innerHTML = STRINGS.map((m, i) => `<button class="small" type="button" data-m="${m}" title="Play ${noteName(m)}">${STRING_NAMES[i]}<small>${Math.floor(m / 12) - 1}</small></button>`).join('');
 }
 
 // ---------- playback ----------
@@ -1617,6 +1804,23 @@ function applyChart(silent){
 }
 function regenerate(){
   if (!S.bars.length) return;
+  const srcMode = $('srcSel').value;
+  $('genCtl').hidden = srcMode === 'transcribe';
+  $('newVarBtn').disabled = $('resetVarBtn').disabled = srcMode === 'transcribe' || S.busy;
+  if (srcMode === 'transcribe'){
+    if (!S.pitch){ runTranscription(); return; }
+    const {notes, shifted} = transcribeNotes();
+    assignFingering(notes);
+    S.notes = notes; S.swing = false;
+    $('styleNote').textContent = `Transcription: ${notes.length} bass notes heard in the recording, snapped to the song's beat and written for your ${INST.label} bass.` +
+      (shifted ? ` ${shifted} sixteenth-note steps were below your lowest string, so those notes were moved up an octave.` : '') +
+      ' Automatic transcription is a starting point: check it by ear, especially fast runs, slides and notes under loud kick drums.';
+    S.tabMeta = {bars: S.bars, notes, bpb: S.bpb, key: S.key, bpm: S.bpm, style: 'pop', swing: false, seed: S.seed, transcribed: true, modeLabel: 'not used for transcriptions', song: S.isDemo ? 'Built-in demo track' : S.fileName};
+    S.tab = renderTab(S.tabMeta);
+    showScreenTab();
+    if (P.playing){ const st = P.songStart + (P.ctx.currentTime - P.ctxStart); P.events = buildEvents(); P.idx = 0; while (P.idx < P.events.length && P.events[P.idx].t < st + 0.05) P.idx++; lastSys = -1; }
+    return;
+  }
   S.mode = $('modeSel').value; S.modeBase = $('modeBase').value;
   $('modeBase').disabled = S.mode === 'auto';
   const line = $('lineSel').value;
@@ -1650,7 +1854,7 @@ function regenerate(){
 async function runAnalysis(buf, name, isDemo){
   stop(); showErr(''); setBusy(true);
   try {
-    S.songBuf = buf; S.fileName = name; S.isDemo = isDemo; S.seed = 1;
+    S.songBuf = buf; S.fileName = name; S.isDemo = isDemo; S.seed = 1; S.pitch = null;
     progress(0.04, 'Preparing audio');
     await tick();
     let x = await toMono11k(buf);
@@ -1702,6 +1906,7 @@ function applyInstrument(id){
   setInstrument(id);
   $('plateTop').textContent = STRINGS.length + '-string · 24 frets';
   $('plateTuning').textContent = STRING_NAMES.join(' ');
+  buildRefButtons();
 }
 {
   let saved = '6';
@@ -1734,7 +1939,7 @@ $('keySel').addEventListener('change', () => { const [t, m] = $('keySel').value.
 $('tsSel').addEventListener('change', () => { S.bpb = +$('tsSel').value; if (!S.F) return; stop(); S.phase = choosePhase(S.labels, S.beatLow, S.bpb); redetectChart(); toast('Bars regrouped in ' + S.bpb + '/4.'); });
 $('shiftBtn').addEventListener('click', () => { if (needSong()) return; stop(); S.phase = (S.phase + 1) % S.bpb; redetectChart(); toast('Bar 1 now starts at ' + fmtTime(timeAt(0, 0)) + '.'); });
 $('applyChords').addEventListener('click', () => { if (needSong()) return; stop(); applyChart(false); toast('Chord chart applied.'); });
-['styleSel','regSel','fills','feelSel','kickChk','lineSel','modeSel','modeBase'].forEach(id => $(id).addEventListener('change', regenerate));
+['srcSel','styleSel','regSel','fills','feelSel','kickChk','lineSel','modeSel','modeBase'].forEach(id => $(id).addEventListener('change', regenerate));
 $('busy').addEventListener('input', () => { $('busyVal').textContent = $('busy').value; regenerate(); });
 $('newVarBtn').addEventListener('click', () => { S.seed++; regenerate(); toast('Variation ' + S.seed + ' written.'); });
 $('resetVarBtn').addEventListener('click', () => { S.seed = 1; regenerate(); });
@@ -1767,6 +1972,8 @@ $('savePdfBtn').addEventListener('click', () => {
   const n = 'Revelator bass - ' + safeName(S.isDemo ? 'demo' : S.fileName) + '.pdf';
   saveFile(n, bytes, n, new Blob([bytes], {type: 'application/pdf'}));
 });
+$('tunerBtn').addEventListener('click', toggleTuner);
+$('refBtns').addEventListener('click', e => { const b = e.target.closest('button[data-m]'); if (b) refTone(+b.dataset.m); });
 getDownloads();
 loadDemo();
 })();
