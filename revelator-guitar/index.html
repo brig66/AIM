@@ -236,6 +236,7 @@ footer .copy{font-weight:600;color:var(--ink)}
           <option value="riff">Riff for the whole song</option>
           <option value="solo">Lead solo over the whole song</option>
           <option value="transcribe">Transcribe the melody or lead in the recording (experimental)</option>
+          <option value="horns">Transcribe the horn section for guitar (experimental)</option>
         </select>
       </label>
       <div class="grid2" id="soloRange">
@@ -255,6 +256,37 @@ footer .copy{font-weight:600;color:var(--ink)}
         <label class="f" for="fretSel">Frets
           <select id="fretSel"><option value="22">22 frets</option><option value="24">24 frets</option></select>
         </label>
+      </div>
+      <div id="hornCtl" style="display:grid;gap:14px" hidden>
+        <div class="grid2">
+          <label class="f" for="hornFrom">Horns play from bar<input type="number" id="hornFrom" min="1" step="1"></label>
+          <label class="f" for="hornTo">to bar<input type="number" id="hornTo" min="1" step="1"></label>
+        </div>
+        <div class="grid2">
+          <label class="f" for="hornVoices">Play it as
+            <select id="hornVoices">
+              <option value="1">Melody: the top horn line</option>
+              <option value="2" selected>Two-note harmony (double stops)</option>
+              <option value="3">Full horn voicing (up to 3 notes)</option>
+            </select>
+          </label>
+          <label class="f" for="hornOct">Octave on guitar
+            <select id="hornOct">
+              <option value="auto">Auto: best fit for guitar</option>
+              <option value="0">Where the horns play</option>
+              <option value="-12">One octave lower</option>
+              <option value="12">One octave higher</option>
+            </select>
+          </label>
+        </div>
+        <label class="f" for="hornSens">Detail
+          <select id="hornSens">
+            <option value="0.75">Fewer notes (only the clearest)</option>
+            <option value="1" selected>Balanced</option>
+            <option value="1.35">More notes</option>
+          </select>
+        </label>
+        <p class="hint">Set the bars to where the horns play, leaving out sections with singing: a singer sits in the same range as horns. The tool listens for steady, held pitches (horns) and skips wavering ones (voices), puts the top horn line on top, and fits the part onto the guitar neck.</p>
       </div>
       <div id="genCtl" style="display:grid;gap:14px">
       <label class="f" for="inflSel">Play it in the style of
@@ -1251,6 +1283,24 @@ function assignFingering(notes){
   const NS = STRINGS.length;
   const candsFor = nt => {
     const a = [], fm = nt.midi - (nt.bend || 0);
+    if (nt.chordUp && nt.chordUp.length){
+      // Horn harmony: one note per string, all within a four-fret stretch (open strings are free).
+      const tgt = nt.chordUp.map(d => fm + d);
+      const rec = (s0, f0, k, xs) => {
+        if (k === tgt.length){ a.push({s: s0, f: f0, x: xs.slice()}); return; }
+        for (let s = (xs.length ? xs[xs.length - 1].s : s0) + 1; s < NS; s++){
+          const f = tgt[k] - STRINGS[s]; if (f < 0 || f > FRETS) continue;
+          const fr = [f0, ...xs.map(x => x.f), f].filter(v => v > 0);
+          if (fr.length && Math.max(...fr) - Math.min(...fr) > 4) continue;
+          xs.push({s, f}); rec(s0, f0, k + 1, xs); xs.pop();
+        }
+      };
+      for (let s = 0; s < NS; s++){ const f = fm - STRINGS[s]; if (f >= 0 && f <= FRETS) rec(s, f, 0, []); }
+      if (a.length) return a;
+      // Too wide to play together: drop the lowest harmony note and try again.
+      nt.midi = tgt[0]; nt.chordUp = tgt.slice(1).map(m => m - tgt[0]);
+      return candsFor(nt);
+    }
     if (nt.oct){
       // Octave shape: the note plus the same note an octave up, two strings higher.
       for (let s = 0; s <= NS - 3; s++){
@@ -1369,12 +1419,12 @@ function renderTab(meta, opts = {}){
     cur.push(b); w += b.width + 2;
   }
   flush();
-  const partTxt = meta.part === 'transcribe' ? 'Transcribed from the recording (melody or lead; check it by ear)' : meta.part === 'riff' ? 'Riff' : meta.part === 'solo' ? 'Lead solo' : `Riff, with a lead solo in bars ${meta.soloFrom + 1}-${meta.soloTo + 1}`;
+  const partTxt = meta.part === 'horns' ? `Horn section transcribed for guitar${meta.hornShift ? (meta.hornShift > 0 ? ' (moved up an octave)' : ' (moved down ' + (-meta.hornShift / 12) + ' octave' + (meta.hornShift < -12 ? 's' : '') + ')') : ''}; check it by ear` : meta.part === 'transcribe' ? 'Transcribed from the recording (melody or lead; check it by ear)' : meta.part === 'riff' ? 'Riff' : meta.part === 'solo' ? 'Lead solo' : `Riff, with a lead solo in bars ${meta.soloFrom + 1}-${meta.soloTo + 1}`;
   const header = [
     'THE REVELATOR GUITAR CREATION TOOL',
     `Song: ${meta.song}`,
-    `Key: ${keyName(meta.key)}   Tempo: ${meta.bpm.toFixed(1)} BPM   Time: ${bpb}/4   ${meta.part === 'transcribe' ? 'Transcribed from the recording' : `${meta.inflName ? 'In the style of ' + meta.inflName + '   ' : ''}Groove: ${GROOVES[meta.style].name}${meta.swing ? ' (swing: play eighth notes as triplets)' : ''}   Variation: ${meta.seed}`}`,
-    `Part: ${partTxt}${meta.part === 'transcribe' ? '' : '   Solo scale: ' + meta.scaleName}`,
+    `Key: ${keyName(meta.key)}   Tempo: ${meta.bpm.toFixed(1)} BPM   Time: ${bpb}/4   ${meta.part === 'transcribe' || meta.part === 'horns' ? 'Transcribed from the recording' : `${meta.inflName ? 'In the style of ' + meta.inflName + '   ' : ''}Groove: ${GROOVES[meta.style].name}${meta.swing ? ' (swing: play eighth notes as triplets)' : ''}   Variation: ${meta.seed}`}`,
+    `Part: ${partTxt}${meta.part === 'transcribe' || meta.part === 'horns' ? '' : '   Solo scale: ' + meta.scaleName}`,
     `Guitar: 6-string, ${TUN.label} tuning (low to high ${STRING_NAMES.join(' ')}), ${FRETS} frets`,
     'Numbers = fret. Stacked numbers = power chord. x = muted note, PM === = palm mute,',
     'h = hammer-on, p = pull-off, / \\ = slide up/down, b = bend up a whole step, ~ = vibrato.',
@@ -1783,9 +1833,9 @@ function buildTabPdf(){
   pdf.text(ML, y + 16, song, 22, 'F2'); y += 34;
   pdf.text(ML, y, `Guitar tablature  ·  6-string, ${TUN.label} tuning (${STRING_NAMES.join(' ')}), ${FRETS} frets`, 11, 'F1', 0.2); y += 16;
   const groove = GROOVES[meta.style] ? GROOVES[meta.style].name : '';
-  pdf.text(ML, y, `Key ${keyName(meta.key)}   ·   Tempo ${Math.round(meta.bpm)} BPM   ·   Time ${bpb}/4   ·   ${meta.part === 'transcribe' ? 'Transcribed from the recording' : `${meta.inflName ? 'In the style of ' + meta.inflName + '   ·   ' : ''}Groove: ${groove}   ·   Variation ${meta.seed}`}`, 9.5, 'F1', GRAY); y += 13;
-  const partTxt = meta.part === 'transcribe' ? 'Transcribed from the recording (melody or lead; check it by ear)' : meta.part === 'riff' ? 'Riff' : meta.part === 'solo' ? 'Lead solo' : `Riff, with a lead solo in bars ${meta.soloFrom + 1}-${meta.soloTo + 1}`;
-  const extra = [`Part: ${partTxt}`, meta.part !== 'riff' && meta.part !== 'transcribe' ? `Solo scale: ${meta.scaleName}` : '', meta.swing ? 'Swing feel: play eighth notes as triplets' : ''].filter(Boolean).join('   ·   ');
+  pdf.text(ML, y, `Key ${keyName(meta.key)}   ·   Tempo ${Math.round(meta.bpm)} BPM   ·   Time ${bpb}/4   ·   ${meta.part === 'transcribe' || meta.part === 'horns' ? 'Transcribed from the recording' : `${meta.inflName ? 'In the style of ' + meta.inflName + '   ·   ' : ''}Groove: ${groove}   ·   Variation ${meta.seed}`}`, 9.5, 'F1', GRAY); y += 13;
+  const partTxt = meta.part === 'horns' ? `Horn section transcribed for guitar${meta.hornShift ? (meta.hornShift > 0 ? ' (moved up an octave)' : ' (moved down ' + (-meta.hornShift / 12) + ' octave' + (meta.hornShift < -12 ? 's' : '') + ')') : ''}; check it by ear` : meta.part === 'transcribe' ? 'Transcribed from the recording (melody or lead; check it by ear)' : meta.part === 'riff' ? 'Riff' : meta.part === 'solo' ? 'Lead solo' : `Riff, with a lead solo in bars ${meta.soloFrom + 1}-${meta.soloTo + 1}`;
+  const extra = [`Part: ${partTxt}`, meta.part !== 'riff' && meta.part !== 'transcribe' && meta.part !== 'horns' ? `Solo scale: ${meta.scaleName}` : '', meta.swing ? 'Swing feel: play eighth notes as triplets' : ''].filter(Boolean).join('   ·   ');
   if (extra){ pdf.text(ML, y, extra, 9.5, 'F1', GRAY); y += 13; }
   pdf.text(ML, y, 'How to read it: each line of the staff is a string (low E at the bottom); numbers are frets; stacked numbers are power chords or octaves; x is muted.', 8.5, 'F3', GRAY); y += 11;
   pdf.text(ML, y, 'Curved arrow with "full" = bend up a whole step. Straight line between notes = slide. Arc with h / p = hammer-on / pull-off.', 8.5, 'F3', GRAY); y += 11;
@@ -2034,6 +2084,230 @@ async function runTranscription(){
   regenerate();
 }
 
+// ---------- horn section transcription ----------
+// Hears several notes at once (a horn section is usually two or three horns in harmony): each candidate pitch is
+// scored by its row of harmonics, the strongest pitches are taken one at a time, and each one's harmonics are
+// removed before looking for the next. Horn notes hold a steady pitch, while a singer's pitch wavers and slides,
+// so notes whose pitch wobbles are left out. The result is fitted onto the guitar.
+const HR_P0 = 50, HR_P1 = 96, HR_NP = HR_P1 - HR_P0 + 1;
+async function computeHornRoll(x){
+  const sr = SR, N = 4096, H = 512;
+  const nF = Math.max(1, Math.floor((x.length - N) / H) + 1);
+  const fft = makeFFT(N), w = hann(N), re = new Float64Array(N), im = new Float64Array(N);
+  // A short window as well, fast enough to follow a singer's vibrato (a long window averages it away).
+  const NS2 = 1024, fftS = makeFFT(NS2), wS = hann(NS2), reS = new Float64Array(NS2), imS = new Float64Array(NS2), magS = new Float64Array(NS2 / 2 + 1);
+  const K = N / 2, mag = new Float64Array(K + 1), pk = new Float64Array(K + 1), pre = new Float64Array(K + 2);
+  const NH = 8, ranges = [];
+  for (let p = HR_P0; p <= HR_P1; p++){
+    const f0 = 440 * Math.pow(2, (p - 69) / 12), rs = [];
+    for (let h = 1; h <= NH; h++){
+      const f = f0 * h; if (f > 4500) break;
+      const c = f * N / sr, a = Math.floor(c * Math.pow(2, -0.4 / 12)), b = Math.ceil(c * Math.pow(2, 0.4 / 12));
+      rs.push([Math.max(1, Math.min(a, Math.round(c) - 1)), Math.min(K, Math.max(b, Math.round(c) + 1)), Math.pow(0.85, h - 1)]);
+    }
+    ranges.push(rs);
+  }
+  const roll = new Float32Array(nF * HR_NP), dev = new Float32Array(nF * HR_NP), frameMax = new Float32Array(nF);
+  const sal = new Float64Array(HR_NP), chosen = new Uint8Array(HR_NP), peaks = new Int32Array(K + 1);
+  let nP = 0;
+  const peakIn = (lo, hi) => {
+    let a = 0, b = nP; while (a < b){ const m = (a + b) >> 1; if (peaks[m] < lo) a = m + 1; else b = m; }
+    let mv = 0, at = -1; for (let i = a; i < nP && peaks[i] <= hi; i++){ const v = pk[peaks[i]]; if (v > mv){ mv = v; at = peaks[i]; } }
+    return [mv, at];
+  };
+  const av = new Float64Array(NH + 2);
+  const score = i => {
+    const rs = ranges[i], n = rs.length;
+    for (let h = 0; h < n; h++) av[h] = peakIn(rs[h][0], rs[h][1])[0];
+    let s = 0;
+    for (let h = 0; h < n; h++){ const nb = (h ? av[h - 1] : av[h]) + av[h] + (h + 1 < n ? av[h + 1] : av[h]); s += rs[h][2] * Math.min(av[h], 1.15 * nb / 3); }
+    return av[0] > 0 ? s : 0.3 * s;
+  };
+  for (let f = 0; f < nF; f++){
+    const off = f * H;
+    for (let i = 0; i < N; i++){ re[i] = x[off + i] * w[i]; im[i] = 0; }
+    fft(re, im);
+    for (let k = 0; k <= K; k++) mag[k] = Math.sqrt(Math.sqrt(re[k] * re[k] + im[k] * im[k]));
+    const offS = off + (N - NS2) / 2;
+    for (let i = 0; i < NS2; i++){ reS[i] = x[offS + i] * wS[i]; imS[i] = 0; }
+    fftS(reS, imS);
+    for (let k = 0; k <= NS2 / 2; k++) magS[k] = Math.sqrt(reS[k] * reS[k] + imS[k] * imS[k]);
+    pre[0] = 0; for (let k = 0; k <= K; k++) pre[k + 1] = pre[k] + mag[k];
+    nP = 0;
+    for (let k = 1; k < K; k++){
+      pk[k] = 0;
+      if (mag[k] < mag[k - 1] || mag[k] < mag[k + 1]) continue;
+      const r = 2 + Math.floor(k * 0.05), a = Math.max(0, k - r), b = Math.min(K, k + r);
+      const v = mag[k] - 1.15 * (pre[b + 1] - pre[a]) / (b - a + 1);
+      if (v > 0){ pk[k] = v; peaks[nP++] = k; }
+    }
+    chosen.fill(0);
+    for (let i = 0; i < HR_NP; i++) sal[i] = score(i);
+    let first = 0;
+    for (let it = 0; it < 6; it++){
+      let bi = -1, bv = 0;
+      for (let i = 0; i < HR_NP; i++) if (!chosen[i] && sal[i] > bv){ bv = sal[i]; bi = i; }
+      if (bi < 0 || bv <= 0 || (first && bv < 0.1 * first)) break;
+      const amps = ranges[bi].map(([lo, hi]) => peakIn(lo, hi));
+      const a1 = amps[0][0];
+      if (a1 < 0.2 * Math.max(...amps.map(a => a[0]))){ chosen[bi] = 2; continue; }
+      chosen[bi] = 1; if (!first) first = bv;
+      roll[f * HR_NP + bi] = bv;
+      // Exact pitch, in cents from the note, read from the strongest of the first four harmonics in the short
+      // window (a singer's vibrato makes this swing; a horn holds steady).
+      {
+        const f0 = 440 * Math.pow(2, (HR_P0 + bi - 69) / 12);
+        let bestM = 0, bestC = 0;
+        for (let h = 1; h <= 4; h++){
+          const c = f0 * h * NS2 / sr; if (c > NS2 / 2 - 2) break;
+          const a = Math.max(1, Math.floor(c * Math.pow(2, -0.5 / 12))), b = Math.min(NS2 / 2 - 1, Math.ceil(c * Math.pow(2, 0.5 / 12)));
+          let at = a; for (let k = a; k <= b; k++) if (magS[k] > magS[at]) at = k;
+          if (magS[at] <= bestM || magS[at] < magS[at - 1] || magS[at] < magS[at + 1]) continue;
+          const la = Math.log(magS[at - 1] + 1e-9), lb = Math.log(magS[at] + 1e-9), lc = Math.log(magS[at + 1] + 1e-9), den = la - 2 * lb + lc;
+          const bin = at + (den < 0 ? 0.5 * (la - lc) / den : 0);
+          bestM = magS[at]; bestC = 1200 * Math.log2(bin * sr / NS2 / (f0 * h));
+        }
+        dev[f * HR_NP + bi] = bestC;
+      }
+      // Remove this note's harmonics; a harmonic is only expected to be about as loud as the quieter of its
+      // neighbours, so anything louder is left for another note at that pitch.
+      amps.forEach(([m, at], h) => {
+        if (at < 0) return;
+        const cut = h === 0 ? m : Math.min(m, 1.1 * Math.min(amps[h - 1][0], amps[h + 1] ? amps[h + 1][0] : amps[h - 1][0]));
+        pk[at] = Math.sqrt(Math.sqrt(Math.max(0, m ** 4 - cut ** 4)));
+      });
+      for (let i = 0; i < HR_NP; i++) if (!chosen[i]) sal[i] = score(i);
+    }
+    frameMax[f] = first;
+    if ((f & 127) === 0){ progress(0.05 + 0.9 * f / nF, 'Listening for the horns'); await tick(); }
+  }
+  const fm = Array.from(frameMax).filter(v => v > 0).sort((a, b) => a - b);
+  return {roll, dev, nF, H, N, sr, ref: fm.length ? fm[Math.floor(fm.length * 0.9)] : 1};
+}
+// Bar and 16th-note step for a time; eighth-note positions are preferred unless a note is clearly on a 16th.
+function gridAt8(t){
+  const bar = curBar(t), spb = S.bpb * 4;
+  let best = 0, bd = Infinity;
+  for (let s = 0; s <= spb; s++){ const d = Math.abs(timeAt(bar, stepPos(s)) - t); if (d < bd){ bd = d; best = s; } }
+  if (best % 2){
+    const len = Math.abs(timeAt(bar, stepPos(best + 1)) - timeAt(bar, stepPos(best)));
+    const dl = Math.abs(timeAt(bar, stepPos(best - 1)) - t), dr = Math.abs(timeAt(bar, stepPos(best + 1)) - t);
+    if (Math.min(dl, dr) < 0.75 * len) best = dl <= dr ? best - 1 : best + 1;
+  }
+  return best >= spb ? {bar: bar + 1, step: 0} : {bar, step: best};
+}
+function transcribeHorns(){
+  const R = S.hornRoll, {roll, dev, nF, H, N, sr} = R, F = S.F, spb = S.bpb * 4, nb = S.bars.length;
+  const sens = +$('hornSens').value || 1, voices = +$('hornVoices').value || 1;
+  const from = clamp((parseInt($('hornFrom').value, 10) || 1) - 1, 0, nb - 1), to = clamp((parseInt($('hornTo').value, 10) || nb) - 1, from, nb - 1);
+  const t0lim = timeAt(from, 0) - 0.05, t1lim = timeAt(to + 1, 0) + 0.05;
+  const thr = R.ref * 0.65 / sens, thrLo = R.ref * 0.12;
+  const tOf = f => (f * H + N / 2) / sr, fOf = t => Math.round((t * sr - N / 2) / H);
+  const onsets = [];
+  for (let f = 2; f < F.env.length - 2; f++){
+    const e = F.env[f];
+    if (e > 0.8 && e >= F.env[f - 1] && e >= F.env[f + 1] && e >= F.env[f - 2] && e >= F.env[f + 2]){ const t = (f * F.H1 + F.N1 / 2) / SR; if (!onsets.length || t - onsets[onsets.length - 1] > 0.05) onsets.push(t); }
+  }
+  const nearOnset = (t, w) => { let best = null, bd = w; for (const o of onsets){ const d = Math.abs(o - t); if (d < bd){ bd = d; best = o; } if (o > t + w) break; } return best; };
+  const raw = [];
+  for (let i = 0; i < HR_NP; i++){
+    const p = HR_P0 + i;
+    const sm = new Float32Array(nF);
+    for (let f = 0; f < nF; f++){ const v = roll[f * HR_NP + i]; sm[f] = Math.max(v, Math.min(f ? roll[(f - 1) * HR_NP + i] : 0, f + 1 < nF ? roll[(f + 1) * HR_NP + i] : 0)); }
+    const at = t => { const f = fOf(t); return f >= 0 && f < nF ? sm[f] : 0; };
+    const maxIn = (a, b) => { let m = 0; for (let f = Math.max(0, fOf(a)); f <= Math.min(nF - 1, fOf(b)); f++) m = Math.max(m, sm[f]); return m; };
+    let f = 0;
+    while (f < nF){
+      if (sm[f] < thrLo){ f++; continue; }
+      let a = f, b = f; while (b + 1 < nF && sm[b + 1] >= thrLo) b++;
+      f = b + 1;
+      let fpk = a; while (fpk < b && sm[fpk + 1] >= sm[fpk]) fpk++;
+      let on = a; while (on < fpk && sm[on] < 0.5 * sm[fpk]) on++;
+      let ts = tOf(on); const sn = nearOnset(ts, 0.12); if (sn != null) ts = sn;
+      const tEnd = tOf(b) - 0.1;
+      if (tEnd < t0lim || ts > t1lim) continue;
+      const starts = [ts];
+      for (const o of onsets){
+        if (o <= starts[starts.length - 1] + 0.12 || o >= tEnd - 0.05) continue;
+        let dip = Infinity; for (let q = Math.max(0, fOf(o - 0.1)); q <= Math.min(nF - 1, fOf(o + 0.06)); q++) dip = Math.min(dip, sm[q]);
+        const after = maxIn(o + 0.06, o + 0.3);
+        if (after > 1.4 * dip && after - dip > 0.12 * R.ref) starts.push(o);
+      }
+      for (let k = 0; k < starts.length; k++){
+        const s0 = starts[k], s1 = k + 1 < starts.length ? starts[k + 1] : Math.max(s0 + 0.08, tEnd);
+        if (s0 < t0lim || s0 > t1lim) continue;
+        const pkv = maxIn(s0 - 0.05, Math.min(s1, s0 + 0.5));
+        if (pkv < thr) continue;
+        // A singer's pitch wavers (vibrato, slides); a horn holds steady.
+        const cents = [];
+        for (let q = Math.max(0, fOf(s0 + 0.08)); q <= Math.min(nF - 1, fOf(s1 - 0.05)); q++) if (roll[q * HR_NP + i] > 0) cents.push(dev[q * HR_NP + i]);
+        if (cents.length >= 4){
+          // Spread of the pitch around its own average (vibrato and slides), ignoring the odd stray reading.
+          const srt = cents.slice().sort((a, b) => a - b), lo = srt[Math.floor(srt.length * 0.15)], hi = srt[Math.floor(srt.length * 0.85)];
+          if (hi - lo > 26 * Math.sqrt(sens)) continue;
+        }
+        if (s1 - s0 < 0.1) continue;
+        raw.push({p, t0: s0, t1: s1, s: pkv});
+      }
+    }
+  }
+  // Drop likely overtones (an octave or a twelfth above a stronger note that sounds with it).
+  raw.sort((a, b) => a.t0 - b.t0);
+  const keep = raw.filter(n => !raw.some(m => m !== n && [12, 19, 24].includes(n.p - m.p) && Math.abs(m.t0 - n.t0) < 0.1 && m.t1 >= n.t1 - 0.3 && n.s < (n.p - m.p === 12 ? 0.8 : 0.6) * m.s));
+  // Group notes that start together; the horn section is the top of each group.
+  const groups = new Map();
+  for (const n of keep){
+    const g = gridAt8(n.t0); if (g.bar < from || g.bar > to || g.bar >= nb) continue;
+    const g1 = gridAt8(n.t1), endStep = g1.bar > g.bar ? spb : g1.step;
+    const k = g.bar * spb + g.step;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push({bar: g.bar, step: g.step, dur: Math.max(1, endStep - g.step), midi: n.p, s: n.s});
+  }
+  let evs = [...groups.entries()].sort((a, b) => a[0] - b[0]).map(([abs, g]) => {
+    // Horns have strong overtones: a note an octave or a twelfth above another note in the same hit, and no
+    // louder than it, is that note's overtone rather than another horn.
+    g = g.filter(n => !g.some(m => m !== n && [12, 19, 24].includes(n.midi - m.midi) && n.s < 1.0 * m.s));
+    g.sort((a, b) => b.midi - a.midi);
+    const top = g[0], pick = [top];
+    // Harmony notes sit within an octave under the top horn (lower notes belong to the band).
+    for (const e of g.slice(1)) if (pick.length < voices && top.midi - e.midi <= 12 && top.midi - e.midi >= 2 && !pick.some(q => q.midi === e.midi)) pick.push(e);
+    return {abs, bar: top.bar, step: top.step, dur: Math.max(...pick.map(e => e.dur)), midis: pick.map(e => e.midi).sort((a, b) => a - b), s: top.s};
+  });
+  // A sustained horn note can be found again inside a later chord; keep the strongest group per step.
+  evs = evs.filter((e, i) => !(i + 1 < evs.length && evs[i + 1].abs === e.abs));
+  // Octave for the guitar: keep the horns' octave when it fits, otherwise move the whole part.
+  const shiftSel = $('hornOct').value;
+  let shift = 0;
+  if (shiftSel === 'auto'){
+    let best = Infinity;
+    for (const sh of [0, -12, 12, -24]){
+      let c = sh === 0 ? 0 : 0.6;
+      for (const e of evs) for (const m of e.midis){ const q = m + sh; if (q < ABS_LO) c += 3; else if (q > ABS_HI - 2) c += 3; else if (q > 81) c += 0.4; }
+      if (c < best){ best = c; shift = sh; }
+    }
+  } else shift = +shiftSel;
+  const notes = [];
+  evs.forEach((e, i) => {
+    const nx = evs[i + 1];
+    const gap = Math.min(spb - e.step, nx ? nx.abs - e.abs : Infinity);
+    const heard = Math.max(1, e.dur);
+    const dur = Math.max(1, gap <= 2 || heard >= gap - 1 ? gap : Math.min(gap, heard));
+    let ms = e.midis.map(m => m + shift);
+    while (ms.length && ms[0] < ABS_LO) ms = ms.slice(1);
+    if (!ms.length){ ms = [fitRange(e.midis[e.midis.length - 1] + shift)]; }
+    notes.push({bar: e.bar, step: e.step, dur, midi: ms[0], chordUp: ms.slice(1).map(m => m - ms[0]), dead: false, part: 'horns'});
+  });
+  return {notes, shift};
+}
+async function runHornTranscription(){
+  if (S.hornBusy || !S.x) return;
+  S.hornBusy = true; stop(); setBusy(true);
+  try { S.hornRoll = await computeHornRoll(S.x); }
+  catch (e){ console.error(e); showErr('The recording could not be transcribed in this browser.'); $('partSel').value = 'both'; }
+  finally { S.hornBusy = false; doneProgress(); setBusy(false); }
+  regenerate();
+}
+
 // ---------- tuner ----------
 const TN = {ctx: null, stream: null, an: null, buf: null, raf: 0, on: false, hist: [], refCtx: null};
 const NO_MIC = 'The microphone is not available here. The Claude page viewer blocks microphone access, so open the single-file copy (index.html) on your computer in Chrome, Edge, Firefox or Safari to use the tuner. The reference tones below work everywhere.';
@@ -2214,7 +2488,7 @@ async function runChart(text, name, bpmIn){
     progress(0.08, 'Building a backing band for the chart');
     await tick();
     const {buf, lead} = await makeBacking(bars, bpm, bpb, CHART_WITH_BASS);
-    S.songBuf = buf; S.fileName = name; S.isDemo = false; S.chartMode = true; S.seed = 1; S.pitch = null;
+    S.songBuf = buf; S.fileName = name; S.isDemo = false; S.chartMode = true; S.seed = 1; S.pitch = null; S.hornRoll = null;
     const x = await toMono11k(buf); S.x = x;
     S.F = await extractFeatures(x, progress);
     S.bpm = bpm; S.songSwing = false; S.labels = null; S.phase = 0;
@@ -2576,8 +2850,28 @@ function defaultSoloRange(n){
 function regenerate(){
   if (!S.bars.length) return;
   const part = $('partSel').value;
-  $('genCtl').hidden = part === 'transcribe';
-  $('newVarBtn').disabled = $('resetVarBtn').disabled = part === 'transcribe' || S.busy;
+  const tr = part === 'transcribe' || part === 'horns';
+  $('genCtl').hidden = tr; $('hornCtl').hidden = part !== 'horns';
+  $('newVarBtn').disabled = $('resetVarBtn').disabled = tr || S.busy;
+  if (part === 'horns' && S.chartMode){ $('partSel').value = 'both'; toast('Horn transcription needs a real recording. Load a song file to use it.'); return regenerate(); }
+  if (part === 'horns'){
+    $('soloRange').hidden = true;
+    const n = S.bars.length;
+    if (!$('hornFrom').value || !$('hornTo').value){ $('hornFrom').value = 1; $('hornTo').value = n; }
+    if (!S.hornRoll){ runHornTranscription(); return; }
+    const {notes, shift} = transcribeHorns();
+    assignFingering(notes);
+    S.notes = notes; S.swing = !!S.songSwing; S.toneAuto = 'clean';
+    const v = +$('hornVoices').value, chords = notes.filter(nt => nt.extra.length).length;
+    $('styleNote').textContent = !notes.length
+      ? 'Horn transcription (experimental): no clear horn notes were found in these bars. Check the bar range, try More notes, or the horns may be too quiet in this mix.'
+      : `Horn transcription (experimental): ${notes.length} horn hits in bars ${$('hornFrom').value}-${$('hornTo').value}${v > 1 ? `, ${chords} played as ${v === 2 ? 'double stops' : 'two- or three-note shapes'}` : ''}${shift ? `, moved ${shift > 0 ? 'up' : 'down'} ${Math.abs(shift) / 12} octave${Math.abs(shift) > 12 ? 's' : ''} to sit well on the guitar` : ''}. Treat it as a starting point and check it by ear.`;
+    S.tabMeta = {bars: S.bars, notes, bpb: S.bpb, key: S.key, bpm: S.bpm, style: 'pop', swing: S.swing, seed: S.seed, part, soloFrom: -1, soloTo: -1, scaleName: '', hornShift: shift, song: S.isDemo ? 'Built-in demo track' : S.fileName};
+    S.tab = renderTab(S.tabMeta);
+    showScreenTab();
+    if (P.playing){ const st = P.songStart + (P.ctx.currentTime - P.ctxStart); P.events = buildEvents(); P.idx = 0; while (P.idx < P.events.length && P.events[P.idx].t < st + 0.05) P.idx++; lastSys = -1; }
+    return;
+  }
   if (part === 'transcribe' && S.chartMode){ $('partSel').value = 'both'; toast('Transcription needs a real recording. Load a song file to use it.'); return regenerate(); }
   if (part === 'transcribe'){
     $('soloRange').hidden = true;
@@ -2640,7 +2934,7 @@ function regenerate(){
 async function runAnalysis(buf, name, isDemo){
   stop(); showErr(''); setBusy(true);
   try {
-    S.songBuf = buf; S.fileName = name; S.isDemo = isDemo; S.seed = 1; S.pitch = null; S.chartMode = false; S.chartKey = null;
+    S.songBuf = buf; S.fileName = name; S.isDemo = isDemo; S.seed = 1; S.pitch = null; S.hornRoll = null; S.chartMode = false; S.chartKey = null;
     progress(0.04, 'Preparing audio');
     await tick();
     let x = await toMono11k(buf);
@@ -2653,7 +2947,7 @@ async function runAnalysis(buf, name, isDemo){
     S.key = detectKey(S.F.keyChroma);
     const bpm = estimateTempo(S.F.env, S.F.fps);
     progress(0.9, 'Writing the guitar part');
-    $('soloFrom').value = ''; $('soloTo').value = '';
+    $('soloFrom').value = ''; $('soloTo').value = ''; $('hornFrom').value = ''; $('hornTo').value = '';
     await tick();
     analyzeBeats(bpm, false);
     songInfo();
@@ -2739,7 +3033,7 @@ $('typeChordsBtn').addEventListener('click', () => {
   S.chartKey = null;
   runChart(t, 'Typed chord chart', +$('chartBpm').value).then(() => { $('chordText').focus(); $('chordText').select(); toast('Replace these example chords with your own, then click Apply chord chart.'); });
 });
-['inflSel','styleSel','fills','feelSel','kickChk','partSel','soundSel','posSel','scaleSel','soloFrom','soloTo'].forEach(id => $(id).addEventListener('change', regenerate));
+['inflSel','styleSel','fills','feelSel','kickChk','partSel','soundSel','posSel','scaleSel','soloFrom','soloTo','hornFrom','hornTo','hornVoices','hornOct','hornSens'].forEach(id => $(id).addEventListener('change', regenerate));
 $('busy').addEventListener('input', () => { $('busyVal').textContent = $('busy').value; regenerate(); });
 $('newVarBtn').addEventListener('click', () => { S.seed++; regenerate(); toast('Variation ' + S.seed + ' written.'); });
 $('resetVarBtn').addEventListener('click', () => { S.seed = 1; regenerate(); });
