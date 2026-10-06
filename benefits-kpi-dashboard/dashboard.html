@@ -1,0 +1,693 @@
+<title>Benefits Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Spectral:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: left rail of sections (top bar on phones), one working pane; ledger-style tables, tiles only on Overview */
+:root{
+  --bg:#f5f6f3; --surface:#ffffff; --sunk:#eceee9; --ink:#1c2733; --muted:#5d6873; --line:#d7dbd3;
+  --accent:#126e66; --accent-ink:#ffffff; --accent-soft:#dcefeb; --amber:#b7791f; --amber-soft:#f6ead2;
+  --good:#2f7d32; --warn:#b26a00; --bad:#b3261e; --good-soft:#e3f1e3; --warn-soft:#fbefd9; --bad-soft:#f8e1df;
+  --s1:#126e66; --s2:#b7791f; --s3:#5b6fa8; --s4:#9a4f7a;
+  --display:"Spectral",Georgia,"Times New Roman",serif; --body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12181e; --surface:#19222a; --sunk:#202a33; --ink:#e6eaee; --muted:#9aa6b1; --line:#2e3a45;
+  --accent:#4fb3a8; --accent-ink:#0d1a19; --accent-soft:#1d3b38; --amber:#e0a84a; --amber-soft:#3a2f1c;
+  --good:#7cc47f; --warn:#e6a94a; --bad:#ef7d75; --good-soft:#1f3322; --warn-soft:#3a2e1a; --bad-soft:#3d2221;
+  --s1:#4fb3a8; --s2:#e0a84a; --s3:#93a6e0; --s4:#d68bb6; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12181e; --surface:#19222a; --sunk:#202a33; --ink:#e6eaee; --muted:#9aa6b1; --line:#2e3a45;
+  --accent:#4fb3a8; --accent-ink:#0d1a19; --accent-soft:#1d3b38; --amber:#e0a84a; --amber-soft:#3a2f1c;
+  --good:#7cc47f; --warn:#e6a94a; --bad:#ef7d75; --good-soft:#1f3322; --warn-soft:#3a2e1a; --bad-soft:#3d2221;
+  --s1:#4fb3a8; --s2:#e0a84a; --s3:#93a6e0; --s4:#d68bb6; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;margin:0}
+h1,h2,h3{font-family:var(--display);font-weight:600;text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:1.6rem} h2{font-size:1.3rem} h3{font-size:1.05rem;font-family:var(--body);font-weight:700}
+.num,td.n,.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.app{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:100vh}
+.rail{background:var(--surface);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:env(safe-area-inset-top,0px);height:100vh;overflow:auto}
+.brand{padding:4px 8px 16px}
+.brand small{display:block;color:var(--muted);font-size:.75rem;letter-spacing:.06em;text-transform:uppercase}
+.rail button{all:unset;cursor:pointer;padding:9px 10px;border-radius:8px;color:var(--ink);font-weight:500;display:flex;gap:10px;align-items:center}
+.rail button:hover{background:var(--sunk)}
+.rail button[aria-current="true"]{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.rail button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.rail .foot{margin-top:auto;font-size:.78rem;color:var(--muted);padding:8px}
+main{padding-block:24px 64px;padding-inline:clamp(16px,3vw,36px);min-width:0;display:flex;flex-direction:column;gap:20px}
+.head{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between}
+.head p{margin:4px 0 0;color:var(--muted);max-width:68ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;min-width:0}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.tiles{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(100%,190px),1fr))}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.tile .lbl{font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.tile .val{font-family:var(--mono);font-size:1.55rem;font-weight:500}
+.tile .sub{font-size:.8rem;color:var(--muted)}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.75rem;font-weight:600;white-space:nowrap}
+.p-good{background:var(--good-soft);color:var(--good)} .p-warn{background:var(--warn-soft);color:var(--warn)} .p-bad{background:var(--bad-soft);color:var(--bad)} .p-info{background:var(--accent-soft);color:var(--accent)} .p-muted{background:var(--sunk);color:var(--muted)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:var(--sunk);font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);white-space:nowrap}
+td.n,th.n{text-align:right}
+tr:last-child td{border-bottom:0}
+.btn{all:unset;cursor:pointer;padding:8px 14px;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:.88rem;display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
+.btn.sec{background:var(--sunk);color:var(--ink);border:1px solid var(--line)}
+.btn.ghost{background:transparent;color:var(--accent);padding:4px 8px}
+.btn.danger{background:transparent;color:var(--bad);padding:4px 8px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.form{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(100%,145px),1fr))}
+.form .wide{grid-column:1/-1}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.78rem;font-weight:600;color:var(--muted)}
+input,select,textarea{font:inherit;font-size:.9rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 9px;min-width:0;width:100%}
+textarea{min-height:90px;resize:vertical}
+.note{font-size:.82rem;color:var(--muted)}
+.callout{border-left:4px solid var(--amber);background:var(--amber-soft);padding:10px 14px;border-radius:6px;font-size:.86rem}
+.callout.info{border-color:var(--accent);background:var(--accent-soft)}
+.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px}
+.chart svg{width:100%;height:auto;display:block}
+.chart .ax{fill:var(--muted);font-size:10px;font-family:var(--mono)}
+.chart .grid line{stroke:var(--line)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.78rem;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.bar{height:10px;border-radius:5px;background:var(--sunk);overflow:hidden}
+.bar>span{display:block;height:100%;background:var(--accent)}
+.timeline{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.lane{background:var(--sunk);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.lane h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:.85rem}
+.checklist{display:flex;flex-direction:column;gap:6px}
+.checklist label{display:flex;gap:8px;align-items:flex-start;font-size:.86rem}
+.checklist input{width:auto;margin-top:3px}
+.status{font-size:.8rem;color:var(--muted)}
+.ai-out{white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px;min-height:120px;font-size:.92rem;max-height:520px;overflow:auto}
+.present{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:clamp(18px,4vw,40px)}
+.present h1{font-size:clamp(1.5rem,3vw,2.2rem)}
+.present .eyebrow{font-size:.78rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.present table{font-size:.95rem}
+.present td.best{background:var(--accent-soft)}
+body.presenting .rail,body.presenting .hide-present{display:none!important}
+body.presenting .app{grid-template-columns:1fr}
+.toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));right:16px;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:.88rem;z-index:50}
+@media (max-width:820px){
+  .app{grid-template-columns:1fr}
+  .rail{position:sticky;height:auto;flex-direction:row;overflow-x:auto;padding:8px 12px;gap:2px;border-right:0;border-bottom:1px solid var(--line);z-index:5}
+  .rail .brand,.rail .foot{display:none}
+  .rail button{white-space:nowrap;padding:8px 10px;font-size:.88rem}
+  .timeline{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:no-preference){.rail button,.btn{transition:background .15s}}
+</style>
+
+<div class="app">
+  <nav class="rail" aria-label="Sections">
+    <div class="brand"><h2>Benefits Command Center</h2><small>Texas · Group Benefits</small></div>
+    <button data-tab="overview">Overview</button>
+    <button data-tab="book">Book of Business</button>
+    <button data-tab="renewals">Renewals &amp; Transitions</button>
+    <button data-tab="plans">Plan Library &amp; Compare</button>
+    <button data-tab="whatif">What-If Modeler</button>
+    <button data-tab="present">Present to Client</button>
+    <button data-tab="market">Texas Market Intel</button>
+    <button data-tab="ai">AI Assistant</button>
+    <div class="foot" id="syncState">Connecting…</div>
+  </nav>
+  <main id="main"></main>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+/* ---------- Market snapshot (fallback; the weekly refresh writes newer data to the shared store) ---------- */
+const MARKET_FALLBACK = {
+  updatedAt:"2026-10-06",
+  months:["2024-09","2024-10","2024-11","2024-12","2025-01","2025-02","2025-03","2025-04","2025-05","2025-06","2025-07","2025-08","2025-09","2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05","2026-06","2026-07","2026-08"],
+  series:{
+    cpiMedical:[3.26,3.31,3.09,2.83,2.63,2.89,2.65,2.72,2.46,2.75,3.52,3.48,3.29,null,2.90,3.15,3.19,3.36,3.05,2.54,2.59,2.03,1.70,1.56],
+    cpiHospital:[4.82,4.28,4.26,3.99,3.25,3.76,3.85,3.80,3.91,4.23,5.74,5.32,5.85,null,6.00,6.70,6.88,7.59,6.38,5.55,5.78,5.47,5.43,5.53],
+    cpiAll:[2.43,2.58,2.72,2.87,2.99,2.80,2.38,2.33,2.38,2.68,2.74,2.94,3.02,null,2.70,2.65,2.39,2.43,3.29,3.78,4.17,3.46,3.30,3.35],
+    txUnemployment:[4.2,4.2,4.2,4.1,4.1,4.1,4.1,4.1,4.1,4.1,4.2,4.2,4.3,null,4.3,4.3,4.3,4.3,4.3,4.3,4.3,4.4,4.5,4.4],
+    txBusinessApps:[39480,40652,39795,42076,33576,40756,43315,42661,43392,44829,44791,45232,50272,49900,53251,47752,49879,46125,45916,46776,49877,48491,55981,48692],
+    txJobGrowth:[null,null,null,null,null,null,null,null,null,null,null,0.88,0.72,0.54,0.46,0.56,0.67,0.53,0.75,0.63,0.73,1.22,1.13,1.11]
+  },
+  benchmarks:{
+    kffYear:2025, singlePremium:9325, familyPremium:26993, singleIncreasePct:5, familyIncreasePct:6,
+    smallFirmSingle:9211, smallFirmFamily:26054, workerShareFamily:6850, employerShareFamily:20143
+  },
+  compliance:{
+    affordability2026:9.96, affordability2027:10.22,
+    hsa2027Single:4500, hsa2027Family:9000, hdhpMinDed2027Single:1750, hdhpMinDed2027Family:3500,
+    hdhpMaxOop2027Single:8700, hdhpMaxOop2027Family:17400
+  },
+  sources:[
+    {name:"CPI Medical Care (CPIMEDSL)",url:"https://fred.stlouisfed.org/series/CPIMEDSL"},
+    {name:"CPI Hospital & Related Services (CUSR0000SEMD)",url:"https://fred.stlouisfed.org/series/CUSR0000SEMD"},
+    {name:"CPI All Items (CPIAUCSL)",url:"https://fred.stlouisfed.org/series/CPIAUCSL"},
+    {name:"Texas Unemployment Rate (TXUR)",url:"https://fred.stlouisfed.org/series/TXUR"},
+    {name:"Texas Business Applications (BABATOTALSATX)",url:"https://fred.stlouisfed.org/series/BABATOTALSATX"},
+    {name:"Texas Nonfarm Employment (TXNA)",url:"https://fred.stlouisfed.org/series/TXNA"},
+    {name:"KFF Employer Health Benefits Survey",url:"https://www.kff.org/health-costs/report/2025-employer-health-benefits-survey/"},
+    {name:"IRS ACA affordability (Rev. Proc. 2025-25, 2026-26)",url:"https://www.irs.gov/"},
+    {name:"IRS HSA/HDHP limits 2027 (Rev. Proc. 2026-24)",url:"https://www.irs.gov/"},
+    {name:"AHRQ MEPS-IC State Tables (Texas)",url:"https://meps.ahrq.gov/data_stats/state_tables.jsp?regionid=48&year=2025"}
+  ]
+};
+
+/* ---------- Helpers ---------- */
+const $ = (s,el=document)=>el.querySelector(s);
+const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money = (v,d=0)=> (v==null||isNaN(v))?"—":"$"+Number(v).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+const kmoney = v => { if(v==null||isNaN(v)) return "—"; const a=Math.abs(v); return a>=1e6?"$"+(v/1e6).toFixed(2)+"M":a>=1e4?"$"+(v/1e3).toFixed(0)+"K":money(v); };
+const pct = (v,d=1)=> (v==null||isNaN(v))?"—":Number(v).toFixed(d)+"%";
+const numv = v => { const n=parseFloat(String(v).replace(/[$,%\s]/g,"")); return isNaN(n)?0:n; };
+const today = ()=> new Date(new Date().toDateString());
+const daysUntil = iso => iso ? Math.round((new Date(iso+"T00:00:00") - today())/864e5) : null;
+const nextRenewal = iso => { if(!iso) return null; let d=new Date(iso+"T00:00:00"); const t=today(); while(d<t){ d.setFullYear(d.getFullYear()+1); } return d.toISOString().slice(0,10); };
+const fmtDate = iso => iso? new Date(iso+"T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : "—";
+const uid = ()=> Math.random().toString(36).slice(2,10);
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true,2600); }
+
+/* Privacy guard: blocks Social Security numbers, emails, phone numbers and health/birth details */
+function piiProblems(text){
+  const s=String(text||""); const out=[];
+  if(/\b\d{3}-\d{2}-\d{4}\b|\b\d{9}\b/.test(s)) out.push("a Social Security or ID number");
+  if(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(s)) out.push("an email address");
+  if(/\(?\b\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}\b/.test(s)) out.push("a phone number");
+  if(/\b(DOB|date of birth|born on|diagnos|pregnan|cancer|diabet|HIV|chemo|dialysis|surgery|prescription for)\b/i.test(s)) out.push("birth-date or health-condition details");
+  return out;
+}
+function guard(...texts){ const p=piiProblems(texts.join(" \n ")); if(p.length){ toast("Not saved: remove "+p.join(", ")+". Keep personal details in your CRM."); return false;} return true; }
+
+/* ---------- Data store: shared database when available, browser storage otherwise ---------- */
+const COLS=["clients","plans","proposals"];
+const state={clients:[],plans:[],proposals:[],market:MARKET_FALLBACK,tab:"overview",shared:false};
+const store={
+  db:null,
+  async init(){
+    try{ this.db = await (window.claude?.use ? window.claude.use("db") : null); }catch(e){ this.db=null; }
+    if(this.db){
+      state.shared=true; $("#syncState").textContent="Saved to your private shared workspace";
+      COLS.forEach(c=> this.db.collection(c).onSnapshot(s=>{ state[c]=s.docs.map(d=>({...d.data(),id:d.id})); render(); }, e=>console.warn(c,e)));
+      this.db.doc("market/latest").onSnapshot(s=>{ if(s.exists){ state.market={...MARKET_FALLBACK,...s.data()}; render(); } }, ()=>{});
+    } else {
+      $("#syncState").textContent="Working offline in this browser only";
+      COLS.forEach(c=>{ try{ state[c]=JSON.parse(localStorage.getItem("bcc_"+c)||"[]"); }catch(e){ state[c]=[]; } });
+      render();
+    }
+  },
+  async save(col,obj){
+    const id=obj.id||uid(); const data={...obj}; delete data.id; data.updatedAt=new Date().toISOString();
+    if(this.db){ await this.db.collection(col).doc(id).set(data); }
+    else { const arr=state[col].filter(x=>x.id!==id); arr.push({...data,id}); state[col]=arr; try{localStorage.setItem("bcc_"+col,JSON.stringify(arr));}catch(e){} render(); }
+    return id;
+  },
+  async remove(col,id){
+    if(this.db){ await this.db.collection(col).doc(id).delete(); }
+    else { state[col]=state[col].filter(x=>x.id!==id); try{localStorage.setItem("bcc_"+col,JSON.stringify(state[col]));}catch(e){} render(); }
+  }
+};
+
+/* ---------- Business math ---------- */
+const TIERS=[["ee","Employee only"],["es","Employee + spouse"],["ec","Employee + child(ren)"],["ef","Family"]];
+function clientRevenue(c){ const prem=numv(c.annualPremium), enr=numv(c.enrolled), r=numv(c.commissionRate);
+  return c.commissionType==="pct" ? prem*r/100 : r*enr*12; }
+function bookKPIs(){
+  const act=state.clients.filter(c=>(c.status||"active")==="active");
+  const pros=state.clients.filter(c=>c.status==="prospect");
+  const yearAgo=new Date(); yearAgo.setFullYear(yearAgo.getFullYear()-1);
+  const lost=state.clients.filter(c=>c.status==="lost" && (!c.lostDate || new Date(c.lostDate)>=yearAgo));
+  const lives=act.reduce((a,c)=>a+numv(c.enrolled),0), eligible=act.reduce((a,c)=>a+numv(c.employees),0);
+  const premium=act.reduce((a,c)=>a+numv(c.annualPremium),0), revenue=act.reduce((a,c)=>a+clientRevenue(c),0);
+  const ren90=act.filter(c=>{const d=daysUntil(nextRenewal(c.renewalDate)); return d!=null&&d<=90;});
+  const withInc=act.filter(c=>c.lastIncrease!==""&&c.lastIncrease!=null);
+  const avgInc=withInc.length? withInc.reduce((a,c)=>a+numv(c.lastIncrease),0)/withInc.length : null;
+  const lines=act.length? act.reduce((a,c)=>a+(c.lines||[]).length,0)/act.length : null;
+  const carriers={}; act.forEach(c=>{ const k=(c.carrier||"Unassigned").trim(); carriers[k]=(carriers[k]||0)+clientRevenue(c); });
+  const retention=(act.length+lost.length)? act.length/(act.length+lost.length)*100 : null;
+  return {act,pros,lost,lives,eligible,premium,revenue,ren90,avgInc,lines,carriers,retention,
+    participation: eligible? lives/eligible*100 : null,
+    pipeline: pros.reduce((a,c)=>a+numv(c.annualPremium),0), pipelineRev: pros.reduce((a,c)=>a+clientRevenue(c),0)};
+}
+function planMonthly(plan,census,mult=1){ const r=plan.rates||{}; return TIERS.reduce((a,[k])=>a+numv(census[k])*numv(r[k])*mult,0); }
+function splitCost(plan,census,contrib,mult=1){
+  const r=plan.rates||{}; const eeShare=numv(contrib.eePct)/100, depShare=numv(contrib.depPct)/100; let er=0, emp=0;
+  const perTier={};
+  TIERS.forEach(([k])=>{ const rate=numv(r[k])*mult; const base=numv(r.ee)*mult; let erPer;
+    if(contrib.mode==="flat"){ erPer=Math.min(rate, numv(contrib.flat)); }
+    else { erPer = k==="ee" ? rate*eeShare : base*eeShare + Math.max(0,rate-base)*depShare; }
+    perTier[k]={rate, er:erPer, emp:rate-erPer};
+    er+=erPer*numv(census[k]); emp+=(rate-erPer)*numv(census[k]); });
+  return {er, emp, total:er+emp, perTier};
+}
+function trendDefault(){ const s=state.market.series.cpiHospital.filter(v=>v!=null); return s.length? Math.round(s[s.length-1]*10)/10 : 6; }
+
+/* ---------- Charts (inline SVG, one scale per chart) ---------- */
+function lineChart(labels, series, opts={}){
+  const W=640,H=220,L=40,R=12,T=12,B=26; const vals=series.flatMap(s=>s.data).filter(v=>v!=null);
+  if(!vals.length) return '<div class="empty">No data yet</div>';
+  let lo=Math.min(0,...vals), hi=Math.max(...vals); const pad=(hi-lo)*0.12||1; hi+=pad; if(lo<0) lo-=pad;
+  const step=niceStep((hi-lo)/4); lo=Math.floor(lo/step)*step; hi=Math.ceil(hi/step)*step;
+  const x=i=>L+(W-L-R)*i/(labels.length-1), y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  let g='<g class="grid">'; for(let v=lo; v<=hi+1e-9; v+=step){ g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L-6}" y="${y(v)+3}" text-anchor="end">${opts.fmt?opts.fmt(v):+v.toFixed(1)}</text>`; } g+='</g>';
+  let xl=''; labels.forEach((m,i)=>{ if(i%6===0||i===labels.length-1){ xl+=`<text class="ax" x="${x(i)}" y="${H-8}" text-anchor="${i===0?'start':i===labels.length-1?'end':'middle'}">${m.slice(5)==='01'||i===0||i===labels.length-1?monthLbl(m):monthLbl(m).split(' ')[0]}</text>`; } });
+  let paths=''; series.forEach((s,si)=>{ let d='',pen=false; const segs=[]; let cur=null; s.data.forEach((v,i)=>{ if(v==null){pen=false;cur=null;return;} d+=(pen?'L':'M')+x(i).toFixed(1)+','+y(v).toFixed(1); pen=true; if(!cur){cur=[];segs.push(cur);} cur.push(i); });
+    if(si===0 && opts.area){ const y0=y(Math.max(lo,0)); segs.forEach(g=>{ if(g.length<2) return; paths+=`<path d="M${x(g[0])},${y0}${g.map(i=>'L'+x(i).toFixed(1)+','+y(s.data[i]).toFixed(1)).join('')}L${x(g[g.length-1])},${y0}Z" fill="${s.color}" opacity=".12"/>`; }); }
+    paths+=`<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2.2" stroke-linejoin="round"/>`;
+    let li=s.data.length-1; while(li>=0&&s.data[li]==null) li--; if(li>=0) paths+=`<circle cx="${x(li)}" cy="${y(s.data[li])}" r="4" fill="${s.color}"/>`; });
+  const leg=series.length>1?`<div class="legend">${series.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>`:'';
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.label||'chart')}">${g}${xl}${paths}</svg>${leg}</div>`;
+}
+function barChart(labels,data,opts={}){
+  const W=640,H=220,L=48,R=12,T=12,B=26; const vals=data.filter(v=>v!=null); if(!vals.length) return '<div class="empty">No data yet</div>';
+  let hi=Math.max(...vals)*1.1; const step=niceStep(hi/4); hi=Math.ceil(hi/step)*step;
+  const bw=(W-L-R)/labels.length, y=v=>T+(H-T-B)*(1-v/hi);
+  let g='<g class="grid">'; for(let v=0; v<=hi+1e-9; v+=step){ g+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L-6}" y="${y(v)+3}" text-anchor="end">${opts.fmt?opts.fmt(v):v}</text>`; } g+='</g>';
+  let bars=''; data.forEach((v,i)=>{ if(v==null) return; bars+=`<rect x="${L+i*bw+bw*0.15}" y="${y(v)}" width="${bw*0.7}" height="${y(0)-y(v)}" rx="2" fill="${i===data.length-1?'var(--amber)':'var(--s1)'}"><title>${monthLbl(labels[i])}: ${v.toLocaleString()}</title></rect>`; });
+  let xl=''; labels.forEach((m,i)=>{ if(i%6===0||i===labels.length-1) xl+=`<text class="ax" x="${L+i*bw+bw/2}" y="${H-8}" text-anchor="middle">${monthLbl(m)}</text>`; });
+  return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.label||'chart')}">${g}${bars}${xl}</svg></div>`;
+}
+function niceStep(raw){ const p=Math.pow(10,Math.floor(Math.log10(raw||1))); const n=raw/p; return (n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10)*p; }
+function monthLbl(m){ const [y,mo]=m.split("-"); return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+mo-1]+" "+y.slice(2); }
+function latest(arr){ for(let i=arr.length-1;i>=0;i--) if(arr[i]!=null) return {v:arr[i],i}; return {v:null,i:-1}; }
+
+/* ---------- Views ---------- */
+const views={};
+views.overview=()=>{
+  const k=bookKPIs(), M=state.market, med=latest(M.series.cpiMedical), hosp=latest(M.series.cpiHospital);
+  const incPill = k.avgInc==null? '' : (k.avgInc<=hosp.v ? `<span class="pill p-good">Below hospital-cost trend</span>` : `<span class="pill p-warn">Above hospital-cost trend</span>`);
+  const carriers=Object.entries(k.carriers).sort((a,b)=>b[1]-a[1]); const ctot=carriers.reduce((a,c)=>a+c[1],0)||1;
+  const ren=k.act.map(c=>({...c,next:nextRenewal(c.renewalDate)})).filter(c=>c.next).sort((a,b)=>a.next.localeCompare(b.next)).slice(0,6);
+  const empty=!state.clients.length;
+  return `
+  <div class="head"><div><h1>Overview</h1><p>Your book of business at a glance. Clients are tracked by code only, so this page never holds employee names or health details.</p></div>
+    <div class="row hide-present"><button class="btn" data-go="book">Add or update clients</button></div></div>
+  ${state.clients.some(c=>/^EXAMPLE/i.test(c.code||""))?`<div class="callout">Example groups, plans and a proposal (codes starting with <span class="mono">EXAMPLE</span>) are loaded so you can see how each section works. Delete them in Book of Business and Plan Library once you add real data.</div>`:''}
+  ${empty?`<div class="callout info">Start by adding your client groups in <b>Book of Business</b>. Use a code such as <span class="mono">GRP-014</span> instead of the company name, and keep the code-to-name list in your CRM.</div>`:''}
+  <div class="tiles">
+    ${tile("Active groups",k.act.length,`${k.pros.length} prospects in pipeline`)}
+    ${tile("Covered employees",k.lives.toLocaleString(),k.participation==null?"Participation —":`Participation ${pct(k.participation,0)} of eligible`)}
+    ${tile("Annual premium managed",kmoney(k.premium),"Sum of active groups")}
+    ${tile("Est. annual revenue",kmoney(k.revenue),k.lives?`${money(k.revenue/12/k.lives,2)} per employee per month`:"Commissions + fees")}
+    ${tile("Client retention (12 mo)",k.retention==null?"—":pct(k.retention,0),`${k.lost.length} groups lost in last year`)}
+    ${tile("Renewals in 90 days",k.ren90.length,kmoney(k.ren90.reduce((a,c)=>a+numv(c.annualPremium),0))+" premium at stake")}
+    ${tile("Avg renewal increase",k.avgInc==null?"—":pct(k.avgInc),incPill||"Enter last increase per group")}
+    ${tile("Lines per client",k.lines==null?"—":k.lines.toFixed(1),"Medical, dental, vision, life…")}
+  </div>
+  <div class="grid g2">
+    <section class="panel"><div class="row" style="justify-content:space-between"><h2>Upcoming renewals</h2><button class="btn ghost" data-go="renewals">Open planner</button></div>
+      ${ren.length? `<div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Group</th><th>Renews</th><th class="n">Days</th><th class="n">Premium</th><th>Stage</th></tr></thead><tbody>
+      ${ren.map(c=>{const d=daysUntil(c.next); return `<tr><td class="mono">${esc(c.code)}</td><td>${fmtDate(c.next)}</td><td class="n">${d}</td><td class="n">${kmoney(numv(c.annualPremium))}</td><td>${stagePill(d)}</td></tr>`}).join('')}
+      </tbody></table></div>` : `<div class="empty" style="margin-top:12px">Renewal dates you enter for each group show up here, soonest first.</div>`}
+    </section>
+    <section class="panel"><h2>Revenue by carrier</h2><p class="note">Shows how much of your income depends on each carrier.</p>
+      ${carriers.length? carriers.map(([n,v],i)=>`<div style="margin:10px 0"><div class="row" style="justify-content:space-between"><span>${esc(n)}</span><span class="mono">${kmoney(v)} · ${pct(v/ctot*100,0)}</span></div><div class="bar"><span style="width:${(v/ctot*100).toFixed(1)}%;background:var(--s${(i%4)+1})"></span></div></div>`).join('') + (carriers[0][1]/ctot>0.5?`<div class="callout" style="margin-top:10px">More than half of revenue sits with one carrier. A carrier commission change would hit hard.</div>`:'') : `<div class="empty">Add a carrier and commission to each group to see this.</div>`}
+    </section>
+  </div>
+  <section class="panel"><div class="row" style="justify-content:space-between"><h2>Market pulse</h2><button class="btn ghost" data-go="market">Texas Market Intel</button></div>
+    <div class="tiles" style="margin-top:12px">
+      ${tile("Medical care inflation",pct(med.v),"Year over year, "+monthLbl(M.months[med.i]))}
+      ${tile("Hospital services inflation",pct(hosp.v),"Biggest driver of renewal increases")}
+      ${tile("Avg family premium",money(M.benchmarks.familyPremium),`KFF ${M.benchmarks.kffYear}, +${M.benchmarks.familyIncreasePct}% vs prior year`)}
+      ${tile("TX new business applications",(latest(M.series.txBusinessApps).v||0).toLocaleString(),"Monthly prospects entering the market")}
+    </div><p class="note" style="margin-top:8px">Market data last refreshed ${fmtDate(M.updatedAt)}.</p>
+  </section>`;
+};
+function tile(l,v,s){ return `<div class="tile"><span class="lbl">${l}</span><span class="val">${v}</span><span class="sub">${s}</span></div>`; }
+function stagePill(d){ if(d==null) return ''; if(d<=30) return '<span class="pill p-bad">0–30: Enroll &amp; finalize</span>'; if(d<=60) return '<span class="pill p-warn">31–60: Present &amp; decide</span>'; if(d<=90) return '<span class="pill p-info">61–90: Market &amp; quote</span>'; if(d<=120) return '<span class="pill p-muted">91–120: Prep</span>'; return '<span class="pill p-muted">Later</span>'; }
+
+const LINES=["Medical","Dental","Vision","Life/AD&D","Short-term disability","Long-term disability","Accident","Critical illness","HSA/HRA/FSA","Voluntary"];
+let editClient=null;
+views.book=()=>{
+  const k=bookKPIs(); const rows=[...state.clients].sort((a,b)=>(a.code||"").localeCompare(b.code||""));
+  const c=editClient||{};
+  return `
+  <div class="head"><div><h1>Book of Business</h1><p>One row per employer group. Use a client code, never an employee's name or health details. Revenue is calculated from per-employee-per-month (PEPM) commission or a percent of premium.</p></div></div>
+  <section class="panel">
+    <h2>${c.id?"Edit "+esc(c.code):"Add a group"}</h2>
+    <form id="clientForm" class="form" style="margin-top:12px">
+      <label class="f">Client code<input id="c_code" required placeholder="GRP-014" value="${esc(c.code||"")}"></label>
+      <label class="f">Status<select id="c_status">${["active","prospect","lost"].map(s=>`<option ${c.status===s?"selected":""}>${s}</option>`).join("")}</select></label>
+      <label class="f">Industry<input id="c_industry" placeholder="Construction" value="${esc(c.industry||"")}"></label>
+      <label class="f">Texas region<input id="c_region" placeholder="DFW" value="${esc(c.region||"")}"></label>
+      <label class="f">Eligible employees<input id="c_employees" type="number" min="0" value="${esc(c.employees||"")}"></label>
+      <label class="f">Enrolled employees<input id="c_enrolled" type="number" min="0" value="${esc(c.enrolled||"")}"></label>
+      <label class="f">Primary carrier<input id="c_carrier" placeholder="Carrier name" value="${esc(c.carrier||"")}"></label>
+      <label class="f">Funding<select id="c_funding">${["Fully insured","Level-funded","Self-funded","ICHRA/QSEHRA"].map(s=>`<option ${c.funding===s?"selected":""}>${s}</option>`).join("")}</select></label>
+      <label class="f">Annual premium ($)<input id="c_premium" type="number" min="0" value="${esc(c.annualPremium||"")}"></label>
+      <label class="f">Commission type<select id="c_ctype"><option value="pepm" ${c.commissionType!=="pct"?"selected":""}>PEPM ($ per enrolled employee per month)</option><option value="pct" ${c.commissionType==="pct"?"selected":""}>Percent of premium</option></select></label>
+      <label class="f">Commission rate<input id="c_crate" type="number" step="0.01" min="0" value="${esc(c.commissionRate||"")}"></label>
+      <label class="f">Plan-year renewal date<input id="c_renewal" type="date" value="${esc(c.renewalDate||"")}"></label>
+      <label class="f">Last renewal increase (%)<input id="c_inc" type="number" step="0.1" value="${esc(c.lastIncrease??"")}"></label>
+      <label class="f">Date lost (if lost)<input id="c_lost" type="date" value="${esc(c.lostDate||"")}"></label>
+      <fieldset class="wide" style="border:1px solid var(--line);border-radius:8px;padding:10px"><legend class="note">Lines of coverage placed</legend>
+        <div class="row">${LINES.map(l=>`<label class="row" style="gap:5px;font-size:.85rem"><input type="checkbox" style="width:auto" name="c_lines" value="${esc(l)}" ${(c.lines||[]).includes(l)?"checked":""}>${esc(l)}</label>`).join("")}</div></fieldset>
+      <label class="f wide">Notes (business notes only, no personal or health information)<textarea id="c_notes">${esc(c.notes||"")}</textarea></label>
+      <div class="row wide"><button class="btn" type="submit">${c.id?"Save changes":"Add group"}</button>${c.id?`<button class="btn sec" type="button" id="cancelEdit">Cancel</button>`:""}</div>
+    </form>
+  </section>
+  <section class="panel">
+    <div class="row" style="justify-content:space-between"><h2>All groups</h2><span class="note">${k.act.length} active · ${k.pros.length} prospects · ${k.lost.length} lost (12 mo)</span></div>
+    ${rows.length?`<div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Code</th><th>Status</th><th>Industry</th><th>Carrier</th><th class="n">Enrolled</th><th class="n">Particip.</th><th class="n">Premium</th><th class="n">Revenue</th><th>Renews</th><th class="n">Lines</th><th></th></tr></thead><tbody>
+    ${rows.map(c=>{const part=numv(c.employees)?numv(c.enrolled)/numv(c.employees)*100:null; return `<tr>
+      <td class="mono">${esc(c.code)}</td><td>${statusPill(c.status)}</td><td>${esc(c.industry)}</td><td>${esc(c.carrier)}</td>
+      <td class="n">${numv(c.enrolled)}</td><td class="n">${part==null?"—":`<span class="${part<70?"pill p-warn":""}">${pct(part,0)}</span>`}</td>
+      <td class="n">${kmoney(numv(c.annualPremium))}</td><td class="n">${kmoney(clientRevenue(c))}</td><td>${fmtDate(nextRenewal(c.renewalDate))}</td><td class="n">${(c.lines||[]).length}</td>
+      <td><button class="btn ghost" data-edit-client="${c.id}">Edit</button><button class="btn danger" data-del-client="${c.id}">Delete</button></td></tr>`}).join("")}
+    </tbody></table></div><p class="note" style="margin-top:8px">Participation below 70% is flagged because many small-group carriers require at least 70–75% of eligible employees to enroll.</p>`:`<div class="empty" style="margin-top:12px">No groups yet. Add your first group above.</div>`}
+  </section>`;
+};
+function statusPill(s){ s=s||"active"; return `<span class="pill ${s==="active"?"p-good":s==="prospect"?"p-info":"p-bad"}">${s}</span>`; }
+
+const CHECK=[
+  ["d120","120 days: Request renewal and claims experience from the carrier"],
+  ["d110","110 days: Confirm census counts by tier (counts only)"],
+  ["d100","100 days: Review contribution strategy and budget with employer"],
+  ["d90","90 days: Market the group and request competing quotes"],
+  ["d75","75 days: Build plan comparison and what-if scenarios"],
+  ["d60","60 days: Present options to decision maker"],
+  ["d45","45 days: Employer decision and signed applications"],
+  ["d30","30 days: Open enrollment materials and employee meetings"],
+  ["d15","15 days: Submit enrollment to carrier and confirm payroll deductions"],
+  ["d0","Effective date: Verify ID cards, billing and first invoice"],
+  ["aca","Check ACA affordability for lowest-cost employee-only option"],
+  ["sbc","Distribute Summary of Benefits and Coverage (SBC)"]
+];
+let openChecklist=null;
+views.renewals=()=>{
+  const act=state.clients.filter(c=>(c.status||"active")==="active").map(c=>({...c,next:nextRenewal(c.renewalDate),d:daysUntil(nextRenewal(c.renewalDate))})).filter(c=>c.next).sort((a,b)=>a.d-b.d);
+  const lane=(t,f)=>{ const l=act.filter(f); return `<div class="lane"><h3>${t} · ${l.length}</h3>${l.map(c=>{const done=Object.values(c.checklist||{}).filter(Boolean).length; return `<div class="card"><div class="row" style="justify-content:space-between"><b class="mono">${esc(c.code)}</b><span class="mono">${c.d}d</span></div><div class="note">${fmtDate(c.next)} · ${esc(c.carrier||"")}</div><div class="row" style="justify-content:space-between;margin-top:6px"><span class="note">${done}/${CHECK.length} steps</span><button class="btn ghost" data-check="${c.id}">Checklist</button></div></div>`}).join("")||'<div class="note">None</div>'}</div>`; };
+  const oc=openChecklist&&state.clients.find(c=>c.id===openChecklist);
+  return `
+  <div class="head"><div><h1>Renewals &amp; Plan-Year Transitions</h1><p>Every active group sorted by days to renewal. Use the 120-day checklist to plan each transition so nothing slips while staff time is limited.</p></div></div>
+  <div class="timeline">${lane("Next 30 days",c=>c.d<=30)}${lane("31–60 days",c=>c.d>30&&c.d<=60)}${lane("61–120 days",c=>c.d>60&&c.d<=120)}</div>
+  ${oc?`<section class="panel"><div class="row" style="justify-content:space-between"><h2>Transition checklist: <span class="mono">${esc(oc.code)}</span></h2><span class="note">Renews ${fmtDate(nextRenewal(oc.renewalDate))}</span></div>
+    <div class="checklist" style="margin-top:10px">${CHECK.map(([k,t])=>`<label><input type="checkbox" data-ck="${k}" ${(oc.checklist||{})[k]?"checked":""}>${esc(t)}</label>`).join("")}</div>
+    <p class="note" style="margin-top:10px">Checklist progress is saved with the group. Reset it after the plan year starts.</p>
+    <div class="row"><button class="btn sec" id="resetCk">Reset for next year</button></div></section>`:""}
+  ${act.length?"":`<div class="empty">Add renewal dates to your active groups in Book of Business to fill this planner.</div>`}
+  <section class="panel"><h2>Groups renewing after 120 days</h2>
+   <p class="note">${act.filter(c=>c.d>120).map(c=>`<span class="mono">${esc(c.code)}</span> (${fmtDate(c.next)})`).join(" · ")||"None"}</p></section>`;
+};
+
+let editPlan=null, compareSel=[], compareCensus={ee:10,es:3,ec:3,ef:4}, compareContrib={mode:"pct",eePct:75,depPct:50,flat:500};
+views.plans=()=>{
+  const p=editPlan||{rates:{}};
+  const sel=state.plans.filter(x=>compareSel.includes(x.id));
+  return `
+  <div class="head"><div><h1>Plan Library &amp; Compare</h1><p>Save the plans you quote, then compare up to four side by side for a census entered as tier counts. Counts only, never names.</p></div></div>
+  <section class="panel"><h2>${p.id?"Edit plan":"Add a plan"}</h2>
+   <form id="planForm" class="form" style="margin-top:12px">
+    <label class="f wide">Plan name<input id="p_name" required placeholder="Carrier A Gold PPO 1500" value="${esc(p.name||"")}"></label>
+    <label class="f">Carrier<input id="p_carrier" value="${esc(p.carrier||"")}"></label>
+    <label class="f">Plan type<select id="p_type">${["PPO","HMO","EPO","POS","HDHP/HSA","Level-funded PPO","ICHRA"].map(s=>`<option ${p.type===s?"selected":""}>${s}</option>`).join("")}</select></label>
+    <label class="f">Metal level<select id="p_metal">${["Platinum","Gold","Silver","Bronze","N/A"].map(s=>`<option ${p.metal===s?"selected":""}>${s}</option>`).join("")}</select></label>
+    <label class="f">Network<input id="p_network" placeholder="Statewide / DFW" value="${esc(p.network||"")}"></label>
+    <label class="f">Deductible (single)<input id="p_ded" type="number" value="${esc(p.deductible||"")}"></label>
+    <label class="f">Deductible (family)<input id="p_dedf" type="number" value="${esc(p.deductibleFamily||"")}"></label>
+    <label class="f">Out-of-pocket max (single)<input id="p_oop" type="number" value="${esc(p.oop||"")}"></label>
+    <label class="f">Coinsurance (plan pays %)<input id="p_coins" type="number" value="${esc(p.coinsurance||"")}"></label>
+    <label class="f">Primary care copay<input id="p_pcp" value="${esc(p.pcp||"")}"></label>
+    <label class="f">Specialist copay<input id="p_spec" value="${esc(p.specialist||"")}"></label>
+    <label class="f">Emergency room<input id="p_er" value="${esc(p.er||"")}"></label>
+    <label class="f">Generic Rx<input id="p_rx" value="${esc(p.rx||"")}"></label>
+    ${TIERS.map(([k,l])=>`<label class="f">Monthly rate: ${l}<input id="p_r_${k}" type="number" step="0.01" value="${esc((p.rates||{})[k]||"")}"></label>`).join("")}
+    <div class="row wide"><button class="btn" type="submit">${p.id?"Save plan":"Add plan"}</button>${p.id?`<button class="btn sec" type="button" id="cancelPlan">Cancel</button>`:""}</div>
+   </form></section>
+  <section class="panel"><h2>Saved plans</h2>
+   ${state.plans.length?`<div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Compare</th><th>Plan</th><th>Type</th><th class="n">Deductible</th><th class="n">OOP max</th><th class="n">EE rate</th><th class="n">Family rate</th><th></th></tr></thead><tbody>
+   ${state.plans.map(x=>`<tr><td><input type="checkbox" style="width:auto" data-cmp="${x.id}" ${compareSel.includes(x.id)?"checked":""}></td><td>${esc(x.name)}<div class="note">${esc(x.carrier||"")}</div></td><td>${esc(x.type)} ${x.metal&&x.metal!=="N/A"?"· "+esc(x.metal):""}</td><td class="n">${money(numv(x.deductible))}</td><td class="n">${money(numv(x.oop))}</td><td class="n">${money(numv((x.rates||{}).ee),2)}</td><td class="n">${money(numv((x.rates||{}).ef),2)}</td><td><button class="btn ghost" data-edit-plan="${x.id}">Edit</button><button class="btn danger" data-del-plan="${x.id}">Delete</button></td></tr>`).join("")}
+   </tbody></table></div>`:`<div class="empty" style="margin-top:12px">No plans saved yet. Add the plans from your carrier quotes above.</div>`}
+  </section>
+  <section class="panel"><h2>Side-by-side comparison</h2>
+   ${censusInputs("cmp",compareCensus,compareContrib)}
+   ${sel.length? compareTable(sel,compareCensus,compareContrib,false) : `<div class="empty" style="margin-top:12px">Tick up to four plans above to compare them.</div>`}
+   ${sel.length?`<div class="row" style="margin-top:12px"><label class="f" style="max-width:220px">Save as proposal for client code<input id="propCode" placeholder="GRP-014"></label><button class="btn" id="saveProp">Save proposal</button><span class="note">Saved proposals appear in Present to Client.</span></div>`:""}
+  </section>`;
+};
+function censusInputs(pfx,census,contrib){
+  return `<div class="form" style="margin-top:12px">
+   ${TIERS.map(([k,l])=>`<label class="f">Enrolled: ${l}<input type="number" min="0" data-${pfx}-census="${k}" value="${census[k]}"></label>`).join("")}
+   <label class="f">Employer contribution<select data-${pfx}-contrib="mode"><option value="pct" ${contrib.mode==="pct"?"selected":""}>Percent of premium</option><option value="flat" ${contrib.mode==="flat"?"selected":""}>Flat $ per employee</option></select></label>
+   ${contrib.mode==="flat"?`<label class="f">Employer $ per employee / month<input type="number" data-${pfx}-contrib="flat" value="${contrib.flat}"></label>`:`<label class="f">Employer % of employee cost<input type="number" data-${pfx}-contrib="eePct" value="${contrib.eePct}"></label><label class="f">Employer % of dependent cost<input type="number" data-${pfx}-contrib="depPct" value="${contrib.depPct}"></label>`}
+  </div>`;
+}
+function compareTable(plans,census,contrib,clientFacing){
+  const costs=plans.map(p=>splitCost(p,census,contrib)); const minEr=Math.min(...costs.map(c=>c.er)); const minDed=Math.min(...plans.map(p=>numv(p.deductible)));
+  const row=(lbl,fn,best)=>`<tr><th scope="row" style="text-transform:none;letter-spacing:0;font-size:.85rem">${lbl}</th>${plans.map((p,i)=>`<td class="n${best&&best(p,i)?" best":""}">${fn(p,i)}</td>`).join("")}</tr>`;
+  return `<div class="tablewrap" style="margin-top:12px"><table><thead><tr><th></th>${plans.map(p=>`<th class="n" style="text-transform:none;letter-spacing:0;color:var(--ink);font-size:.85rem">${esc(p.name)}</th>`).join("")}</tr></thead><tbody>
+   ${row("Plan type",p=>esc(p.type+(p.metal&&p.metal!=="N/A"?" · "+p.metal:"")))}
+   ${row("Network",p=>esc(p.network||"—"))}
+   ${row("Deductible (single / family)",p=>money(numv(p.deductible))+" / "+money(numv(p.deductibleFamily)),p=>numv(p.deductible)===minDed&&clientFacing)}
+   ${row("Out-of-pocket max (single)",p=>money(numv(p.oop)))}
+   ${row("Plan pays after deductible",p=>p.coinsurance?p.coinsurance+"%":"—")}
+   ${row("Primary care / specialist",p=>esc((p.pcp||"—")+" / "+(p.specialist||"—")))}
+   ${row("Emergency room",p=>esc(p.er||"—"))}
+   ${row("Generic prescriptions",p=>esc(p.rx||"—"))}
+   ${TIERS.map(([k,l])=>row("Employee pays / month: "+l,(p,i)=>money(costs[i].perTier[k].emp,2))).join("")}
+   ${row("Employer cost / year",(p,i)=>money(costs[i].er*12),(p,i)=>clientFacing&&costs[i].er===minEr)}
+   ${row("Employees' total cost / year",(p,i)=>money(costs[i].emp*12))}
+   ${row("Total premium / year",(p,i)=>`<b>${money(costs[i].total*12)}</b>`)}
+  </tbody></table></div>`;
+}
+
+let wi={base:"",alt:"",increase:null,trend:null,census:{ee:10,es:3,ec:3,ef:4},contrib:{mode:"pct",eePct:75,depPct:50,flat:500},altContrib:null,wage:32000};
+views.whatif=()=>{
+  if(wi.increase==null) wi.increase=trendDefault(); if(wi.trend==null) wi.trend=trendDefault();
+  if(!wi.altContrib) wi.altContrib={...wi.contrib};
+  const base=state.plans.find(p=>p.id===wi.base), alt=state.plans.find(p=>p.id===wi.alt);
+  const opt=sel=>`<option value="">Choose a plan</option>`+state.plans.map(p=>`<option value="${p.id}" ${sel===p.id?"selected":""}>${esc(p.name)}</option>`).join("");
+  let out="";
+  if(base){
+    const cur=splitCost(base,wi.census,wi.contrib), ren=splitCost(base,wi.census,wi.contrib,1+numv(wi.increase)/100);
+    const altC=alt? splitCost(alt,wi.census,wi.altContrib):null;
+    const scen=[["Current plan, today's rates",cur],["Renew as is (+"+pct(numv(wi.increase))+")",ren]]; if(altC) scen.push(["Switch to "+alt.name,altC]);
+    const lowest=[base,alt].filter(Boolean).reduce((m,p)=>{const c=splitCost(p,wi.census,p===alt?wi.altContrib:wi.contrib,p===base?1+numv(wi.increase)/100:1).perTier.ee.emp; return Math.min(m,c);},Infinity);
+    const C=state.market.compliance, maxEE26=numv(wi.wage)*C.affordability2026/100/12, maxEE27=numv(wi.wage)*C.affordability2027/100/12;
+    const yrs=[0,1,2].map(y=>({y, renew:ren.total*12*Math.pow(1+numv(wi.trend)/100,y), alt:altC?altC.total*12*Math.pow(1+numv(wi.trend)/100,y):null}));
+    out=`<section class="panel"><h2>Results</h2>
+     <div class="tablewrap" style="margin-top:12px"><table><thead><tr><th>Scenario</th><th class="n">Total / year</th><th class="n">Employer / year</th><th class="n">Employees / year</th><th class="n">Employer change vs renewal</th></tr></thead><tbody>
+     ${scen.map(([n,c])=>`<tr><td>${esc(n)}</td><td class="n">${money(c.total*12)}</td><td class="n">${money(c.er*12)}</td><td class="n">${money(c.emp*12)}</td><td class="n">${deltaPill(c.er*12-ren.er*12)}</td></tr>`).join("")}
+     </tbody></table></div>
+     <div class="grid g2" style="margin-top:16px">
+      <div><h3>ACA affordability check</h3><p class="note">The employee's monthly cost for the lowest-cost employee-only option must stay under ${pct(C.affordability2026,2)} of income in 2026 and ${pct(C.affordability2027,2)} in 2027. Uses the lowest annual wage you enter (W-2 safe harbor).</p>
+       <div class="row"><span>Lowest employee-only cost: <b class="mono">${money(lowest,2)}</b>/mo</span></div>
+       <div class="row" style="margin-top:6px">${lowest<=maxEE26?'<span class="pill p-good">Affordable 2026</span>':'<span class="pill p-bad">Not affordable 2026</span>'} <span class="note">max ${money(maxEE26,2)}/mo</span></div>
+       <div class="row" style="margin-top:6px">${lowest<=maxEE27?'<span class="pill p-good">Affordable 2027</span>':'<span class="pill p-bad">Not affordable 2027</span>'} <span class="note">max ${money(maxEE27,2)}/mo</span></div>
+       <p class="note">Affordability penalties apply to employers with 50 or more full-time-equivalent employees.</p></div>
+      <div><h3>Three-year projection at ${pct(numv(wi.trend))} annual trend</h3>
+       <div class="tablewrap"><table><thead><tr><th>Plan year</th><th class="n">Renew as is</th>${altC?`<th class="n">Alternative</th>`:""}</tr></thead><tbody>
+       ${yrs.map(r=>`<tr><td>Year ${r.y+1}</td><td class="n">${money(r.renew)}</td>${altC?`<td class="n">${money(r.alt)}</td>`:""}</tr>`).join("")}
+       </tbody></table></div>${altC?`<p class="note">Three-year difference: <b>${money(yrs.reduce((a,r)=>a+r.renew-r.alt,0))}</b> in total premium.</p>`:""}</div>
+     </div></section>`;
+  }
+  return `
+  <div class="head"><div><h1>What-If Modeler</h1><p>Test a renewal before you present it. See the renewal increase, a plan change and a contribution change side by side, with an ACA affordability check.</p></div></div>
+  <section class="panel"><h2>Scenario inputs</h2>
+   ${state.plans.length<1?`<div class="callout" style="margin-top:10px">Add at least one plan in Plan Library first. The modeler uses saved plan rates.</div>`:""}
+   <div class="form" style="margin-top:12px">
+    <label class="f">Current plan<select id="wi_base">${opt(wi.base)}</select></label>
+    <label class="f">Renewal increase (%)<input id="wi_inc" type="number" step="0.1" value="${wi.increase}"></label>
+    <label class="f">Alternative plan<select id="wi_alt">${opt(wi.alt)}</select></label>
+    <label class="f">Annual cost trend for projection (%)<input id="wi_trend" type="number" step="0.1" value="${wi.trend}"></label>
+    <label class="f">Lowest annual wage, full-time ($)<input id="wi_wage" type="number" value="${wi.wage}"></label>
+   </div>
+   <p class="note">Default increase and trend come from the latest hospital-services inflation rate (${pct(trendDefault())}). Carrier renewals often run higher.</p>
+   <h3 style="margin-top:14px">Census and current contribution</h3>${censusInputs("wi",wi.census,wi.contrib)}
+   <h3 style="margin-top:14px">Contribution for the alternative plan</h3>${censusInputsAlt()}
+  </section>${out||'<div class="empty">Choose a current plan to see results.</div>'}`;
+};
+function censusInputsAlt(){ const c=wi.altContrib; return `<div class="form" style="margin-top:8px"><label class="f">Employer contribution<select data-wia-contrib="mode"><option value="pct" ${c.mode==="pct"?"selected":""}>Percent of premium</option><option value="flat" ${c.mode==="flat"?"selected":""}>Flat $ per employee</option></select></label>
+ ${c.mode==="flat"?`<label class="f">Employer $ per employee / month<input type="number" data-wia-contrib="flat" value="${c.flat}"></label>`:`<label class="f">Employer % of employee cost<input type="number" data-wia-contrib="eePct" value="${c.eePct}"></label><label class="f">Employer % of dependent cost<input type="number" data-wia-contrib="depPct" value="${c.depPct}"></label>`}</div>`; }
+function deltaPill(d){ if(Math.abs(d)<1) return '<span class="pill p-muted">No change</span>'; return d<0?`<span class="pill p-good">Saves ${money(-d)}</span>`:`<span class="pill p-warn">Costs ${money(d)} more</span>`; }
+
+let presentSel="", presentTitle="";
+views.present=()=>{
+  const props=[...state.proposals].sort((a,b)=>(b.updatedAt||"").localeCompare(a.updatedAt||""));
+  const pr=props.find(p=>p.id===presentSel)||null; const plans=pr? (pr.planIds||[]).map(id=>state.plans.find(p=>p.id===id)).filter(Boolean):[];
+  return `
+  <div class="head hide-present"><div><h1>Present to Client</h1><p>A clean view for screen sharing or meetings. It shows benefits and costs only, with no commissions, no other clients and no employee information.</p></div></div>
+  <section class="panel hide-present"><div class="form">
+   <label class="f">Proposal<select id="pr_sel"><option value="">Choose a saved proposal</option>${props.map(p=>`<option value="${p.id}" ${p.id===presentSel?"selected":""}>${esc(p.clientCode)} · ${(p.planIds||[]).length} plans · ${fmtDate((p.updatedAt||"").slice(0,10))}</option>`).join("")}</select></label>
+   <label class="f">Heading shown on screen (not saved)<input id="pr_title" placeholder="Your 2027 Benefit Options" value="${esc(presentTitle)}"></label>
+   <div class="row" style="align-self:end"><button class="btn" id="startPresent" ${pr?"":"disabled"}>Start presenting</button>${pr?`<button class="btn danger" data-del-prop="${pr.id}">Delete proposal</button>`:""}</div>
+  </div></section>
+  ${pr? `<section class="present"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><div class="eyebrow">Plan Year Options</div><h1>${esc(presentTitle||"Your Benefit Options")}</h1><p class="note">Costs shown for ${TIERS.map(([k,l])=>`${numv(pr.census[k])} ${l.toLowerCase()}`).join(", ")} enrollees.</p></div>
+    <button class="btn sec" id="stopPresent">Exit presentation</button></div>
+    ${plans.length?compareTable(plans,pr.census,pr.contrib,true):'<div class="empty">The plans in this proposal were deleted.</div>'}
+    <p class="note" style="margin-top:12px">Highlighted cells mark the lowest employer cost and lowest deductible. Rates are illustrative until final carrier underwriting. Contribution: ${pr.contrib.mode==="flat"?money(numv(pr.contrib.flat))+" per employee per month":pct(numv(pr.contrib.eePct),0)+" of employee cost and "+pct(numv(pr.contrib.depPct),0)+" of dependent cost"}.</p></section>`
+  : `<div class="empty">Save a proposal from Plan Library &amp; Compare, then choose it here.</div>`}`;
+};
+
+views.market=()=>{
+  const M=state.market, S=M.series, B=M.benchmarks, C=M.compliance;
+  return `
+  <div class="head"><div><h1>Texas Market Intel</h1><p>Public data that shapes renewals and new-business opportunity. It refreshes weekly from federal sources. Last refreshed <b>${fmtDate(M.updatedAt)}</b>.</p></div></div>
+  <div class="grid g2">
+   <section class="panel"><h2>Healthcare cost inflation</h2><p class="note">Year-over-year change. Hospital prices drive most renewal increases.</p>
+    ${lineChart(M.months,[{name:"Hospital services",data:S.cpiHospital,color:"var(--s2)"},{name:"Medical care",data:S.cpiMedical,color:"var(--s1)"},{name:"All items (general inflation)",data:S.cpiAll,color:"var(--s3)"}],{fmt:v=>v.toFixed(0)+"%",label:"Healthcare inflation"})}</section>
+   <section class="panel"><h2>New Texas business applications</h2><p class="note">Monthly. Each new business is a future group-benefits prospect.</p>
+    ${barChart(M.months,S.txBusinessApps,{fmt:v=>(v/1000).toFixed(0)+"K",label:"Texas business applications"})}</section>
+   <section class="panel"><h2>Texas unemployment rate</h2><p class="note">A tight labor market pushes employers to improve benefits to hire and keep staff.</p>
+    ${lineChart(M.months,[{name:"Texas unemployment",data:S.txUnemployment,color:"var(--s1)"}],{fmt:v=>v.toFixed(1)+"%",area:true,label:"Texas unemployment"})}</section>
+   <section class="panel"><h2>Texas job growth</h2><p class="note">Year-over-year change in nonfarm jobs. Growing payrolls mean growing enrollment.</p>
+    ${lineChart(M.months,[{name:"Texas job growth",data:S.txJobGrowth,color:"var(--s4)"}],{fmt:v=>v.toFixed(1)+"%",area:true,label:"Texas job growth"})}</section>
+  </div>
+  <section class="panel"><h2>Benchmarks to quote clients</h2>
+   <div class="tiles" style="margin-top:12px">
+    ${tile("Avg single premium",money(B.singlePremium),`KFF ${B.kffYear} · +${B.singleIncreasePct}% vs prior year`)}
+    ${tile("Avg family premium",money(B.familyPremium),`KFF ${B.kffYear} · +${B.familyIncreasePct}% vs prior year`)}
+    ${tile("Small firm single (10–199)",money(B.smallFirmSingle),`KFF ${B.kffYear}`)}
+    ${tile("Small firm family (10–199)",money(B.smallFirmFamily),`KFF ${B.kffYear}`)}
+    ${tile("Worker share, family",money(B.workerShareFamily),`Employer pays ${money(B.employerShareFamily)}`)}
+   </div></section>
+  <section class="panel"><h2>Compliance numbers for plan-year planning</h2>
+   <div class="tablewrap" style="margin-top:12px"><table><tbody>
+    <tr><td>ACA affordability threshold, 2026 plan years</td><td class="n">${pct(C.affordability2026,2)}</td></tr>
+    <tr><td>ACA affordability threshold, 2027 plan years</td><td class="n">${pct(C.affordability2027,2)}</td></tr>
+    <tr><td>HSA contribution limit 2027 (single / family)</td><td class="n">${money(C.hsa2027Single)} / ${money(C.hsa2027Family)}</td></tr>
+    <tr><td>HDHP minimum deductible 2027 (single / family)</td><td class="n">${money(C.hdhpMinDed2027Single)} / ${money(C.hdhpMinDed2027Family)}</td></tr>
+    <tr><td>HDHP out-of-pocket maximum 2027 (single / family)</td><td class="n">${money(C.hdhpMaxOop2027Single)} / ${money(C.hdhpMaxOop2027Family)}</td></tr>
+   </tbody></table></div></section>
+  <section class="panel"><h2>Sources</h2><ul class="note">${(M.sources||[]).map(x=>`<li><a href="${esc(x.url)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(x.name)}</a></li>`).join("")}</ul>
+   <p class="note">This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.</p></section>`;
+};
+
+const AI_TASKS={
+  renewal:{label:"Draft a renewal letter to the employer",hint:"Example: renewal came in at +11%, we found an alternative that saves 6%."},
+  explain:{label:"Explain a plan comparison in plain English",hint:"Pick a proposal below. Claude will write talking points for the meeting."},
+  transition:{label:"Build a plan-year transition plan",hint:"Example: moving from fully insured PPO to a level-funded plan on Jan 1."},
+  oe:{label:"Draft an open-enrollment email to employees",hint:"Example: new HSA plan added, enrollment window Nov 10–21."},
+  research:{label:"Research a benefits question",hint:"Example: pros and cons of ICHRA for a 25-employee Texas employer."},
+  followup:{label:"Draft a client follow-up or check-in",hint:"Example: mid-year check-in after a carrier change."}
+};
+let ai={task:"renewal",client:"",proposal:"",text:"",out:"",busy:false,ctrl:null,available:null};
+views.ai=()=>{
+  const props=state.proposals;
+  return `
+  <div class="head"><div><h1>AI Assistant</h1><p>Drafts letters, talking points, transition plans and research using Claude. Only anonymized details are sent: the client code, group counts and plan data. Personal information is blocked before sending.</p></div></div>
+  ${ai.available===false?`<div class="callout">The AI Assistant is not available in this view. Open the dashboard from claude.ai while signed in to use it.</div>`:""}
+  <section class="panel"><div class="form">
+   <label class="f">Task<select id="ai_task">${Object.entries(AI_TASKS).map(([k,t])=>`<option value="${k}" ${ai.task===k?"selected":""}>${t.label}</option>`).join("")}</select></label>
+   <label class="f">Client code (optional)<select id="ai_client"><option value="">None</option>${state.clients.map(c=>`<option value="${c.id}" ${ai.client===c.id?"selected":""}>${esc(c.code)}</option>`).join("")}</select></label>
+   <label class="f">Proposal (optional)<select id="ai_prop"><option value="">None</option>${props.map(p=>`<option value="${p.id}" ${ai.proposal===p.id?"selected":""}>${esc(p.clientCode)} · ${(p.planIds||[]).length} plans</option>`).join("")}</select></label>
+   <label class="f wide">Details<textarea id="ai_text" placeholder="${esc(AI_TASKS[ai.task].hint)}">${esc(ai.text)}</textarea></label>
+   <div class="row wide"><button class="btn" id="ai_go" ${ai.busy?"disabled":""}>${ai.busy?"Writing…":"Generate"}</button>${ai.busy?`<button class="btn sec" id="ai_stop">Stop</button>`:""}${ai.out&&!ai.busy?`<button class="btn sec" id="ai_copy">Copy text</button>`:""}</div>
+  </div></section>
+  <section class="panel"><h2>Draft</h2><div class="ai-out" id="ai_out">${ai.out?esc(ai.out):'<span class="note">Your draft appears here. Review every draft before sending. Carrier rates and plan details must come from actual carrier quotes.</span>'}</div></section>`;
+};
+function aiContext(){
+  const parts=[]; const c=state.clients.find(x=>x.id===ai.client);
+  if(c) parts.push(`Client group (anonymized code ${c.code}): industry ${c.industry||"n/a"}, Texas region ${c.region||"n/a"}, ${numv(c.employees)} eligible / ${numv(c.enrolled)} enrolled employees, carrier ${c.carrier||"n/a"}, funding ${c.funding||"n/a"}, annual premium ${money(numv(c.annualPremium))}, renews ${fmtDate(nextRenewal(c.renewalDate))}, last renewal increase ${c.lastIncrease??"n/a"}%, lines: ${(c.lines||[]).join(", ")||"n/a"}.`);
+  const p=state.proposals.find(x=>x.id===ai.proposal);
+  if(p){ const plans=(p.planIds||[]).map(id=>state.plans.find(x=>x.id===id)).filter(Boolean);
+    parts.push(`Proposal census (counts by tier): ${TIERS.map(([k,l])=>l+" "+numv(p.census[k])).join(", ")}. Employer contribution: ${p.contrib.mode==="flat"?money(numv(p.contrib.flat))+"/employee/month":p.contrib.eePct+"% employee, "+p.contrib.depPct+"% dependents"}.`);
+    plans.forEach(pl=>{ const s=splitCost(pl,p.census,p.contrib); parts.push(`Plan "${pl.name}" (${pl.type}${pl.metal&&pl.metal!=="N/A"?", "+pl.metal:""}, network ${pl.network||"n/a"}): deductible ${money(numv(pl.deductible))} single/${money(numv(pl.deductibleFamily))} family, OOP max ${money(numv(pl.oop))}, coinsurance ${pl.coinsurance||"n/a"}%, PCP ${pl.pcp||"n/a"}, specialist ${pl.specialist||"n/a"}, ER ${pl.er||"n/a"}, generic Rx ${pl.rx||"n/a"}. Monthly rates EE ${money(numv(pl.rates?.ee),2)}, ES ${money(numv(pl.rates?.es),2)}, EC ${money(numv(pl.rates?.ec),2)}, EF ${money(numv(pl.rates?.ef),2)}. Annual: total ${money(s.total*12)}, employer ${money(s.er*12)}, employees ${money(s.emp*12)}.`); }); }
+  const M=state.market; parts.push(`Market context: medical care CPI ${pct(latest(M.series.cpiMedical).v)} YoY, hospital services CPI ${pct(latest(M.series.cpiHospital).v)} YoY; KFF ${M.benchmarks.kffYear} average premiums ${money(M.benchmarks.singlePremium)} single / ${money(M.benchmarks.familyPremium)} family; ACA affordability ${M.compliance.affordability2026}% (2026), ${M.compliance.affordability2027}% (2027).`);
+  return parts.join("\n");
+}
+async function runAI(){
+  const prob=piiProblems(ai.text); if(prob.length){ toast("Remove "+prob.join(", ")+" before sending."); return; }
+  const sample=await window.claude?.use?.("sample"); if(!sample){ ai.available=false; render(); return; }
+  ai.busy=true; ai.out=""; ai.ctrl=new AbortController(); render();
+  const sys=`You assist an independent employee-benefits broker in Texas who serves small and medium-sized employers. Task: ${AI_TASKS[ai.task].label}.
+Rules: Write in plain US English for a business owner. Use only the facts given below; do not invent carrier names, rates, or plan details. Where a figure is needed but not given, leave a clearly marked [placeholder]. Never ask for or include personal or health information about employees. Refer to the client by the placeholder [Client Name] rather than the code. Keep it concise and ready to send. For research questions, note any facts the broker should verify, and keep Texas and federal (ACA, ERISA, COBRA, Texas state continuation) rules in mind.
+
+Context:
+${aiContext()}
+
+Broker's request:
+${ai.text||"(no extra details)"}`;
+  try{
+    const r=await sample(sys,{signal:ai.ctrl.signal,modelTier:ai.task==="research"||ai.task==="transition"?"complex":"default",cache:false,onText:u=>{ ai.out=u.text; const o=$("#ai_out"); if(o) o.textContent=u.text; }});
+    ai.out=r.text+(r.truncated?"\n\n[Draft was cut short. Ask again with a narrower request.]":"");
+  }catch(e){
+    if(e?.code==="not_granted"){ ai.available=false; } else if(e?.code!=="cancelled"){ ai.out=(e?.text||"")+`\n\n[Could not finish: ${e?.message||"unknown error"}${e?.code==="rate_limited"?" — wait a minute and try again.":""}]`; }
+  }
+  ai.busy=false; render();
+}
+
+/* ---------- Render + events ---------- */
+function render(){
+  const v=views[state.tab]||views.overview; const m=$("#main");
+  const keep=document.activeElement?.id; m.innerHTML=v();
+  document.querySelectorAll(".rail button").forEach(b=>b.setAttribute("aria-current",b.dataset.tab===state.tab?"true":"false"));
+  if(keep&&document.getElementById(keep)&&/^(wi_|ai_text|pr_title)/.test(keep)){ const el=document.getElementById(keep); el.focus(); if(el.setSelectionRange&&el.type==="text") try{el.setSelectionRange(el.value.length,el.value.length);}catch(e){} }
+}
+function go(tab){ state.tab=tab; try{localStorage.setItem("bcc_tab",tab);}catch(e){} document.body.classList.remove("presenting"); render(); window.scrollTo(0,0); }
+document.querySelector(".rail").addEventListener("click",e=>{ const b=e.target.closest("button[data-tab]"); if(b) go(b.dataset.tab); });
+
+document.addEventListener("click",async e=>{
+  const t=e.target.closest("button,[data-go]"); if(!t) return;
+  if(t.dataset.go){ go(t.dataset.go); return; }
+  if(t.id==="cancelEdit"){ editClient=null; render(); return; }
+  if(t.dataset.editClient){ editClient=state.clients.find(c=>c.id===t.dataset.editClient); render(); window.scrollTo(0,0); return; }
+  if(t.dataset.delClient){ if(t.dataset.confirm!=="1"){ t.dataset.confirm="1"; t.textContent="Confirm delete"; return; } await store.remove("clients",t.dataset.delClient); toast("Group deleted"); return; }
+  if(t.dataset.check){ openChecklist=t.dataset.check; render(); return; }
+  if(t.id==="resetCk"){ const c=state.clients.find(x=>x.id===openChecklist); if(c){ await store.save("clients",{...c,checklist:{}}); toast("Checklist reset"); } return; }
+  if(t.id==="cancelPlan"){ editPlan=null; render(); return; }
+  if(t.dataset.editPlan){ editPlan=state.plans.find(p=>p.id===t.dataset.editPlan); render(); window.scrollTo(0,0); return; }
+  if(t.dataset.delPlan){ if(t.dataset.confirm!=="1"){ t.dataset.confirm="1"; t.textContent="Confirm delete"; return; } compareSel=compareSel.filter(x=>x!==t.dataset.delPlan); await store.remove("plans",t.dataset.delPlan); toast("Plan deleted"); return; }
+  if(t.id==="saveProp"){ const code=$("#propCode").value.trim(); if(!code){ toast("Enter a client code for this proposal"); return; } if(!guard(code)) return;
+    await store.save("proposals",{clientCode:code,planIds:[...compareSel],census:{...compareCensus},contrib:{...compareContrib}}); toast("Proposal saved. Open Present to Client to show it."); return; }
+  if(t.dataset.delProp){ if(t.dataset.confirm!=="1"){ t.dataset.confirm="1"; t.textContent="Confirm delete"; return; } await store.remove("proposals",t.dataset.delProp); presentSel=""; toast("Proposal deleted"); return; }
+  if(t.id==="startPresent"){ document.body.classList.add("presenting"); window.scrollTo(0,0); return; }
+  if(t.id==="stopPresent"){ document.body.classList.remove("presenting"); return; }
+  if(t.id==="ai_go"){ runAI(); return; }
+  if(t.id==="ai_stop"){ ai.ctrl?.abort(); return; }
+  if(t.id==="ai_copy"){ try{ await navigator.clipboard.writeText(ai.out); toast("Copied"); }catch(err){ const r=document.createRange(); r.selectNodeContents($("#ai_out")); const s=getSelection(); s.removeAllRanges(); s.addRange(r); toast("Text selected. Press Ctrl+C or Cmd+C to copy."); } return; }
+});
+
+document.addEventListener("submit",async e=>{
+  e.preventDefault();
+  if(e.target.id==="clientForm"){
+    const g=id=>$("#"+id).value.trim();
+    const obj={...(editClient||{}),code:g("c_code"),status:g("c_status"),industry:g("c_industry"),region:g("c_region"),employees:g("c_employees"),enrolled:g("c_enrolled"),carrier:g("c_carrier"),funding:g("c_funding"),annualPremium:g("c_premium"),commissionType:g("c_ctype"),commissionRate:g("c_crate"),renewalDate:g("c_renewal"),lastIncrease:g("c_inc"),lostDate:g("c_lost"),notes:g("c_notes"),lines:[...document.querySelectorAll('input[name="c_lines"]:checked')].map(x=>x.value)};
+    if(!obj.code){ toast("Enter a client code"); return; }
+    if(!guard(obj.code,obj.notes,obj.industry,obj.carrier,obj.region)) return;
+    await store.save("clients",obj); toast(editClient?"Group updated":"Group added"); editClient=null; render();
+  }
+  if(e.target.id==="planForm"){
+    const g=id=>$("#"+id).value.trim();
+    const obj={...(editPlan||{}),name:g("p_name"),carrier:g("p_carrier"),type:g("p_type"),metal:g("p_metal"),network:g("p_network"),deductible:g("p_ded"),deductibleFamily:g("p_dedf"),oop:g("p_oop"),coinsurance:g("p_coins"),pcp:g("p_pcp"),specialist:g("p_spec"),er:g("p_er"),rx:g("p_rx"),rates:Object.fromEntries(TIERS.map(([k])=>[k,g("p_r_"+k)]))};
+    if(!guard(obj.name,obj.carrier,obj.network)) return;
+    await store.save("plans",obj); toast(editPlan?"Plan updated":"Plan added"); editPlan=null; render();
+  }
+});
+
+document.addEventListener("change",async e=>{
+  const t=e.target, d=t.dataset;
+  if(d.cmp){ if(t.checked){ if(compareSel.length>=4){ t.checked=false; toast("Compare up to four plans at a time"); return; } compareSel.push(d.cmp);} else compareSel=compareSel.filter(x=>x!==d.cmp); render(); return; }
+  if(d.ck){ const c=state.clients.find(x=>x.id===openChecklist); if(c){ await store.save("clients",{...c,checklist:{...(c.checklist||{}),[d.ck]:t.checked}}); } return; }
+  if(t.id==="wi_base"){ wi.base=t.value; render(); return; }
+  if(t.id==="wi_alt"){ wi.alt=t.value; render(); return; }
+  if(t.id==="pr_sel"){ presentSel=t.value; render(); return; }
+  if(t.id==="ai_task"){ ai.task=t.value; render(); return; }
+  if(t.id==="ai_client"){ ai.client=t.value; return; }
+  if(t.id==="ai_prop"){ ai.proposal=t.value; return; }
+  if(d.cmpContrib==="mode"){ compareContrib.mode=t.value; render(); return; }
+  if(d.wiContrib==="mode"){ wi.contrib.mode=t.value; render(); return; }
+  if(d.wiaContrib==="mode"){ wi.altContrib.mode=t.value; render(); return; }
+  if(d.cmpCensus||d.cmpContrib||d.wiCensus||d.wiContrib||d.wiaContrib||/^wi_/.test(t.id)) render();
+});
+document.addEventListener("input",e=>{
+  const t=e.target, d=t.dataset;
+  if(d.cmpCensus) compareCensus[d.cmpCensus]=numv(t.value);
+  else if(d.cmpContrib && d.cmpContrib!=="mode") compareContrib[d.cmpContrib]=numv(t.value);
+  else if(d.wiCensus) wi.census[d.wiCensus]=numv(t.value);
+  else if(d.wiContrib && d.wiContrib!=="mode") wi.contrib[d.wiContrib]=numv(t.value);
+  else if(d.wiaContrib && d.wiaContrib!=="mode") wi.altContrib[d.wiaContrib]=numv(t.value);
+  else if(t.id==="wi_inc") wi.increase=numv(t.value);
+  else if(t.id==="wi_trend") wi.trend=numv(t.value);
+  else if(t.id==="wi_wage") wi.wage=numv(t.value);
+  else if(t.id==="pr_title") presentTitle=t.value;
+  else if(t.id==="ai_text") ai.text=t.value;
+});
+
+try{ const t=localStorage.getItem("bcc_tab"); if(t&&views[t]) state.tab=t; }catch(e){}
+render();
+store.init();
+</script>
