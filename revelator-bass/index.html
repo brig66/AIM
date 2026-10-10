@@ -1058,6 +1058,29 @@ function intervalOf(chord, want){
   return 0;
 }
 
+// ---------- music theory helpers for the bass line ----------
+// Chord tones are the root, third, fifth and seventh of the chord (plus the bass note of a slash chord).
+const chordPcs = c => [...new Set([...c.iv.map(i => mod12(c.root + i)), mod12(c.bass)])];
+const chordThird = c => mod12(c.root + intervalOf(c, 3));
+const chordFifth = c => mod12(c.root + intervalOf(c, 5));
+const chordSeventh = c => (c.iv.includes(10) || c.iv.includes(11) || (c.iv.includes(9) && c.iv.length > 3)) ? mod12(c.root + intervalOf(c, 7)) : null;
+// Every pitch in a range with one of the given pitch classes.
+function pitchesIn(pcs, lo, hi){ const out = []; for (let p = Math.max(lo, ABS_LO); p <= Math.min(hi, ABS_HI); p++) if (pcs.includes(mod12(p))) out.push(p); return out; }
+// The pitch in the range closest to a reference note; ties are broken by the seeded random generator.
+function nearestOf(pcs, ref, lo, hi, rng){
+  let c = pitchesIn(pcs, lo, hi); if (!c.length) c = pitchesIn(pcs, ABS_LO, ABS_HI);
+  if (!c.length) return ref;
+  let bd = Infinity; for (const p of c) bd = Math.min(bd, Math.abs(p - ref));
+  const best = c.filter(p => Math.abs(p - ref) === bd);
+  return best[Math.floor(rng() * best.length)];
+}
+// The root an octave away from the previous note, so the line moves by a clear octave rather than a random jump.
+function octaveOf(pc, from, lo, hi){
+  const c = pitchesIn([pc], lo, hi + 12); if (!c.length) return from;
+  let best = c[0], bd = Infinity;
+  for (const p of c){ const d = Math.abs(Math.abs(p - from) - 12); if (d < bd){ bd = d; best = p; } }
+  return best;
+}
 function generateBass(bars, cfg){
   const {bpb, style, register, seed, key, kicks} = cfg;
   const INF = (GROOVES[style] || {}).infl;
@@ -1150,43 +1173,46 @@ function generateBass(bars, cfg){
       const si = segAt[bi][s], chord = segs[si].chord;
       if (chord.none) continue;
       const anchor = anchorFor(si);
-      const rootRef = anchor - mod12(chord.bass - chord.root);
       const nt = nextTarget(si);
       const scale = chordScale(chord, key);
+      const from = prev ?? anchor;
+      const strong = s % 8 === 0 || bar.chords.some(c => c.start === s);
+      const pcs = chordPcs(chord), T5 = chordFifth(chord), T3 = chordThird(chord), T7 = chordSeventh(chord);
+      const near = pc => nearestOf([pc], from, r.lo, r.hi, rng);
+      // A chord tone that is not simply the last note again: a line moves between chord tones rather than repeating one.
+      const moveTo = pc => { const p = near(pc); if (p !== from || prev == null) return p; const alt = pitchesIn(pcs, from - 4, from + 4).filter(q => q !== from && q >= r.lo - 2 && q <= r.hi + 2); return alt.length ? alt[Math.floor(rng() * alt.length)] : p; };
       let midi = anchor, dead = false;
-      const tone = iv => { let p = rootRef + iv; while (p > r.hi && p - 12 >= ABS_LO) p -= 12; while (p < r.lo && p + 12 <= ABS_HI) p += 12; return p; };
       switch (ch){
-        case 'R': midi = anchor; break;
+        case 'R': midi = s === segs[si].start ? anchor : near(chord.bass); break;
         case 'L': midi = anchor - 12 >= ABS_LO ? anchor - 12 : anchor; break;
-        case '5': midi = rootRef + 7 <= r.hi ? rootRef + 7 : rootRef - 5; break;
-        case '8': midi = anchor + 12 <= r.hi ? anchor + 12 : anchor - 12 >= r.lo ? anchor - 12 : anchor; break;
-        case '3': { const t = intervalOf(chord, 3); midi = style === 'melodic' && rootRef + t + 12 <= Math.min(ABS_HI, r.hi + 7) ? rootRef + t + 12 : tone(t); break; }
-        case '7': midi = tone(intervalOf(chord, 7)); break;
-        case '6': midi = tone(9); break;
-        case 'b': midi = tone(10); break;
+        case '5': midi = moveTo(T5); break;
+        case '8': midi = octaveOf(chord.bass, from, r.lo, r.hi); break;
+        case '3': midi = moveTo(T3); break;
+        case '7': midi = moveTo(T7 != null ? T7 : T5); break;
+        case '6': midi = moveTo(mod12(chord.root + 9)); break;
+        case 'b': midi = moveTo(mod12(chord.root + 10)); break;
         case 'N': midi = nt ? nt.a : anchor; break;
-        case 'H': { const t = pick([intervalOf(chord, 3), intervalOf(chord, 5), 12]); midi = rootRef + 12 + t <= Math.min(ABS_HI, r.hi + 7) ? rootRef + 12 + t : tone(t); break; }
+        case 'H': midi = nearestOf(pcs, from + 7, r.lo, Math.min(r.hi + 7, ABS_HI), rng); break;
         case 'C': {
-          const pcs = chord.iv.map(i => mod12(chord.root + i)).filter(p => p !== chord.bass);
-          const pc = pcs.length ? pick(pcs) : chord.bass;
-          midi = nearestPc(pc, (prev ?? anchor) + (rng() < 0.5 ? 2 : -2), r.lo, r.hi);
-          if (midi === prev) midi = anchor;
+          // A chord tone a few steps away from the last note: a small, singable move that stays in the chord.
+          const cand = pitchesIn(pcs, from - 5, from + 5).filter(p => p !== from && p >= r.lo - 2 && p <= r.hi + 2);
+          midi = cand.length ? cand[Math.floor(rng() * cand.length)] : nearestOf(pcs, from, r.lo, r.hi, rng);
           break;
         }
         case 'P': {
-          const T = nt ? nt.a : anchor, from = prev ?? anchor;
-          const dir = Math.sign(T - from) || (from < r.center ? 1 : -1);
+          // Passing tone: a scale step on the way from the last note to the next chord's root.
+          const T = nt ? nt.a : anchor, dir = Math.sign(T - from) || (from < r.center ? 1 : -1);
           midi = scaleStep(from, dir, scale);
           break;
         }
         case 'A': {
+          // Approach to the next chord root: a half step (the classic chromatic approach) or a scale step, from the side the line comes from.
           if (!nt){ midi = anchor; break; }
-          const T = nt.a, from = prev ?? anchor;
-          const side = from > T ? 1 : from < T ? -1 : (rng() < 0.5 ? 1 : -1);
+          const T = nt.a, side = from > T ? 1 : from < T ? -1 : (rng() < 0.5 ? 1 : -1);
           const nscale = chordScale(nt.chord, key);
-          const opts = [[T + side, (complexity >= 3 ? 3 : 1) + (INF ? INF.chrom * 5 : 0)], [scaleStep(T, side, nscale), 3], [side > 0 ? T + 7 : T - 5, 2]];
-          if (complexity >= 4) opts.push([T - side, 1]);
-          let tot = opts.reduce((a, o) => a + o[1], 0), x = rng() * tot;
+          const opts = [[T + side, (complexity >= 3 ? 3 : 1) + (INF ? INF.chrom * 5 : 0)], [scaleStep(T, side, nscale), 3], [T + 2 * side, 1]].filter(o => o[0] !== from);
+          if (!opts.length){ midi = T + side; break; }
+          let tot = opts.reduce((x, o) => x + o[1], 0), x = rng() * tot;
           midi = opts[0][0]; for (const o of opts){ x -= o[1]; if (x <= 0){ midi = o[0]; break; } }
           break;
         }
@@ -1194,17 +1220,26 @@ function generateBass(bars, cfg){
         case 'S': {
           if (!run || !run.length){
             let n = 0; for (let k = s; k < spb && (chars[k] === 'S' || chars[k] === '.'); k++) if (chars[k] === 'S') n++;
-            const T = nt ? nt.a : anchor, from = prev ?? anchor, nsc = nt ? chordScale(nt.chord, key) : scale;
+            const T = nt ? nt.a : anchor, nsc = nt ? chordScale(nt.chord, key) : scale;
+            // Run toward the next chord root, heading in the direction the line is already moving.
             let dir = from > T ? 1 : -1; if (rng() < 0.25) dir = -dir;
             const build = dir => { const out = []; let p = T; for (let i = 0; i < n; i++){ p = scaleStep(p, dir, nsc); out.unshift(p); } return out; };
             run = build(dir);
             if (run.some(p => p < ABS_LO || p > ABS_HI)) run = build(-dir);
-            if (complexity >= 4 && rng() < 0.5 && run.length > 1) run[run.length - 1] = T + (run[run.length - 1] > T ? 1 : -1);
           }
           midi = run.shift();
           break;
         }
         default: midi = anchor;
+      }
+      if (!dead){
+        // Smooth line: no leap bigger than an octave unless the note is an octave or a high chord tone by design.
+        if (prev != null && ch !== '8' && ch !== 'L' && ch !== 'H'){ while (midi - prev > 12) midi -= 12; while (prev - midi > 12) midi += 12; }
+        // Strong beats and chord changes always sound a chord tone, so the harmony is clear.
+        if (strong && !pcs.includes(mod12(midi))){
+          midi = nearestOf(pcs, midi, r.lo, r.hi, rng);
+          if (midi === from && prev != null){ const alt = pitchesIn(pcs, from - 4, from + 4).filter(x => x !== from && x >= r.lo - 2 && x <= r.hi + 2); if (alt.length) midi = alt[Math.floor(rng() * alt.length)]; }
+        }
       }
       midi = fitAbs(midi);
       ons.push({step: s, midi, dead});
