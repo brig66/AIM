@@ -1,0 +1,321 @@
+{
+  "send_date": "2026-10-17",
+  "subject_date": "October 17, 2026",
+  "week_range": "October 17 - 23, 2026",
+  "test_mode": true,
+  "theme": "Fall Flavors, Fast Weeknights",
+  "theme_text": "Arlington is still warm in mid-October, so this week keeps the cooking quick and the flavors bright: herb sauces, a sweet-savory glaze, a light pesto pasta, and a spiced chicken with couscous. Every dinner finishes in one pan or one pot, and nothing runs longer than 25 minutes.",
+  "why_chosen": [
+    "Chimichurri Sirloin is a new steak preparation. The last steak dinners were Dijon-peppercorn, strip steaks, and cheesesteak hoagies, so this one brings a fresh herb sauce that is quick to make and keeps well.",
+    "Pesto Shrimp Pasta is a Hall of Fame 5-star dish from early August. It has been about ten weeks since its last pasta appearance, so it is due for an Encore. Its only pasta-shrimp cousins served recently were in September and October, and this version is the original.",
+    "Honey-Garlic Pork Chops is a 4-star Keep in Rotation dish. Its last planned appearance was August 9, more than eight weeks ago, so it is ready to return. Pork is also a protein the household rated well.",
+    "Harissa-Honey Chicken Thighs is new to the rotation. Chicken already appeared often this fall, so this one brings a different cuisine (North African) rather than another Italian chicken. It avoids the rejected Lemon-Garlic Chicken entirely."
+  ],
+  "rating_history_note": "Ratings come only from confirmed feedback in ratings.csv. Menu appearances are planned menus, not confirmed cooked meals.",
+  "dinners": [
+    {
+      "id": "chimichurri-sirloin",
+      "title": "Chimichurri Sirloin Steaks",
+      "label": "New",
+      "description": "Seared sirloin with a bright, garlicky parsley-oregano sauce. Ready in about a quarter of an hour, with one skillet and one bowl.",
+      "protein": "Beef sirloin (steak)",
+      "cuisine": "Argentine-inspired",
+      "technique": "Pan-searing and fresh herb sauce",
+      "suggested_night": "Monday",
+      "servings": 2,
+      "difficulty": "Easy",
+      "cleanup": "Easy (one skillet, one bowl)",
+      "prep_min": 10,
+      "cook_min": 10,
+      "rest_min": 5,
+      "total_min": 25,
+      "ingredients": [
+        {"group": "Chimichurri", "items": [
+          "1/2 cup packed fresh flat-leaf parsley leaves, finely chopped",
+          "1 tablespoon fresh oregano leaves, chopped (or 1/2 teaspoon dried oregano)",
+          "1 medium garlic clove, finely minced",
+          "2 tablespoons red wine vinegar",
+          "1/4 cup extra-virgin olive oil",
+          "1/4 teaspoon red pepper flakes",
+          "1/4 teaspoon kosher salt"
+        ]},
+        {"group": "Steak", "items": [
+          "2 boneless sirloin steaks, about 1 inch thick (about 6 ounces each)",
+          "1/2 teaspoon kosher salt",
+          "1/4 teaspoon black pepper",
+          "1 tablespoon neutral oil (such as avocado or canola)"
+        ]}
+      ],
+      "steps": [
+        "Make the chimichurri first. Stir the parsley, oregano, and garlic together in a small bowl. Add the vinegar, olive oil, red pepper flakes, and salt, then stir. Let it sit while you cook the steak so the flavors can mingle.",
+        "Pat the steaks dry with paper towels. Season both sides with the salt and black pepper.",
+        "Heat a 10 to 12 inch skillet over medium-high heat for 3 minutes until very hot. Add the oil and swirl.",
+        "Lay the steaks in the pan and leave them alone for 4 minutes so a crust forms.",
+        "Flip the steaks and cook 3 to 4 minutes more. For medium-rare, pull them when an instant-read thermometer reads 130 to 135 F in the center.",
+        "Move the steaks to a cutting board and rest them 5 minutes. Slice against the grain.",
+        "Spoon about half the chimichurri over the sliced steak and serve the rest on the side."
+      ],
+      "side": "Optional simple side: a bagged salad or a warm slice of bread. Keeps vegetables limited.",
+      "chefs_tip": "Season the steaks right before they hit the pan, not an hour early. Salt drawn out too early can leave the surface damp and slow the crust.",
+      "shortcut": "Chimichurri can be made up to 2 days ahead. Store it in a sealed jar in the refrigerator and let it sit 15 minutes at room temperature before serving. Do not leave garlic-in-oil at room temperature.",
+      "leftovers": "Refrigerate sliced steak within 2 hours and use within 3 days. Reheat gently or eat cold over salad.",
+      "food_safety": "Steak is cooked to the owner's preferred doneness. Use an instant-read thermometer and rest before slicing.",
+      "estimated_cost_per_serving": "Not estimated: live prices not checked",
+      "source": {
+        "name": "Ree Drummond, Steaks with Chimichurri (Food Network)",
+        "url": "https://www.foodnetwork.com/recipes/ree-drummond/steaks-with-chimichurri-4492459.amp",
+        "total_time_claim": "30 minutes (per source listing)",
+        "verified": false,
+        "verification_note": "Inspiration only. This recipe is adapted and rewritten. Total time comes from the search listing, not a page check."
+      }
+    },
+    {
+      "id": "pesto-shrimp-pasta",
+      "title": "Pesto Shrimp Pasta with Cherry Tomatoes",
+      "label": "Encore",
+      "description": "Plump shrimp tossed with a spoonful of basil pesto, blistered cherry tomatoes, and linguine. A Hall of Fame favorite, back for an encore.",
+      "protein": "Shrimp",
+      "cuisine": "Italian",
+      "technique": "Pan-searing and pasta tossing",
+      "suggested_night": "Tuesday",
+      "servings": 2,
+      "difficulty": "Easy",
+      "cleanup": "Easy (one pot, one skillet)",
+      "prep_min": 5,
+      "cook_min": 13,
+      "rest_min": 0,
+      "total_min": 18,
+      "ingredients": [
+        {"group": "Pasta and sauce", "items": [
+          "6 ounces dried linguine (about half a standard 12-ounce box)",
+          "1 tablespoon kosher salt for the pasta water",
+          "3 tablespoons basil pesto, jarred or homemade",
+          "1/4 cup reserved pasta water",
+          "2 tablespoons finely grated Parmesan"
+        ]},
+        {"group": "Shrimp and tomatoes", "items": [
+          "10 ounces raw large shrimp (16 to 20 count), peeled and deveined, thawed",
+          "1 tablespoon extra-virgin olive oil",
+          "1 cup cherry tomatoes, halved",
+          "1 medium garlic clove, minced",
+          "1/4 teaspoon kosher salt",
+          "1/8 teaspoon black pepper",
+          "Pinch of red pepper flakes (optional)"
+        ]}
+      ],
+      "steps": [
+        "Bring a large pot of water to a boil. Add the salt and the linguine. Cook 1 minute less than the package directions for al dente.",
+        "While the pasta cooks, pat the shrimp dry and season with the salt and pepper.",
+        "Scoop out 1/4 cup of the pasta water, then drain the pasta.",
+        "Heat the olive oil in a large skillet over medium-high heat. Add the shrimp in one layer and cook 1 to 2 minutes per side until they turn pink and opaque and curl into a loose C. Move them to a plate.",
+        "Lower the heat to medium. Add the tomatoes and cook 2 minutes, until they start to soften and blister. Add the garlic and stir 30 seconds.",
+        "Add the drained pasta, pesto, and reserved pasta water. Toss for 1 minute so the pesto coats each strand. Stir in the shrimp and any juices.",
+        "Top with the Parmesan and pepper flakes if using, then serve right away."
+      ],
+      "side": "None needed. The tomatoes are the vegetable.",
+      "chefs_tip": "Save the pasta water before draining. A quarter cup of starchy water is what turns pesto into a silky coating instead of a thick smear.",
+      "shortcut": "Thaw shrimp overnight in the refrigerator, or in a bowl of cold water for 15 minutes. Halve the tomatoes up to a day ahead and keep them refrigerated.",
+      "leftovers": "Refrigerate within 2 hours and use within 2 days. Reheat with a splash of water in a skillet over medium heat.",
+      "food_safety": "Shrimp must be opaque and cooked through, with no translucent centers.",
+      "estimated_cost_per_serving": "Not estimated: live prices not checked",
+      "source": {
+        "name": "Dinner at the Zoo, Shrimp Pesto Pasta",
+        "url": "https://www.dinneratthezoo.com/wprm_print/shrimp-pesto-pasta",
+        "total_time_claim": "20 minutes for four servings (per source listing)",
+        "verified": false,
+        "verification_note": "Inspiration only. Scaled to two servings and rewritten. Total time comes from the search listing, not a page check."
+      }
+    },
+    {
+      "id": "honey-garlic-pork-chops",
+      "title": "Honey-Garlic Pork Chops",
+      "label": "Keep in Rotation",
+      "description": "Golden pan-seared pork chops finished in a glossy honey, soy, and garlic glaze. A 4-star favorite that is ready to come back.",
+      "protein": "Pork loin chops",
+      "cuisine": "American-Asian fusion",
+      "technique": "Pan-searing and pan-glaze",
+      "suggested_night": "Wednesday",
+      "servings": 2,
+      "difficulty": "Easy",
+      "cleanup": "Easy (one skillet)",
+      "prep_min": 5,
+      "cook_min": 14,
+      "rest_min": 3,
+      "total_min": 22,
+      "ingredients": [
+        {"group": "Pork", "items": [
+          "2 boneless center-cut pork loin chops, about 3/4 inch thick (about 5 to 6 ounces each)",
+          "1/2 teaspoon kosher salt",
+          "1/4 teaspoon black pepper",
+          "1 tablespoon olive oil"
+        ]},
+        {"group": "Glaze", "items": [
+          "1 tablespoon butter",
+          "3 medium garlic cloves, minced",
+          "3 tablespoons honey",
+          "2 tablespoons low-sodium soy sauce",
+          "1 teaspoon apple cider vinegar",
+          "1/4 cup low-sodium chicken broth",
+          "1 green onion, sliced (for garnish)"
+        ]}
+      ],
+      "steps": [
+        "Pat the chops dry and season both sides with the salt and pepper.",
+        "Heat the olive oil in a 12 inch skillet over medium-high heat until shimmering. Add the chops and cook 3 to 4 minutes, until deep golden underneath.",
+        "Flip the chops and cook 3 to 4 minutes more. Check the thickest part with an instant-read thermometer. It must reach 145 F. Move the chops to a plate.",
+        "Lower the heat to medium. Melt the butter in the same skillet, then add the garlic and stir 30 seconds until fragrant.",
+        "Whisk in the honey, soy sauce, vinegar, and broth. Simmer 2 to 3 minutes until the sauce thickens slightly and coats a spoon.",
+        "Return the chops and any juices to the skillet. Spoon the glaze over them and turn once to coat.",
+        "Let the chops rest 3 minutes in the skillet or on a plate, so they stay juicy and the temperature holds at 145 F or higher. Garnish with green onion and serve."
+      ],
+      "side": "Optional: a bagged salad, or a scoop of microwave rice to catch the glaze.",
+      "chefs_tip": "Glaze only at the end. Honey and garlic scorch if they sit in a hot pan, so lower the heat before adding the glaze.",
+      "shortcut": "Mix the glaze up to 2 days ahead and refrigerate it in a jar. Warm it for 20 seconds in the microwave before using.",
+      "leftovers": "Refrigerate within 2 hours and use within 3 days. Reheat gently to 165 F.",
+      "food_safety": "Pork must reach 145 F at the thickest point and rest 3 minutes before serving.",
+      "estimated_cost_per_serving": "Not estimated: live prices not checked",
+      "source": {
+        "name": "Easy Weeknight Recipes, Honey Garlic Pork Chops",
+        "url": "https://easyweeknightrecipes.com/honey-garlic-pork-chops",
+        "total_time_claim": "About 20 minutes, serves 4 (per source listing)",
+        "verified": false,
+        "verification_note": "Inspiration only. Scaled to two servings and rewritten. Time and temperature come from the search listing, not a page check."
+      }
+    },
+    {
+      "id": "harissa-honey-chicken",
+      "title": "Harissa-Honey Chicken Thighs with Couscous",
+      "label": "New",
+      "description": "Boneless thighs glazed with smoky harissa and honey, served over fluffy couscous with a cool yogurt drizzle. A fresh cuisine for the rotation.",
+      "protein": "Chicken thighs",
+      "cuisine": "North African",
+      "technique": "Pan-searing and quick steam for couscous",
+      "suggested_night": "Thursday",
+      "servings": 2,
+      "difficulty": "Easy",
+      "cleanup": "Easy (one skillet, one small pot or bowl)",
+      "prep_min": 5,
+      "cook_min": 14,
+      "rest_min": 3,
+      "total_min": 22,
+      "ingredients": [
+        {"group": "Chicken", "items": [
+          "1 pound boneless, skinless chicken thighs (about 4), trimmed",
+          "1 1/2 tablespoons harissa paste (adjust for your heat preference)",
+          "1 tablespoon honey",
+          "1 teaspoon smoked paprika",
+          "2 medium garlic cloves, minced",
+          "1/2 teaspoon kosher salt",
+          "1 tablespoon olive oil"
+        ]},
+        {"group": "Couscous and finish", "items": [
+          "1/2 cup instant couscous",
+          "1/2 cup boiling water",
+          "1/4 teaspoon kosher salt (for the couscous)",
+          "2 tablespoons plain Greek yogurt",
+          "1 tablespoon chopped fresh parsley"
+        ]}
+      ],
+      "steps": [
+        "In a bowl, stir together the harissa, honey, paprika, garlic, and salt. Add the chicken thighs and turn to coat.",
+        "Heat the olive oil in a 12 inch skillet over medium-high heat for 2 minutes.",
+        "Lay the thighs in the pan and cook 5 to 6 minutes without moving them until well browned on the bottom.",
+        "Flip and cook 5 to 6 minutes more. The thickest part must reach 165 F on an instant-read thermometer.",
+        "While the chicken rests 3 minutes on a cutting board, make the couscous. Put it in a bowl with the salt, then pour the boiling water over it. Cover for 5 minutes, then fluff with a fork.",
+        "Slice the chicken and spoon it over the couscous. Drizzle with yogurt, sprinkle with parsley, and serve."
+      ],
+      "side": "None needed. The couscous is the starch and the chicken is the main.",
+      "chefs_tip": "Add the honey only in the last minute of cooking or after the chicken comes out. Honey burns fast over high heat.",
+      "shortcut": "Coat the raw chicken with the harissa mixture up to 24 hours ahead and keep it covered in the refrigerator. Add the oil and cook when ready.",
+      "leftovers": "Refrigerate chicken and couscous separately within 2 hours and use within 3 days. Reheat chicken to 165 F.",
+      "food_safety": "Chicken must reach 165 F. Wash the cutting board and hands after handling raw chicken.",
+      "estimated_cost_per_serving": "Not estimated: live prices not checked",
+      "source": {
+        "name": "A Cedar Spoon, Harissa Chicken",
+        "url": "https://www.acedarspoon.com/harissa-chicken-recipe/",
+        "total_time_claim": "Under 30 minutes, not counting marinating (per source listing)",
+        "verified": false,
+        "verification_note": "Inspiration only. The source marinates 30 minutes or more. This version skips the long marinade and is rewritten. Time comes from the search listing, not a page check."
+      }
+    }
+  ],
+  "prep_ahead": [
+    {"when": "Sunday evening (10 minutes)", "task": "Make the chimichurri and store it in a sealed jar in the refrigerator. Halve the cherry tomatoes and refrigerate them in a container. Move the shrimp from the freezer to the refrigerator to thaw."},
+    {"when": "Monday evening (5 minutes)", "task": "Coat the chicken thighs with the harissa mixture and refrigerate them covered. Mix the honey-garlic glaze ingredients (but do not add the garlic until cooking)."}
+  ],
+  "food_safety_notes": [
+    "Keep raw chicken, pork, and shrimp on their own plates and away from ready-to-eat foods.",
+    "Use a clean cutting board, or wash it with hot soapy water between raw meats and vegetables.",
+    "Refrigerate leftovers within 2 hours. Discard anything older than 3 to 4 days.",
+    "Do not leave chimichurri (garlic in oil) on the counter for more than 2 hours."
+  ],
+  "grocery": {
+    "default_channel": "Amazon Fresh / Amazon Same-Day Delivery",
+    "premium_channel_note": "Whole Foods is optional for the sirloin and shrimp if better quality is wanted.",
+    "categories": [
+      {"name": "Meat & Seafood", "channel": "Amazon Fresh (default) or Whole Foods (premium option)", "items": [
+        {"item": "Boneless sirloin steak, about 1 inch thick", "quantity": "2 steaks (about 12 ounces total)", "channel_note": "Whole Foods option for better quality"},
+        {"item": "Raw large shrimp, 16 to 20 count, peeled and deveined", "quantity": "10 ounces (1 bag)", "channel_note": "Whole Foods option"},
+        {"item": "Boneless center-cut pork loin chops, about 3/4 inch thick", "quantity": "2 chops (about 12 ounces total)", "channel_note": ""},
+        {"item": "Boneless, skinless chicken thighs", "quantity": "1 pound (about 4 thighs)", "channel_note": ""}
+      ]},
+      {"name": "Produce", "channel": "Amazon Fresh / Same-Day", "items": [
+        {"item": "Fresh flat-leaf parsley", "quantity": "1 bunch (needs about 1/2 cup leaves for chimichurri plus 1 tablespoon for garnish)", "channel_note": ""},
+        {"item": "Fresh oregano", "quantity": "1 small bunch (or use dried oregano from the pantry)", "channel_note": ""},
+        {"item": "Garlic", "quantity": "1 head (about 7 cloves needed this week)", "channel_note": ""},
+        {"item": "Cherry tomatoes", "quantity": "1 pint (1 cup needed)", "channel_note": ""},
+        {"item": "Green onions", "quantity": "1 bunch (1 needed)", "channel_note": ""}
+      ]},
+      {"name": "Dairy & Refrigerated", "channel": "Amazon Fresh / Same-Day", "items": [
+        {"item": "Butter", "quantity": "1 tablespoon needed (use a stick you already have if available)", "channel_note": ""},
+        {"item": "Plain Greek yogurt", "quantity": "1 small tub (2 tablespoons needed)", "channel_note": ""},
+        {"item": "Parmesan cheese, grated", "quantity": "1 small container (2 tablespoons needed)", "channel_note": ""},
+        {"item": "Basil pesto, jarred", "quantity": "1 small jar (3 tablespoons needed)", "channel_note": "Check the refrigerator first"}
+      ]},
+      {"name": "Bakery", "channel": "None this week", "items": []},
+      {"name": "Pantry", "channel": "Amazon Fresh / Same-Day", "items": [
+        {"item": "Dried linguine", "quantity": "1 box, 12 ounces (6 ounces used)", "channel_note": "Leftover pasta keeps for another night"},
+        {"item": "Instant couscous", "quantity": "1 small box (1/2 cup needed)", "channel_note": ""},
+        {"item": "Harissa paste", "quantity": "1 small jar (1 1/2 tablespoons needed)", "channel_note": "Check the pantry first"},
+        {"item": "Honey", "quantity": "1 small bottle (about 6 tablespoons needed)", "channel_note": ""},
+        {"item": "Low-sodium soy sauce", "quantity": "1 small bottle (2 tablespoons needed)", "channel_note": ""},
+        {"item": "Apple cider vinegar", "quantity": "1 small bottle (1 teaspoon needed)", "channel_note": ""},
+        {"item": "Red wine vinegar", "quantity": "1 small bottle (2 tablespoons needed)", "channel_note": ""},
+        {"item": "Low-sodium chicken broth", "quantity": "1 small carton (1/4 cup needed)", "channel_note": ""},
+        {"item": "Smoked paprika", "quantity": "1 small jar (1 teaspoon needed)", "channel_note": "Check the pantry first"},
+        {"item": "Red pepper flakes", "quantity": "1 small jar (under 1/2 teaspoon needed)", "channel_note": "Check the pantry first"}
+      ]},
+      {"name": "Frozen", "channel": "None this week", "items": []},
+      {"name": "Optional", "channel": "Only if wanted", "items": [
+        {"item": "Whole Foods upgrade: thicker sirloin or wild shrimp", "quantity": "Optional", "channel_note": "Premium option"},
+        {"item": "Bagged salad or sliced bread (side)", "quantity": "1 bag or 1 loaf", "channel_note": "Optional side"}
+      ]}
+    ],
+    "common_staples": [
+      {"item": "Extra-virgin olive oil", "quantity": "Needed about 1/3 cup total; check your supply"},
+      {"item": "Kosher salt", "quantity": "Check your supply"},
+      {"item": "Black pepper", "quantity": "Check your supply"},
+      {"item": "Neutral oil (avocado or canola)", "quantity": "1 tablespoon; check your supply"}
+    ],
+    "import_list": "Use the category lists above. Edit this list before ordering. Remove anything already on hand.",
+    "not_ordered_automatically": true
+  },
+  "pantry_check": [
+    "Look for olive oil, neutral oil, kosher salt, and black pepper.",
+    "Check for harissa paste, honey, low-sodium soy sauce, couscous, and chicken broth.",
+    "Check the refrigerator for basil pesto, Parmesan, Greek yogurt, and butter.",
+    "Check for a partial bag of frozen shrimp or a box of linguine from an earlier week."
+  ],
+  "waste_reduction": [
+    "Buy one 12-ounce box of linguine and use 6 ounces. The rest keeps for a future dinner.",
+    "Use the entire parsley bunch: chimichurri this week and garnish with the stems trimmed for the chicken.",
+    "A pint of cherry tomatoes gives 1 cup for the pasta; use the rest in salads or sandwiches.",
+    "Use the chimichurri on eggs, chicken, or sandwiches later in the week."
+  ],
+  "budget": {
+    "status": "Not estimated",
+    "note": "This report did not check live store prices, so no grocery total is shown. Dawn can enter her Amazon and Whole Foods totals after ordering.",
+    "dawn_entry_rows": ["Amazon Fresh total", "Whole Foods total (if used)", "Pantry items bought"]
+  },
+  "retired_or_hall_of_fame_note": "Lemon-Garlic Chicken is retired and is not in this menu."
+}

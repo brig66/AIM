@@ -1,0 +1,67 @@
+PASS  Exactly four dinners
+PASS  Servings are two for every dinner
+PASS  Chimichurri Sirloin Steaks: total time 30 minutes or less
+PASS  Chimichurri Sirloin Steaks: prep + cook + rest equals total
+PASS  Chimichurri Sirloin Steaks: has a verified-or-labeled source URL
+PASS  Chimichurri Sirloin Steaks: has a directions list of 4 or more steps
+PASS  Chimichurri Sirloin Steaks: no "lemon-garlic chicken"
+PASS  Chimichurri Sirloin Steaks: no "mushroom"
+PASS  Chimichurri Sirloin Steaks: no "heavy cream"
+PASS  Chimichurri Sirloin Steaks: no "cream sauce"
+PASS  Chimichurri Sirloin Steaks: no "alfredo"
+PASS  Chimichurri Sirloin Steaks: no "half-and-half"
+PASS  Pesto Shrimp Pasta with Cherry Tomatoes: total time 30 minutes or less
+PASS  Pesto Shrimp Pasta with Cherry Tomatoes: prep + cook + rest equals total
+PASS  Pesto Shrimp Pasta with Cherry Tomatoes: has a verified-or-labeled source URL
+PASS  Pesto Shrimp Pasta with Cherry Tomatoes: has a directions list of 4 or more steps
+PASS  Pesto Shrimp Pasta with Cherry Tomatoes: no "lemon-garlic chicken"
+PASS  Pesto Shrimp Pasta with Cherry Tomatoes: no "mushroom"
+PASS  Pesto Shrimp Pasta with Cherry Tomatoes: no "heavy cream"
+PASS  Pesto Shrimp Pasta with Cherry Tomatoes: no "cream sauce"
+PASS  Pesto Shrimp Pasta with Cherry Tomatoes: no "alfredo"
+PASS  Pesto Shrimp Pasta with Cherry Tomatoes: no "half-and-half"
+PASS  Pesto Shrimp Pasta with Cherry Tomatoes: shrimp opaque cue stated
+PASS  Honey-Garlic Pork Chops: total time 30 minutes or less
+PASS  Honey-Garlic Pork Chops: prep + cook + rest equals total
+PASS  Honey-Garlic Pork Chops: has a verified-or-labeled source URL
+PASS  Honey-Garlic Pork Chops: has a directions list of 4 or more steps
+PASS  Honey-Garlic Pork Chops: no "lemon-garlic chicken"
+PASS  Honey-Garlic Pork Chops: no "mushroom"
+PASS  Honey-Garlic Pork Chops: no "heavy cream"
+PASS  Honey-Garlic Pork Chops: no "cream sauce"
+PASS  Honey-Garlic Pork Chops: no "alfredo"
+PASS  Honey-Garlic Pork Chops: no "half-and-half"
+PASS  Honey-Garlic Pork Chops: 145 F stated for pork
+PASS  Honey-Garlic Pork Chops: 3-minute rest stated for pork
+PASS  Harissa-Honey Chicken Thighs with Couscous: total time 30 minutes or less
+PASS  Harissa-Honey Chicken Thighs with Couscous: prep + cook + rest equals total
+PASS  Harissa-Honey Chicken Thighs with Couscous: has a verified-or-labeled source URL
+PASS  Harissa-Honey Chicken Thighs with Couscous: has a directions list of 4 or more steps
+PASS  Harissa-Honey Chicken Thighs with Couscous: no "lemon-garlic chicken"
+PASS  Harissa-Honey Chicken Thighs with Couscous: no "mushroom"
+PASS  Harissa-Honey Chicken Thighs with Couscous: no "heavy cream"
+PASS  Harissa-Honey Chicken Thighs with Couscous: no "cream sauce"
+PASS  Harissa-Honey Chicken Thighs with Couscous: no "alfredo"
+PASS  Harissa-Honey Chicken Thighs with Couscous: no "half-and-half"
+PASS  Harissa-Honey Chicken Thighs with Couscous: 165 F stated for chicken
+PASS  Every dinner has a label
+PASS  Chimichurri Sirloin Steaks: not served in the last 8 weeks (unless Encore)
+PASS  Honey-Garlic Pork Chops: not served in the last 8 weeks (unless Encore)
+PASS  Harissa-Honey Chicken Thighs with Couscous: not served in the last 8 weeks (unless Encore)
+PASS  Retired dish not on menu: lemon-garlic chicken
+PASS  Each dinner uses a different protein
+PASS  Subject uses the required format
+PASS  Subject date is the send Saturday
+PASS  HTML has no leftover template placeholders
+PASS  HTML has no external images
+PASS  HTML has no style tags or scripts
+PASS  HTML has no forms
+PASS  Hall of Fame section present
+PASS  Feedback section lists all four dinners
+PASS  Grocery list has no duplicate item names
+PASS  Grocery list is not auto-ordered
+PASS  No budget total is shown without a price check
+PASS  HTML tables are balanced
+PASS  HTML divs are balanced
+
+65 of 65 checks passed.

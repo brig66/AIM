@@ -1,0 +1,53 @@
+{
+  "project": "Brig & Dawn's Weekly Dinner Menu",
+  "owner": "Brig",
+  "household": "Brig and Dawn, two adults",
+  "location": "Arlington, Texas, USA",
+  "timezone": "America/Chicago",
+  "schedule": {
+    "day": "Saturday",
+    "time": "10:00",
+    "timezone": "America/Chicago",
+    "note": "Routine is set in Central time so daylight-saving changes are handled automatically."
+  },
+  "sender": "brig@aim-tex.com",
+  "recipients": ["brig@aim-tex.com", "dawn.serman@mac.com"],
+  "subject_template": "Brig & Dawn's Weekly Dinner Menu - {Month} {Day}, {Year}",
+  "dinners_per_week": 4,
+  "servings": 2,
+  "max_total_minutes": 30,
+  "dish_repeat_window_weeks": 8,
+  "encore_interval_weeks": [6, 10],
+  "proteins_preferred": ["steak", "chicken", "shrimp", "pork"],
+  "cuisines_preferred": ["Italian", "steak", "chicken", "shrimp", "pork", "rotate"],
+  "avoid": {
+    "dishes": ["Lemon-Garlic Chicken"],
+    "ingredients": ["mushrooms", "cream sauces (heavy cream, alfredo, cream-based pan sauces)"]
+  },
+  "vegetables": "limited and approachable",
+  "food_safety": {
+    "chicken_min_internal_f": 165,
+    "pork_min_internal_f": 145,
+    "pork_rest_minutes": 3,
+    "shrimp": "opaque and cooked through",
+    "thermometer": "Use an instant-read thermometer for chicken and pork."
+  },
+  "shopping": {
+    "default_channel": "Amazon Fresh / Amazon Same-Day Delivery (Dawn)",
+    "premium_channel": "Whole Foods (optional, for steak, shrimp, and seafood)",
+    "auto_order": false,
+    "note": "Nothing is ordered automatically. Dawn edits the checklist before ordering."
+  },
+  "feedback_scale": {
+    "5": "Make Again (Hall of Fame)",
+    "4": "Keep in Rotation",
+    "3": "Good but Not Often",
+    "retired": "Don't Include Again (retired)"
+  },
+  "delivery": {
+    "method": "Outlook (Microsoft 365) send_mail with the HTML body",
+    "duplicate_check": "Search Sent Items for the same subject before sending",
+    "on_failure": "Save the HTML and report the exact error. Do not disable the schedule.",
+    "status": "Pending: test send and Sent Items verification, then owner confirmation"
+  }
+}
