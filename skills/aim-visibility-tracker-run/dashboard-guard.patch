@@ -1,0 +1,146 @@
+diff -ru --label a/aim-visibility-tracker-run --label b/aim-visibility-tracker-run -x __pycache__ a/aim-visibility-tracker-run b/aim-visibility-tracker-run
+--- a/aim-visibility-tracker-run
++++ b/aim-visibility-tracker-run
+@@ -10,7 +10,8 @@
+   "run the AI visibility tracker", "run the tracker for a client", "run my Luraco baseline",
+   "refresh AI citation tracking", "re-run the monitoring for a client", or "give me this
+   month's AI visibility run". The engine and AIM brand kit are bundled in this skill, so it is
+-  self-contained.
++  self-contained. Not for clients on the AIM Analytics Dashboard: their AI visibility is
++  already collected there, and live runs for them are refused.
+ ---
+ 
+ # AIM AI Visibility Tracker — Run from Chat (no Terminal)
+@@ -38,6 +39,23 @@
+ Default Mac folder for this user (confirm it is connected before assuming):
+ `/Users/brigserman/Documents/AIM/AIM SEO Audit Agent/AIM AI Visibiltiy Tracker - Final/aim-ai-visibility-tracker`
+ 
++## Dashboard clients are not run here (required)
++Every active client on the AIM Analytics Dashboard already has its AI visibility collected by
++the dashboard itself, every other Monday, and those numbers appear in the dashboard and the
++monthly report. Running this skill for one of those clients buys the same answers a second time
++and stores them somewhere the dashboard never reads. So this skill is for prospects, one-off
++checks and non-dashboard clients only.
++
++The bundled engine enforces this: before any live run it asks the dashboard whether the
++config's domains belong to a dashboard client, and stops if they do, or if it can't get an
++answer. Mock runs are always allowed. When it stops:
++- Tell the user in plain language that the client is on the AIM Analytics Dashboard and that
++  its AI visibility numbers are there. Nothing was queried and nothing was spent.
++- Do NOT work around it: do not edit the script, remove or change domains in the config, call
++  the AI engines another way, or trigger the dashboard's own collector to get fresh numbers.
++- If the user believes the client should not be on the dashboard, that is a dashboard setting
++  for them to change, not something to bypass here.
++
+ ## Procedure
+ 
+ ### 1. Determine which client to run
+@@ -60,6 +78,13 @@
+ pip install requests pyyaml weasyprint --break-system-packages -q
+ ```
+ 
++### 3b. Check the client is not on the dashboard (before any live run)
++```
++python3 "$SKILL_DIR/scripts/aim_ai_visibility_tracker.py" check --config STAGED_DIR/config.SLUG.yaml
++```
++It prints `OK - ...` when a live run is allowed. If it prints `STOPPED - ...`, do not go on to
++step 4: follow "Dashboard clients are not run here" above.
++
+ ### 4. Run the tracker, DETACHED, because it is long
+ The run makes prompts times platforms live API calls (for example 10 x 4 = 40, or 20 x 4 = 80),
+ roughly 10 to 20 minutes, sequential. Run it fully detached so it survives, and poll. Do NOT
+@@ -76,7 +101,8 @@
+ python3 -c "import sqlite3;print(sqlite3.connect('DB_PATH_FROM_CONFIG').execute('select count(*) from results').fetchone()[0])"
+ ```
+ Stop when the count reaches prompts times platforms, or when the process ends early (check
+-`ps aux | grep aim_ai_visibility_tracker`). If it stopped early, inspect run.log and relaunch.
++`ps aux | grep aim_ai_visibility_tracker`). If it stopped early, inspect run.log and relaunch —
++unless run.log starts with `STOPPED`, which is the dashboard check: never relaunch that.
+ For a format preview with no keys, add `--mock` (produces synthetic data, clearly badged).
+ 
+ ### 5. Render the branded PDF
+diff -ru --label a/aim-visibility-tracker-run --label b/aim-visibility-tracker-run -x __pycache__ a/aim-visibility-tracker-run b/aim-visibility-tracker-run
+--- a/aim-visibility-tracker-run
++++ b/aim-visibility-tracker-run
+@@ -30,7 +30,7 @@
+     python aim_ai_visibility_tracker.py metrics --config config.luraco.yaml [--run-id N]
+ """
+ from __future__ import annotations
+-import os, re, json, time, sqlite3, argparse, datetime, urllib.parse, hashlib, random
++import os, re, json, time, sqlite3, argparse, datetime, urllib.parse, urllib.request, hashlib, random
+ from dataclasses import dataclass, field
+ from typing import Any
+ 
+@@ -387,9 +387,54 @@
+     con.commit()
+ 
+ # --------------------------------------------------------------------------- #
++#  Dashboard guard
++# --------------------------------------------------------------------------- #
++# A client on the AIM Analytics Dashboard is already queried by the platform's
++# own collector on its schedule. A live run here would buy the same answers
++# again into a local file the dashboard never reads, so live runs for those
++# domains stop before any engine is called. Mock runs cost nothing and are
++# always allowed. If the check cannot be completed the run stops too: an
++# unconfirmed run is exactly the duplicate spend this exists to prevent.
++GUARD_URL = "https://hfmvugxpwgagvxsjbjfn.supabase.co/functions/v1/tracker-guard"
++
++class DashboardClientError(SystemExit):
++    pass
++
++def dashboard_guard(cfg: "Config") -> None:
++    domains = sorted({d.strip().lower() for d in [cfg.primary_domain, *cfg.brand.domains] if d and d.strip()})
++    if not domains:
++        raise DashboardClientError(
++            f"STOPPED - no AI engine was queried and nothing was spent.\n"
++            f"The config for {cfg.client} lists no brand domains, so it can't be checked against "
++            f"the AIM Analytics Dashboard. Add the client's website under brand.domains and run again.")
++    req = urllib.request.Request(GUARD_URL, data=json.dumps({"domains": domains}).encode(),
++                                 headers={"Content-Type": "application/json"}, method="POST")
++    try:
++        with urllib.request.urlopen(req, timeout=20) as r:
++            answer = json.load(r)
++    except Exception as e:
++        raise DashboardClientError(
++            f"STOPPED - no AI engine was queried and nothing was spent.\n"
++            f"Couldn't reach the AIM Analytics Dashboard to confirm {cfg.client} isn't already "
++            f"tracked there ({e}). Try again in a few minutes.")
++    if answer.get("dashboard_client") is True:
++        raise DashboardClientError(
++            f"STOPPED - no AI engine was queried and nothing was spent.\n"
++            f"{cfg.client} ({', '.join(domains)}) is a client on the AIM Analytics Dashboard. Its AI "
++            f"visibility is already collected there every other Monday and appears in the dashboard "
++            f"and the monthly report. Use those numbers instead of running the tracker here.")
++    if answer.get("dashboard_client") is not False:
++        raise DashboardClientError(
++            f"STOPPED - no AI engine was queried and nothing was spent.\n"
++            f"The AIM Analytics Dashboard check returned an unexpected answer for {cfg.client}. "
++            f"Try again in a few minutes.")
++
++# --------------------------------------------------------------------------- #
+ #  Orchestration
+ # --------------------------------------------------------------------------- #
+ def run(cfg: Config, mock: bool = False, sleep: float = 1.0, note: str = "") -> int:
++    if not mock:
++        dashboard_guard(cfg)
+     con = db_connect(cfg.db_path)
+     started = datetime.datetime.now(datetime.timezone.utc).isoformat()
+     run_id = con.execute("INSERT INTO runs (slug,started_at,mock,note) VALUES (?,?,?,?)",
+@@ -480,6 +525,7 @@
+     pr = sub.add_parser("run"); pr.add_argument("--config", required=True)
+     pr.add_argument("--mock", action="store_true"); pr.add_argument("--sleep", type=float, default=1.0)
+     pr.add_argument("--note", default="")
++    pc = sub.add_parser("check"); pc.add_argument("--config", required=True)
+     pm = sub.add_parser("metrics"); pm.add_argument("--config", required=True)
+     pm.add_argument("--run-id", type=int, default=None)
+     a = ap.parse_args()
+@@ -487,6 +533,9 @@
+     if a.cmd == "run":
+         rid = run(cfg, mock=a.mock, sleep=a.sleep, note=a.note)
+         print(json.dumps(compute_metrics(cfg, rid), indent=2))
++    elif a.cmd == "check":
++        dashboard_guard(cfg)
++        print(f"OK - {cfg.client} is not on the AIM Analytics Dashboard; a live run is allowed.")
+     elif a.cmd == "metrics":
+         print(json.dumps(compute_metrics(cfg, a.run_id), indent=2))
+ 
