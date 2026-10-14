@@ -181,10 +181,10 @@ roughly 70% without losing the monthly trend:
 
 | Lever | Before | After |
 | --- | --- | --- |
-| Pass schedule | Every Monday (`ai-weekly-enqueue`) | Every other Monday (`ai-biweekly-enqueue`), counted from the 2026-09-21 pass |
+| Pass schedule | Every Monday (`ai-weekly-enqueue`) | Every other Monday (`ai-biweekly-enqueue`) from 2026-09-28; since replaced by the 15th and the last day of each month (`ai-twice-monthly-pass`) |
 | Samples per discovery question | 3 (`ai_prompt_sets.repeats`) | 2, and the column default is now 2 so new sets match |
 | Samples per branded question | Same as discovery | 1 — a question naming the brand is answered with the brand nearly every time |
-| Claude web searches per question | Unlimited | 2 (`max_uses`) |
+| Claude web searches per question | Unlimited | 2 (`max_uses`) on 2026-10-05 only — removed 2026-10-14, see below |
 | Result writes | Batches of 8 | One at a time, so a wall-clock kill no longer discards paid answers |
 | Late calls | Started up to 110s in, 120s timeout, killed at ~150s | No new pair after 75s, no new sample after 100s, every call aborted by 140s |
 
@@ -219,3 +219,21 @@ It matches active clients' `clients.domain` plus the `primary_domain` and
 `brand.domains` of their active prompt sets, and returns only a boolean
 because it takes no credential. The skill changes are in
 `skills/*/dashboard-guard.patch`; the uploadable packages are in `skills/dist/`.
+
+### 2026-10-14 follow-up
+
+The 2026-10-05 pass, the first under these settings, showed Claude's citation
+rate on answers that had text falling from 23.8% to 17.5% on the same
+questions. Fewer searches find fewer sources, so the cap was skewing the
+measurement. It is removed in `ai-collect` v20. A search that fails now returns
+an error object in place of the result list, and that is skipped rather than
+failing the whole answer.
+
+`ai-repair-late` moved from 13:10 to 14:10 UTC on the pass days. The 10-05
+pass finished at 13:21, after the repair had already run, so its error rows
+were never retried.
+
+The 10-05 pass also lost most of Gemini (`402`, prepaid credits depleted) and
+about one Claude answer in six to an empty reply. The empty replies were fixed
+separately in v19 by raising `max_tokens`. The Gemini errors need credit added
+in Google AI Studio.
